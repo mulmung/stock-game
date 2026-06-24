@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
-  <title>주식 게임 v33</title>
+  <title>주식 게임 v34</title>
   <style>
     * { box-sizing: border-box; }
     html, body { margin: 0; padding: 0; height: 100%; font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; background: #1f2937; color: #fff; }
@@ -283,7 +283,7 @@
     <section id="loadingScreen" class="screen active">
       <div class="card">
         <h1 class="title">주식 게임</h1>
-        <p class="subtitle">불러오는 중...</p>
+        <p id="loadingStatus" class="subtitle">로그인 상태를 확인하는 중...</p>
       </div>
     </section>
 
@@ -643,7 +643,10 @@
 
     const app = initializeApp(firebaseConfig);
     const auth = getAuth(app);
-    setPersistence(auth, browserLocalPersistence).catch(() => {});
+    const authPersistenceReady = setPersistence(auth, browserLocalPersistence).catch((error) => {
+      console.warn("Auth persistence setup failed", error);
+      return null;
+    });
     const provider = new GoogleAuthProvider();
     provider.setCustomParameters({ prompt: "select_account" });
     const db = getFirestore(app);
@@ -662,6 +665,7 @@
     const bottomBar = document.getElementById("bottomBar");
     const googleLoginBtn = document.getElementById("googleLoginBtn");
     const loginStatus = document.getElementById("loginStatus");
+    const loadingStatus = document.getElementById("loadingStatus");
     const nicknameInput = document.getElementById("nicknameInput");
     const startBtn = document.getElementById("startBtn");
     const nicknameStatus = document.getElementById("nicknameStatus");
@@ -788,6 +792,8 @@
     let marketUpdating = false;
     let appBackHistoryReady = false;
     let appBackPushTimer = null;
+    let redirectLoginErrorMessage = "";
+    let authFlowStarted = false;
 
     function isAdmin() { return currentUser && currentUser.email === ADMIN_EMAIL; }
     function activeMainScreens() { return ["game", "market", "bank", "ranking", "settings"]; }
@@ -852,6 +858,22 @@
     function setStatus(el, text, type = "") {
       el.textContent = text || "";
       el.className = "status" + (type ? " " + type : "");
+    }
+
+    function setLoadingStatus(text) {
+      if (loadingStatus) loadingStatus.textContent = text || "로그인 상태를 확인하는 중...";
+    }
+
+    function resetLoginButton() {
+      if (!googleLoginBtn) return;
+      googleLoginBtn.disabled = false;
+      googleLoginBtn.textContent = "Google 로그인";
+    }
+
+    function setLoginButtonLoading(text = "Google 로그인 중...") {
+      if (!googleLoginBtn) return;
+      googleLoginBtn.disabled = true;
+      googleLoginBtn.textContent = text;
     }
     function showEarnPopup(text, type = "success") {
       if (!floatingEarnPopup) return;
@@ -2391,9 +2413,11 @@
     }
 
     googleLoginBtn.addEventListener("click", async () => {
+      redirectLoginErrorMessage = "";
       setStatus(loginStatus, isMobileDevice() ? "구글 로그인으로 이동합니다..." : "구글 로그인 팝업을 엽니다...");
+      setLoginButtonLoading(isMobileDevice() ? "이동 중..." : "로그인 중...");
       try {
-        await setPersistence(auth, browserLocalPersistence);
+        await authPersistenceReady;
         if (isMobileDevice()) {
           await signInWithRedirect(auth, provider);
         } else {
@@ -2408,10 +2432,17 @@
         ];
         if (!isMobileDevice() && fallbackCodes.includes(error.code)) {
           setStatus(loginStatus, "팝업 로그인이 막혀서 이동 방식으로 다시 시도합니다...");
-          try { await signInWithRedirect(auth, provider); }
-          catch (redirectError) { setStatus(loginStatus, "로그인에 실패했습니다.", "error"); }
+          try {
+            await signInWithRedirect(auth, provider);
+          } catch (redirectError) {
+            console.error("Redirect login failed", redirectError);
+            setStatus(loginStatus, "로그인에 실패했습니다. 다시 시도해주세요.", "error");
+            resetLoginButton();
+          }
         } else {
-          setStatus(loginStatus, "로그인에 실패했습니다.", "error");
+          console.error("Login failed", error);
+          setStatus(loginStatus, "로그인에 실패했습니다. 다시 시도해주세요.", "error");
+          resetLoginButton();
         }
       }
     });
@@ -2478,42 +2509,97 @@
     bankModal.addEventListener("click", (event) => event.stopPropagation());
 
 
-    getRedirectResult(auth).catch(() => {
-      setStatus(loginStatus, "로그인 결과를 확인하지 못했습니다. 다시 시도해주세요.", "error");
-    });
-
-    onAuthStateChanged(auth, async (user) => {
-      currentUser = user;
-      if (!user) {
-        currentUserData = null;
-        if (unsubscribeUser) unsubscribeUser();
-        if (unsubscribeSettings) unsubscribeSettings();
-        if (unsubscribeStocks) unsubscribeStocks();
-        if (unsubscribeHoldings) unsubscribeHoldings();
-        if (unsubscribeBankLogs) unsubscribeBankLogs();
-        if (unsubscribeBankGlobal) unsubscribeBankGlobal();
-        for (const unsub of priceUnsubs.values()) unsub();
-        priceUnsubs.clear(); priceHistories.clear(); stocks = []; holdings = []; bankLogs = []; bankGlobalData = { totalDeposits: 0 }; rankings = []; expandedRankingId = null;
-        stopMarketTimer();
-        stopBankInterestTimer();
-        showScreen("login");
-        return;
+    async function clearLocalSessionData() {
+      currentUserData = null;
+      if (unsubscribeUser) { unsubscribeUser(); unsubscribeUser = null; }
+      if (unsubscribeSettings) { unsubscribeSettings(); unsubscribeSettings = null; }
+      if (unsubscribeStocks) { unsubscribeStocks(); unsubscribeStocks = null; }
+      if (unsubscribeHoldings) { unsubscribeHoldings(); unsubscribeHoldings = null; }
+      if (unsubscribeBankLogs) { unsubscribeBankLogs(); unsubscribeBankLogs = null; }
+      if (unsubscribeBankGlobal) { unsubscribeBankGlobal(); unsubscribeBankGlobal = null; }
+      for (const unsub of priceUnsubs.values()) {
+        try { unsub(); } catch (error) {}
       }
+      priceUnsubs.clear();
+      priceHistories.clear();
+      stocks = [];
+      holdings = [];
+      bankLogs = [];
+      bankGlobalData = { totalDeposits: 0 };
+      rankings = [];
+      expandedRankingId = null;
+      stopMarketTimer();
+      stopBankInterestTimer();
+    }
+
+    async function loadSignedInUser(user) {
+      setLoadingStatus("로그인은 완료됐습니다. 게임 데이터를 불러오는 중...");
+      showScreen("loading");
       try {
         await ensureSettingsDocForAdmin();
         await listenSettings();
         await listenStocks();
-        await listenHoldings(user.uid);
-        startMarketTimer();
-        await updateDoc(userRef(user.uid), { lastLoginAt: serverTimestamp() }).catch(() => {});
         const snap = await getDoc(userRef(user.uid));
-        if (snap.exists()) listenUser(user.uid);
-        else { currentUserData = null; showScreen("nickname"); }
+        if (snap.exists()) {
+          await listenHoldings(user.uid);
+          startMarketTimer();
+          await updateDoc(userRef(user.uid), { lastLoginAt: serverTimestamp() }).catch(() => {});
+          listenUser(user.uid);
+        } else {
+          currentUserData = null;
+          holdings = [];
+          bankLogs = [];
+          startMarketTimer();
+          resetLoginButton();
+          showScreen("nickname");
+        }
       } catch (error) {
-        setStatus(loginStatus, "데이터를 불러오지 못했습니다. Firebase 규칙을 확인해주세요.", "error");
-        showScreen("login");
+        console.error("Failed to load signed-in user", error);
+        setLoadingStatus("로그인은 완료됐지만 데이터를 불러오지 못했습니다. 새로고침하거나 잠시 후 다시 시도해주세요.");
+        resetLoginButton();
+        showScreen("loading");
       }
-    });
+    }
+
+    async function startAuthFlow() {
+      if (authFlowStarted) return;
+      authFlowStarted = true;
+      setLoadingStatus("로그인 상태를 확인하는 중...");
+      showScreen("loading");
+      try {
+        await authPersistenceReady;
+      } catch (error) {
+        console.warn("Auth persistence was not ready", error);
+      }
+
+      try {
+        const redirectResult = await getRedirectResult(auth);
+        if (redirectResult && redirectResult.user) {
+          setLoadingStatus("구글 로그인 결과를 확인했습니다. 게임 데이터를 불러오는 중...");
+        }
+      } catch (error) {
+        console.error("Redirect result check failed", error);
+        redirectLoginErrorMessage = "구글 로그인 결과를 확인하지 못했습니다. 다시 시도해주세요.";
+      }
+
+      onAuthStateChanged(auth, async (user) => {
+        currentUser = user;
+        if (!user) {
+          await clearLocalSessionData();
+          resetLoginButton();
+          showScreen("login");
+          if (redirectLoginErrorMessage) {
+            setStatus(loginStatus, redirectLoginErrorMessage, "error");
+          } else {
+            setStatus(loginStatus, "");
+          }
+          return;
+        }
+        await loadSignedInUser(user);
+      });
+    }
+
+    startAuthFlow();
   </script>
 </body>
 </html>
