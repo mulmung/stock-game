@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
-  <title>주식 게임</title>
+  <title>주식 게임 v6</title>
   <style>
     * { box-sizing: border-box; }
     html, body { margin: 0; padding: 0; height: 100%; font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; background: #0f172a; color: #fff; }
@@ -50,10 +50,15 @@
     .menu-item { width: 100%; height: 48px; background: transparent; color: #fff; text-align: left; padding: 0 16px; font-weight: 900; border-radius: 0; }
     .menu-item:active { background: rgba(255,255,255,0.08); }
 
-    .settings-screen { align-items: flex-start; justify-content: center; overflow-y: auto; padding-top: 34px; }
+    .settings-screen { align-items: stretch; justify-content: flex-start; overflow-y: auto; padding: 0 24px 96px; }
+    .settings-page { width: 100%; max-width: 520px; margin: 0 auto; padding: 28px 0 26px; }
+    .settings-page .title { text-align: left; margin-bottom: 8px; }
+    .settings-page .subtitle { text-align: left; margin-bottom: 26px; }
+    .settings-section { width: 100%; }
     .settings-row { display: grid; grid-template-columns: 1fr 34px; gap: 8px; align-items: center; }
     .won { color: #cbd5e1; font-weight: 800; }
-    .hint { font-size: 12px; color: #94a3b8; line-height: 1.5; margin-top: -6px; margin-bottom: 16px; }
+    .hint { font-size: 12px; color: #94a3b8; line-height: 1.5; margin-top: -6px; margin-bottom: 18px; }
+    .settings-divider { height: 1px; background: rgba(255,255,255,0.12); margin: 22px 0; }
 
     .loading { color: #cbd5e1; text-align: center; }
   </style>
@@ -97,38 +102,41 @@
     </section>
 
     <section id="settingsScreen" class="screen settings-screen">
-      <div class="card">
+      <div class="settings-page">
         <h1 class="title">설정</h1>
         <p class="subtitle">관리자만 수정할 수 있는 게임 기본값입니다.</p>
 
-        <div class="field">
-          <label for="signupBonusInput">신규 가입 지급 금액</label>
-          <div class="settings-row">
-            <input id="signupBonusInput" type="number" inputmode="numeric" min="1" step="1000" />
-            <div class="won">원</div>
+        <div class="settings-section">
+          <div class="field">
+            <label for="signupBonusInput">신규 가입 지급 금액</label>
+            <div class="settings-row">
+              <input id="signupBonusInput" type="number" inputmode="numeric" min="1" step="1000" />
+              <div class="won">원</div>
+            </div>
           </div>
-        </div>
 
-        <div class="field">
-          <label for="earnMinInput">돈벌기 최소 지급 금액</label>
-          <div class="settings-row">
-            <input id="earnMinInput" type="number" inputmode="numeric" min="1" step="1000" />
-            <div class="won">원</div>
+          <div class="field">
+            <label for="earnMinInput">돈벌기 최소 지급 금액</label>
+            <div class="settings-row">
+              <input id="earnMinInput" type="number" inputmode="numeric" min="1" step="1000" />
+              <div class="won">원</div>
+            </div>
           </div>
-        </div>
 
-        <div class="field">
-          <label for="earnMaxInput">돈벌기 최대 지급 금액</label>
-          <div class="settings-row">
-            <input id="earnMaxInput" type="number" inputmode="numeric" min="1" step="1000" />
-            <div class="won">원</div>
+          <div class="field">
+            <label for="earnMaxInput">돈벌기 최대 지급 금액</label>
+            <div class="settings-row">
+              <input id="earnMaxInput" type="number" inputmode="numeric" min="1" step="1000" />
+              <div class="won">원</div>
+            </div>
           </div>
-        </div>
 
-        <div class="hint">기본값: 신규 가입 1,000,000원 / 돈벌기 10,000원~50,000원</div>
-        <button id="saveSettingsBtn" class="primary-btn">저장하기</button>
-        <button id="backToGameBtn" class="ghost-btn">뒤로가기</button>
-        <div id="settingsStatus" class="status"></div>
+          <div class="hint">기본값: 신규 가입 1,000,000원 / 돈벌기 10,000원~50,000원</div>
+          <div class="settings-divider"></div>
+          <button id="saveSettingsBtn" class="primary-btn">저장하기</button>
+          <button id="backToGameBtn" class="ghost-btn">뒤로가기</button>
+          <div id="settingsStatus" class="status"></div>
+        </div>
       </div>
     </section>
 
@@ -220,6 +228,7 @@
     let currentUser = null;
     let currentUserData = null;
     let currentSettings = { ...DEFAULT_SETTINGS };
+    let currentScreenName = "loading";
     let unsubscribeUser = null;
     let unsubscribeSettings = null;
     let cooldownTimer = null;
@@ -229,6 +238,7 @@
     }
 
     function showScreen(name) {
+      currentScreenName = name;
       Object.values(screens).forEach(screen => screen.classList.remove("active"));
       screens[name].classList.add("active");
       bottomBar.classList.toggle("active", name === "game" || name === "settings");
@@ -298,7 +308,9 @@
         }
         currentUserData = snap.data();
         renderUserBar();
-        showScreen("game");
+        if (!["game", "settings"].includes(currentScreenName)) {
+          showScreen("game");
+        }
         updateEarnButton();
       });
     }
