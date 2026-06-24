@@ -298,7 +298,8 @@
     import {
       getAuth,
       GoogleAuthProvider,
-      signInWithPopup,
+      signInWithRedirect,
+      getRedirectResult,
       onAuthStateChanged
     } from "https://www.gstatic.com/firebasejs/12.15.0/firebase-auth.js";
     import {
@@ -436,7 +437,13 @@
 
     /********************************************************************
      * 6) 로그인 상태 확인
+     * 모바일 브라우저 안정성을 위해 redirect 로그인 결과도 먼저 확인합니다.
      ********************************************************************/
+    getRedirectResult(auth).catch((error) => {
+      console.error(error);
+      loginError.textContent = "구글 로그인 결과를 확인하지 못했습니다. Firebase Auth 설정을 확인해주세요.";
+    });
+
     onAuthStateChanged(auth, async (user) => {
       currentUser = user;
       loginError.textContent = "";
@@ -479,10 +486,10 @@
     googleLoginBtn.addEventListener("click", async () => {
       loginError.textContent = "";
       try {
-        await signInWithPopup(auth, provider);
+        await signInWithRedirect(auth, provider);
       } catch (error) {
         console.error(error);
-        loginError.textContent = "구글 로그인에 실패했습니다. 팝업 차단 또는 Firebase Auth 설정을 확인해주세요.";
+        loginError.textContent = "구글 로그인에 실패했습니다. Firebase Auth 설정과 승인 도메인을 확인해주세요.";
       }
     });
 
