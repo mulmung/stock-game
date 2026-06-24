@@ -3,302 +3,150 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
-  <title>주식 게임 v4</title>
+  <title>주식 게임</title>
   <style>
     * { box-sizing: border-box; }
-    html, body {
-      margin: 0;
-      padding: 0;
-      width: 100%;
-      min-height: 100%;
-      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Noto Sans KR", sans-serif;
-      background: #070b12;
-      color: #ffffff;
-    }
-    body {
-      overflow-x: hidden;
-    }
-    .app {
-      min-height: 100vh;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      padding: 20px;
-      background:
-        radial-gradient(circle at top, rgba(33, 150, 243, 0.22), transparent 36%),
-        linear-gradient(180deg, #101827 0%, #070b12 100%);
-    }
-    .screen {
-      width: 100%;
-      max-width: 430px;
-      min-height: 620px;
-      border: 1px solid rgba(255,255,255,0.1);
-      background: rgba(10, 16, 26, 0.92);
-      box-shadow: 0 20px 60px rgba(0,0,0,0.45);
-      position: relative;
-      overflow: hidden;
-    }
-    .center-panel {
-      min-height: 620px;
-      display: flex;
-      flex-direction: column;
-      justify-content: center;
-      padding: 28px;
-      gap: 18px;
-      text-align: center;
-    }
-    .title {
-      font-size: 34px;
-      font-weight: 900;
-      letter-spacing: -1px;
-      margin: 0;
-    }
-    .subtitle {
-      margin: 0;
-      color: rgba(255,255,255,0.68);
-      line-height: 1.55;
-      font-size: 14px;
-    }
-    .input {
-      width: 100%;
-      height: 52px;
-      border: 1px solid rgba(255,255,255,0.2);
-      background: rgba(255,255,255,0.08);
-      color: #fff;
-      outline: none;
-      border-radius: 0;
-      padding: 0 14px;
-      font-size: 16px;
-      text-align: center;
-    }
-    .input:focus {
-      border-color: #2f8cff;
-      box-shadow: 0 0 0 3px rgba(47, 140, 255, 0.18);
-    }
-    .btn {
-      width: 100%;
-      min-height: 52px;
-      border: 0;
-      border-radius: 0;
-      font-size: 16px;
-      font-weight: 900;
-      cursor: pointer;
-      color: #fff;
-      background: #1976ff;
-    }
-    .btn:hover { filter: brightness(1.08); }
-    .btn:active { transform: translateY(1px); }
-    .btn:disabled {
-      cursor: not-allowed;
-      opacity: 0.45;
-      filter: grayscale(0.5);
-    }
-    .google-btn {
-      background: #ffffff;
-      color: #111827;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      gap: 10px;
-    }
-    .google-icon {
-      width: 22px;
-      height: 22px;
-      display: inline-grid;
-      place-items: center;
-      border: 1px solid #d1d5db;
-      font-weight: 900;
-      border-radius: 50%;
-    }
-    .game-screen {
-      min-height: 620px;
-      padding: 22px 18px 92px;
-      display: none;
-    }
-    .top-card {
-      border: 1px solid rgba(255,255,255,0.1);
-      background: rgba(255,255,255,0.06);
-      padding: 18px;
-      margin-bottom: 14px;
-    }
-    .top-card h1 {
-      margin: 0 0 8px;
-      font-size: 24px;
-      letter-spacing: -0.5px;
-    }
-    .top-card p {
-      margin: 0;
-      color: rgba(255,255,255,0.65);
-      line-height: 1.5;
-      font-size: 14px;
-    }
-    .notice {
-      border: 1px dashed rgba(255,255,255,0.18);
-      padding: 18px;
-      color: rgba(255,255,255,0.72);
-      font-size: 14px;
-      line-height: 1.55;
-    }
-    .bottom-bar {
-      position: absolute;
-      left: 0;
-      right: 0;
-      bottom: 0;
-      height: 74px;
-      padding: 10px;
-      padding-bottom: max(10px, env(safe-area-inset-bottom));
-      display: grid;
-      grid-template-columns: 64px minmax(0, 1fr) 72px;
-      gap: 6px;
-      border-top: 1px solid rgba(255,255,255,0.12);
-      background: rgba(5, 9, 16, 0.96);
-      backdrop-filter: blur(12px);
-    }
-    .bar-btn {
-      border: 0;
-      border-radius: 0;
-      background: #1976ff;
-      color: #fff;
-      font-weight: 900;
-      font-size: 13px;
-      white-space: nowrap;
-      cursor: pointer;
-      min-width: 0;
-    }
-    .menu-icon {
-      font-size: 24px;
-      line-height: 1;
-    }
-    .bar-btn:disabled {
-      opacity: 0.5;
-      cursor: not-allowed;
-      background: #334155;
-    }
-    .bar-center {
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      gap: 4px;
-      border: 1px solid rgba(255,255,255,0.1);
-      background: rgba(255,255,255,0.06);
-      min-width: 0;
-      overflow: hidden;
-      padding: 0 8px;
-    }
-    .nickname {
-      width: 100%;
-      text-align: center;
-      font-size: 13px;
-      color: rgba(255,255,255,0.72);
-      white-space: nowrap;
-      overflow: hidden;
-      text-overflow: ellipsis;
-    }
-    .cash {
-      width: 100%;
-      text-align: center;
-      font-size: 17px;
-      font-weight: 900;
-      white-space: nowrap;
-      overflow: hidden;
-      text-overflow: ellipsis;
-    }
-    .toast {
-      position: absolute;
-      left: 18px;
-      right: 18px;
-      bottom: 92px;
-      padding: 13px 14px;
-      background: rgba(25, 118, 255, 0.96);
-      color: #fff;
-      font-weight: 900;
-      text-align: center;
-      display: none;
-      z-index: 10;
-    }
-    .loading {
-      position: absolute;
-      inset: 0;
-      background: #070b12;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      color: rgba(255,255,255,0.75);
-      z-index: 99;
-      font-weight: 800;
-    }
-    .error {
-      color: #ff7b7b;
-      font-size: 13px;
-      line-height: 1.5;
-      min-height: 20px;
-    }
-    .hidden { display: none !important; }
-    @media (max-width: 460px) {
-      .app { padding: 0; align-items: stretch; }
-      .screen {
-        max-width: none;
-        min-height: 100vh;
-        border: 0;
-      }
-      .center-panel { min-height: 100vh; }
-      .game-screen { min-height: 100vh; }
-      .bottom-bar { position: fixed; }
-    }
+    html, body { margin: 0; padding: 0; height: 100%; font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; background: #0f172a; color: #fff; }
+    body { overflow: hidden; }
+    button, input { font: inherit; }
+    button { border: 0; cursor: pointer; }
+    button:disabled { opacity: 0.45; cursor: not-allowed; }
+
+    .app { min-height: 100dvh; display: flex; flex-direction: column; background: radial-gradient(circle at top, #1e3a8a 0%, #0f172a 48%, #020617 100%); }
+    .screen { flex: 1; display: none; padding: 24px; align-items: center; justify-content: center; padding-bottom: 96px; }
+    .screen.active { display: flex; }
+    .card { width: min(420px, 100%); background: rgba(15, 23, 42, 0.92); border: 1px solid rgba(255,255,255,0.12); padding: 24px; box-shadow: 0 18px 50px rgba(0,0,0,0.35); }
+    .title { font-size: 26px; font-weight: 900; text-align: center; margin: 0 0 8px; }
+    .subtitle { margin: 0 0 22px; color: #cbd5e1; text-align: center; line-height: 1.5; font-size: 14px; }
+    .field { display: flex; flex-direction: column; gap: 8px; margin-bottom: 16px; }
+    .field label { color: #cbd5e1; font-size: 13px; font-weight: 800; }
+    input { width: 100%; height: 48px; border: 1px solid rgba(255,255,255,0.18); background: rgba(2,6,23,0.75); color: #fff; padding: 0 14px; outline: none; border-radius: 0; }
+    input:focus { border-color: #60a5fa; }
+    .primary-btn { width: 100%; height: 48px; background: #2563eb; color: #fff; font-weight: 900; border-radius: 0; }
+    .primary-btn:active { transform: translateY(1px); }
+    .ghost-btn { width: 100%; height: 46px; background: rgba(255,255,255,0.08); color: #fff; border: 1px solid rgba(255,255,255,0.14); font-weight: 800; border-radius: 0; margin-top: 10px; }
+    .status { min-height: 22px; color: #93c5fd; font-size: 13px; margin-top: 12px; text-align: center; line-height: 1.5; }
+    .error { color: #fca5a5; }
+    .success { color: #86efac; }
+
+    .main { width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; text-align: center; }
+    .main-box { width: min(520px, 100%); padding: 24px; }
+    .main-box h1 { margin: 0 0 10px; font-size: 28px; }
+    .main-box p { margin: 0; color: #cbd5e1; line-height: 1.6; }
+    .earned-toast { margin-top: 18px; min-height: 28px; color: #86efac; font-weight: 900; }
+
+    .bottom-bar { position: fixed; left: 0; right: 0; bottom: 0; height: 72px; padding-bottom: env(safe-area-inset-bottom); background: rgba(2, 6, 23, 0.94); border-top: 1px solid rgba(255,255,255,0.16); display: none; grid-template-columns: 58px 1fr 72px; z-index: 50; }
+    .bottom-bar.active { display: grid; }
+    .bar-btn { height: 72px; background: #1d4ed8; color: #fff; font-weight: 900; border-radius: 0; border-right: 1px solid rgba(255,255,255,0.14); white-space: nowrap; }
+    .bar-btn:last-child { border-right: 0; border-left: 1px solid rgba(255,255,255,0.14); }
+    .bar-btn.menu { font-size: 25px; }
+    .bar-btn.earn { font-size: 13px; padding: 0 4px; }
+    .center-info { min-width: 0; height: 72px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px; padding: 0 8px; }
+    .nickname { font-size: 14px; color: #bfdbfe; font-weight: 900; max-width: 100%; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+    .cash { font-size: 18px; font-weight: 950; max-width: 100%; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+
+    .menu-panel { position: fixed; left: 8px; bottom: calc(80px + env(safe-area-inset-bottom)); width: 132px; background: rgba(15, 23, 42, 0.98); border: 1px solid rgba(255,255,255,0.18); box-shadow: 0 18px 45px rgba(0,0,0,0.4); display: none; z-index: 80; }
+    .menu-panel.active { display: block; }
+    .menu-item { width: 100%; height: 48px; background: transparent; color: #fff; text-align: left; padding: 0 16px; font-weight: 900; border-radius: 0; }
+    .menu-item:active { background: rgba(255,255,255,0.08); }
+
+    .settings-screen { align-items: flex-start; justify-content: center; overflow-y: auto; padding-top: 34px; }
+    .settings-row { display: grid; grid-template-columns: 1fr 34px; gap: 8px; align-items: center; }
+    .won { color: #cbd5e1; font-weight: 800; }
+    .hint { font-size: 12px; color: #94a3b8; line-height: 1.5; margin-top: -6px; margin-bottom: 16px; }
+
+    .loading { color: #cbd5e1; text-align: center; }
   </style>
 </head>
 <body>
-  <div class="app">
-    <main class="screen">
-      <div id="loading" class="loading">불러오는 중...</div>
+  <div class="app" id="appRoot">
+    <section id="loadingScreen" class="screen active">
+      <div class="loading">불러오는 중...</div>
+    </section>
 
-      <section id="loginScreen" class="center-panel hidden">
+    <section id="loginScreen" class="screen">
+      <div class="card">
         <h1 class="title">주식 게임</h1>
-        <p class="subtitle">구글 로그인 후 닉네임을 등록하면<br />초기 자금 1,000,000원을 받고 시작합니다.</p>
-        <button id="googleLoginBtn" class="btn google-btn">
-          <span class="google-icon">G</span>
-          Google 로그인
-        </button>
-        <p id="loginError" class="error"></p>
-      </section>
+        <p class="subtitle">구글 로그인 후 게임을 시작할 수 있어요.</p>
+        <button id="googleLoginBtn" class="primary-btn">Google 로그인</button>
+        <div id="loginStatus" class="status"></div>
+      </div>
+    </section>
 
-      <section id="nicknameScreen" class="center-panel hidden">
+    <section id="nicknameScreen" class="screen">
+      <div class="card">
         <h1 class="title">닉네임 설정</h1>
-        <p class="subtitle">게임에서 사용할 닉네임을 입력해주세요.</p>
-        <input id="nicknameInput" class="input" type="text" maxlength="12" placeholder="닉네임 입력" autocomplete="off" />
-        <button id="startBtn" class="btn" disabled>시작하기</button>
-        <p id="nicknameError" class="error"></p>
-      </section>
+        <p class="subtitle">처음 가입하면 현재 설정된 가입 보상이 지급됩니다.</p>
+        <div class="field">
+          <label for="nicknameInput">닉네임</label>
+          <input id="nicknameInput" type="text" maxlength="12" placeholder="닉네임 입력" autocomplete="off" />
+        </div>
+        <button id="startBtn" class="primary-btn" disabled>시작하기</button>
+        <div id="nicknameStatus" class="status"></div>
+      </div>
+    </section>
 
-      <section id="gameScreen" class="game-screen">
-        <div class="top-card">
+    <section id="gameScreen" class="screen">
+      <div class="main">
+        <div class="main-box">
           <h1>주식 게임</h1>
-          <p>현재는 1차 기본 구조입니다. 구글 로그인, 닉네임 저장, 보유현금 저장, 돈벌기 60초 쿨타임이 적용되어 있습니다.</p>
+          <p>아래 돈벌기 버튼을 눌러 현금을 모아보세요.<br />돈벌기는 60초마다 한 번씩 가능합니다.</p>
+          <div id="earnedToast" class="earned-toast"></div>
         </div>
-        <div class="notice">
-          다음 단계에서 종목, 차트, 매수/매도, 거래내역, 우편함, 은행 기능을 이 구조 위에 하나씩 붙이면 됩니다.
-        </div>
+      </div>
+    </section>
 
-        <div id="toast" class="toast"></div>
+    <section id="settingsScreen" class="screen settings-screen">
+      <div class="card">
+        <h1 class="title">설정</h1>
+        <p class="subtitle">관리자만 수정할 수 있는 게임 기본값입니다.</p>
 
-        <nav class="bottom-bar">
-          <button id="menuBtn" class="bar-btn menu-icon" aria-label="메뉴 열기">☰</button>
-          <div class="bar-center">
-            <div id="nicknameLabel" class="nickname">-</div>
-            <div id="cashLabel" class="cash">0원</div>
+        <div class="field">
+          <label for="signupBonusInput">신규 가입 지급 금액</label>
+          <div class="settings-row">
+            <input id="signupBonusInput" type="number" inputmode="numeric" min="1" step="1000" />
+            <div class="won">원</div>
           </div>
-          <button id="earnBtn" class="bar-btn">돈벌기</button>
-        </nav>
-      </section>
-    </main>
+        </div>
+
+        <div class="field">
+          <label for="earnMinInput">돈벌기 최소 지급 금액</label>
+          <div class="settings-row">
+            <input id="earnMinInput" type="number" inputmode="numeric" min="1" step="1000" />
+            <div class="won">원</div>
+          </div>
+        </div>
+
+        <div class="field">
+          <label for="earnMaxInput">돈벌기 최대 지급 금액</label>
+          <div class="settings-row">
+            <input id="earnMaxInput" type="number" inputmode="numeric" min="1" step="1000" />
+            <div class="won">원</div>
+          </div>
+        </div>
+
+        <div class="hint">기본값: 신규 가입 1,000,000원 / 돈벌기 10,000원~50,000원</div>
+        <button id="saveSettingsBtn" class="primary-btn">저장하기</button>
+        <button id="backToGameBtn" class="ghost-btn">뒤로가기</button>
+        <div id="settingsStatus" class="status"></div>
+      </div>
+    </section>
+
+    <div id="adminMenuPanel" class="menu-panel">
+      <button id="openSettingsBtn" class="menu-item">설정</button>
+    </div>
+
+    <footer id="bottomBar" class="bottom-bar">
+      <button id="menuBtn" class="bar-btn menu">☰</button>
+      <div class="center-info">
+        <div id="barNickname" class="nickname">-</div>
+        <div id="barCash" class="cash">0원</div>
+      </div>
+      <button id="earnBtn" class="bar-btn earn">돈벌기</button>
+    </footer>
   </div>
 
   <script type="module">
-    /********************************************************************
-     * 1) Firebase 설정
-     * Firebase 설정값 입력 완료 버전입니다.
-     ********************************************************************/
     import { initializeApp } from "https://www.gstatic.com/firebasejs/12.15.0/firebase-app.js";
     import {
       getAuth,
@@ -313,8 +161,10 @@
       getDoc,
       setDoc,
       updateDoc,
+      onSnapshot,
       runTransaction,
-      serverTimestamp
+      serverTimestamp,
+      Timestamp
     } from "https://www.gstatic.com/firebasejs/12.15.0/firebase-firestore.js";
 
     const firebaseConfig = {
@@ -326,276 +176,351 @@
       appId: "1:243838439967:web:47b378ec6aef87e03f3b2a"
     };
 
+    const ADMIN_EMAIL = "khu9918@gmail.com";
+    const DEFAULT_SETTINGS = {
+      signupBonus: 1000000,
+      earnMin: 10000,
+      earnMax: 50000
+    };
+    const EARN_COOLDOWN_SECONDS = 60;
+
     const app = initializeApp(firebaseConfig);
     const auth = getAuth(app);
-    const db = getFirestore(app);
     const provider = new GoogleAuthProvider();
+    const db = getFirestore(app);
 
-    /********************************************************************
-     * 2) 기본 설정값
-     ********************************************************************/
-    const INITIAL_CASH = 1000000;
-    const EARN_MIN = 10000;
-    const EARN_MAX = 50000;
-    const EARN_COOLDOWN_MS = 60 * 1000;
+    const screens = {
+      loading: document.getElementById("loadingScreen"),
+      login: document.getElementById("loginScreen"),
+      nickname: document.getElementById("nicknameScreen"),
+      game: document.getElementById("gameScreen"),
+      settings: document.getElementById("settingsScreen")
+    };
+
+    const bottomBar = document.getElementById("bottomBar");
+    const googleLoginBtn = document.getElementById("googleLoginBtn");
+    const loginStatus = document.getElementById("loginStatus");
+    const nicknameInput = document.getElementById("nicknameInput");
+    const startBtn = document.getElementById("startBtn");
+    const nicknameStatus = document.getElementById("nicknameStatus");
+    const barNickname = document.getElementById("barNickname");
+    const barCash = document.getElementById("barCash");
+    const earnBtn = document.getElementById("earnBtn");
+    const earnedToast = document.getElementById("earnedToast");
+    const menuBtn = document.getElementById("menuBtn");
+    const adminMenuPanel = document.getElementById("adminMenuPanel");
+    const openSettingsBtn = document.getElementById("openSettingsBtn");
+    const signupBonusInput = document.getElementById("signupBonusInput");
+    const earnMinInput = document.getElementById("earnMinInput");
+    const earnMaxInput = document.getElementById("earnMaxInput");
+    const saveSettingsBtn = document.getElementById("saveSettingsBtn");
+    const backToGameBtn = document.getElementById("backToGameBtn");
+    const settingsStatus = document.getElementById("settingsStatus");
 
     let currentUser = null;
     let currentUserData = null;
+    let currentSettings = { ...DEFAULT_SETTINGS };
+    let unsubscribeUser = null;
+    let unsubscribeSettings = null;
     let cooldownTimer = null;
 
-    /********************************************************************
-     * 3) DOM
-     ********************************************************************/
-    const loading = document.getElementById("loading");
-    const loginScreen = document.getElementById("loginScreen");
-    const nicknameScreen = document.getElementById("nicknameScreen");
-    const gameScreen = document.getElementById("gameScreen");
+    function isAdmin() {
+      return currentUser && currentUser.email === ADMIN_EMAIL;
+    }
 
-    const googleLoginBtn = document.getElementById("googleLoginBtn");
-    const loginError = document.getElementById("loginError");
-
-    const nicknameInput = document.getElementById("nicknameInput");
-    const startBtn = document.getElementById("startBtn");
-    const nicknameError = document.getElementById("nicknameError");
-
-    const nicknameLabel = document.getElementById("nicknameLabel");
-    const cashLabel = document.getElementById("cashLabel");
-    const earnBtn = document.getElementById("earnBtn");
-    const menuBtn = document.getElementById("menuBtn");
-    const toast = document.getElementById("toast");
-
-    /********************************************************************
-     * 4) 화면 전환
-     ********************************************************************/
     function showScreen(name) {
-      loading.classList.add("hidden");
-      loginScreen.classList.add("hidden");
-      nicknameScreen.classList.add("hidden");
-      gameScreen.style.display = "none";
-
-      if (name === "login") loginScreen.classList.remove("hidden");
-      if (name === "nickname") nicknameScreen.classList.remove("hidden");
-      if (name === "game") gameScreen.style.display = "block";
+      Object.values(screens).forEach(screen => screen.classList.remove("active"));
+      screens[name].classList.add("active");
+      bottomBar.classList.toggle("active", name === "game" || name === "settings");
+      closeAdminMenu();
     }
 
-    function showToast(message) {
-      toast.textContent = message;
-      toast.style.display = "block";
-      setTimeout(() => {
-        toast.style.display = "none";
-      }, 1800);
+    function formatWon(value) {
+      const safe = Number(value || 0);
+      return safe.toLocaleString("ko-KR") + "원";
     }
 
-    function formatMoney(value) {
-      return Number(value || 0).toLocaleString("ko-KR") + "원";
+    function setStatus(el, text, type = "") {
+      el.textContent = text || "";
+      el.className = "status" + (type ? " " + type : "");
     }
 
-    function getRandomEarnAmount() {
-      return Math.floor(Math.random() * (EARN_MAX - EARN_MIN + 1)) + EARN_MIN;
+    function settingsRef() {
+      return doc(db, "settings", "game");
     }
 
     function userRef(uid) {
       return doc(db, "users", uid);
     }
 
-    function timestampToMs(value) {
-      if (!value) return 0;
-      if (typeof value.toMillis === "function") return value.toMillis();
-      if (typeof value.seconds === "number") return value.seconds * 1000;
-      return 0;
+    async function ensureSettingsDocForAdmin() {
+      const ref = settingsRef();
+      const snap = await getDoc(ref);
+      if (!snap.exists() && isAdmin()) {
+        await setDoc(ref, {
+          ...DEFAULT_SETTINGS,
+          updatedAt: serverTimestamp(),
+          updatedBy: currentUser.uid
+        });
+      }
     }
 
-    /********************************************************************
-     * 5) 유저 데이터 렌더링
-     ********************************************************************/
-    function renderUser(data) {
-      currentUserData = data;
-      nicknameLabel.textContent = data.nickname || "닉네임 없음";
-      cashLabel.textContent = formatMoney(data.cash || 0);
-      updateEarnButton();
+    function listenSettings() {
+      if (unsubscribeSettings) unsubscribeSettings();
+      unsubscribeSettings = onSnapshot(settingsRef(), (snap) => {
+        if (snap.exists()) {
+          const data = snap.data();
+          currentSettings = {
+            signupBonus: Number(data.signupBonus ?? DEFAULT_SETTINGS.signupBonus),
+            earnMin: Number(data.earnMin ?? DEFAULT_SETTINGS.earnMin),
+            earnMax: Number(data.earnMax ?? DEFAULT_SETTINGS.earnMax)
+          };
+        } else {
+          currentSettings = { ...DEFAULT_SETTINGS };
+        }
+        fillSettingsInputs();
+      });
+    }
+
+    function fillSettingsInputs() {
+      signupBonusInput.value = currentSettings.signupBonus;
+      earnMinInput.value = currentSettings.earnMin;
+      earnMaxInput.value = currentSettings.earnMax;
+    }
+
+    function listenUser(uid) {
+      if (unsubscribeUser) unsubscribeUser();
+      unsubscribeUser = onSnapshot(userRef(uid), (snap) => {
+        if (!snap.exists()) {
+          currentUserData = null;
+          showScreen("nickname");
+          return;
+        }
+        currentUserData = snap.data();
+        renderUserBar();
+        showScreen("game");
+        updateEarnButton();
+      });
+    }
+
+    function renderUserBar() {
+      if (!currentUserData) return;
+      barNickname.textContent = currentUserData.nickname || "-";
+      barCash.textContent = formatWon(currentUserData.cash || 0);
+    }
+
+    function getLastEarnDate() {
+      const lastEarnAt = currentUserData?.lastEarnAt;
+      if (!lastEarnAt) return null;
+      if (lastEarnAt instanceof Timestamp) return lastEarnAt.toDate();
+      if (lastEarnAt.toDate) return lastEarnAt.toDate();
+      return null;
+    }
+
+    function getCooldownLeft() {
+      const lastDate = getLastEarnDate();
+      if (!lastDate) return 0;
+      const passed = Math.floor((Date.now() - lastDate.getTime()) / 1000);
+      return Math.max(0, EARN_COOLDOWN_SECONDS - passed);
     }
 
     function updateEarnButton() {
-      if (!currentUserData) return;
       if (cooldownTimer) clearInterval(cooldownTimer);
 
       const tick = () => {
-        const lastEarnMs = timestampToMs(currentUserData.lastEarnAt);
-        const now = Date.now();
-        const remainMs = Math.max(0, EARN_COOLDOWN_MS - (now - lastEarnMs));
-        const remainSec = Math.ceil(remainMs / 1000);
-
-        if (!lastEarnMs || remainMs <= 0) {
+        const left = getCooldownLeft();
+        if (left > 0) {
+          earnBtn.disabled = true;
+          earnBtn.textContent = `${left}초`;
+        } else {
           earnBtn.disabled = false;
           earnBtn.textContent = "돈벌기";
-          if (cooldownTimer) clearInterval(cooldownTimer);
-          cooldownTimer = null;
-        } else {
-          earnBtn.disabled = true;
-          earnBtn.textContent = `${remainSec}초`;
+          if (cooldownTimer) {
+            clearInterval(cooldownTimer);
+            cooldownTimer = null;
+          }
         }
       };
 
       tick();
-      cooldownTimer = setInterval(tick, 250);
+      cooldownTimer = setInterval(tick, 1000);
     }
 
-    /********************************************************************
-     * 6) 로그인 상태 확인
-     * 모바일 브라우저 안정성을 위해 redirect 로그인 결과도 먼저 확인합니다.
-     ********************************************************************/
-    getRedirectResult(auth).catch((error) => {
-      console.error(error);
-      loginError.textContent = "구글 로그인 결과를 확인하지 못했습니다. Firebase Auth 설정을 확인해주세요.";
-    });
+    function randomEarnAmount(min, max) {
+      const safeMin = Math.max(1, Number(min || DEFAULT_SETTINGS.earnMin));
+      const safeMax = Math.max(safeMin, Number(max || DEFAULT_SETTINGS.earnMax));
+      const step = 1000;
+      const minStep = Math.ceil(safeMin / step);
+      const maxStep = Math.floor(safeMax / step);
+      if (maxStep < minStep) return safeMin;
+      return (Math.floor(Math.random() * (maxStep - minStep + 1)) + minStep) * step;
+    }
 
-    onAuthStateChanged(auth, async (user) => {
-      currentUser = user;
-      loginError.textContent = "";
-      nicknameError.textContent = "";
-
-      if (!user) {
-        currentUserData = null;
-        showScreen("login");
+    async function handleEarn() {
+      if (!currentUser || !currentUserData) return;
+      const left = getCooldownLeft();
+      if (left > 0) {
+        updateEarnButton();
         return;
       }
 
-      try {
-        const ref = userRef(user.uid);
-        const snap = await getDoc(ref);
-
-        if (!snap.exists()) {
-          showScreen("nickname");
-          return;
-        }
-
-        const data = snap.data();
-        if (!data.nickname) {
-          showScreen("nickname");
-          return;
-        }
-
-        await updateDoc(ref, { lastLoginAt: serverTimestamp() });
-        renderUser(data);
-        showScreen("game");
-      } catch (error) {
-        console.error(error);
-        loginError.textContent = "유저 정보를 불러오지 못했습니다. Firebase 설정과 규칙을 확인해주세요.";
-        showScreen("login");
-      }
-    });
-
-    /********************************************************************
-     * 7) 구글 로그인
-     ********************************************************************/
-    googleLoginBtn.addEventListener("click", async () => {
-      loginError.textContent = "";
-      try {
-        await signInWithRedirect(auth, provider);
-      } catch (error) {
-        console.error(error);
-        loginError.textContent = "구글 로그인에 실패했습니다. Firebase Auth 설정과 승인 도메인을 확인해주세요.";
-      }
-    });
-
-    /********************************************************************
-     * 8) 닉네임 입력 + 시작하기
-     ********************************************************************/
-    nicknameInput.addEventListener("input", () => {
-      const nickname = nicknameInput.value.trim();
-      startBtn.disabled = nickname.length < 1;
-    });
-
-    startBtn.addEventListener("click", async () => {
-      if (!currentUser) return;
-
-      const nickname = nicknameInput.value.trim();
-      if (!nickname) return;
-
-      nicknameError.textContent = "";
-      startBtn.disabled = true;
-      startBtn.textContent = "저장 중...";
-
-      try {
-        const data = {
-          nickname,
-          cash: INITIAL_CASH,
-          lastEarnAt: null,
-          createdAt: serverTimestamp(),
-          lastLoginAt: serverTimestamp()
-        };
-
-        await setDoc(userRef(currentUser.uid), data);
-
-        currentUserData = {
-          nickname,
-          cash: INITIAL_CASH,
-          lastEarnAt: null
-        };
-
-        renderUser(currentUserData);
-        showScreen("game");
-        showToast("가입 보상 1,000,000원 지급!");
-      } catch (error) {
-        console.error(error);
-        nicknameError.textContent = "닉네임 저장에 실패했습니다. Firestore 규칙을 확인해주세요.";
-      } finally {
-        startBtn.textContent = "시작하기";
-        startBtn.disabled = nicknameInput.value.trim().length < 1;
-      }
-    });
-
-    /********************************************************************
-     * 9) 돈벌기
-     ********************************************************************/
-    earnBtn.addEventListener("click", async () => {
-      if (!currentUser || !currentUserData || earnBtn.disabled) return;
-
+      const amount = randomEarnAmount(currentSettings.earnMin, currentSettings.earnMax);
       earnBtn.disabled = true;
       earnBtn.textContent = "처리중";
 
       try {
-        const amount = getRandomEarnAmount();
-        const ref = userRef(currentUser.uid);
-
         await runTransaction(db, async (transaction) => {
+          const ref = userRef(currentUser.uid);
           const snap = await transaction.get(ref);
-          if (!snap.exists()) throw new Error("유저 데이터 없음");
+          if (!snap.exists()) throw new Error("유저 데이터가 없습니다.");
 
           const data = snap.data();
-          const lastEarnMs = timestampToMs(data.lastEarnAt);
-          const now = Date.now();
-
-          if (lastEarnMs && now - lastEarnMs < EARN_COOLDOWN_MS) {
-            throw new Error("아직 돈벌기 쿨타임입니다.");
+          const lastEarnAt = data.lastEarnAt?.toDate ? data.lastEarnAt.toDate() : null;
+          if (lastEarnAt) {
+            const passed = Math.floor((Date.now() - lastEarnAt.getTime()) / 1000);
+            if (passed < EARN_COOLDOWN_SECONDS) throw new Error("아직 돈벌기 시간이 남았습니다.");
           }
 
           transaction.update(ref, {
             cash: Number(data.cash || 0) + amount,
             lastEarnAt: serverTimestamp()
           });
-
-          currentUserData = {
-            ...data,
-            cash: Number(data.cash || 0) + amount,
-            lastEarnAt: { seconds: Math.floor(Date.now() / 1000) }
-          };
         });
 
-        renderUser(currentUserData);
-        showToast(`+${formatMoney(amount)} 획득!`);
+        earnedToast.textContent = `+${formatWon(amount)} 획득!`;
+        setTimeout(() => { earnedToast.textContent = ""; }, 2500);
       } catch (error) {
-        console.error(error);
-        showToast(error.message || "돈벌기 처리에 실패했습니다.");
+        earnedToast.textContent = error.message || "돈벌기에 실패했습니다.";
+        setTimeout(() => { earnedToast.textContent = ""; }, 2500);
+      } finally {
         updateEarnButton();
+      }
+    }
+
+    function toggleAdminMenu(event) {
+      event.stopPropagation();
+      if (!isAdmin()) {
+        closeAdminMenu();
+        return;
+      }
+      adminMenuPanel.classList.toggle("active");
+    }
+
+    function closeAdminMenu() {
+      adminMenuPanel.classList.remove("active");
+    }
+
+    async function createNewUser() {
+      const nickname = nicknameInput.value.trim();
+      if (!nickname) return;
+      startBtn.disabled = true;
+      setStatus(nicknameStatus, "저장 중...");
+
+      try {
+        await setDoc(userRef(currentUser.uid), {
+          nickname,
+          cash: Number(currentSettings.signupBonus || DEFAULT_SETTINGS.signupBonus),
+          lastEarnAt: null,
+          createdAt: serverTimestamp(),
+          lastLoginAt: serverTimestamp()
+        });
+        setStatus(nicknameStatus, "시작합니다!", "success");
+      } catch (error) {
+        setStatus(nicknameStatus, "닉네임 저장에 실패했습니다. Firestore 규칙과 설정값을 확인해주세요.", "error");
+        startBtn.disabled = false;
+      }
+    }
+
+    async function saveSettings() {
+      if (!isAdmin()) return;
+      const signupBonus = Number(signupBonusInput.value);
+      const earnMin = Number(earnMinInput.value);
+      const earnMax = Number(earnMaxInput.value);
+
+      if (!Number.isFinite(signupBonus) || signupBonus <= 0) {
+        setStatus(settingsStatus, "신규 가입 지급 금액은 0보다 커야 합니다.", "error");
+        return;
+      }
+      if (!Number.isFinite(earnMin) || earnMin <= 0) {
+        setStatus(settingsStatus, "돈벌기 최소 지급 금액은 0보다 커야 합니다.", "error");
+        return;
+      }
+      if (!Number.isFinite(earnMax) || earnMax < earnMin) {
+        setStatus(settingsStatus, "돈벌기 최대 지급 금액은 최소 지급 금액보다 크거나 같아야 합니다.", "error");
+        return;
+      }
+
+      saveSettingsBtn.disabled = true;
+      setStatus(settingsStatus, "저장 중...");
+      try {
+        await setDoc(settingsRef(), {
+          signupBonus,
+          earnMin,
+          earnMax,
+          updatedAt: serverTimestamp(),
+          updatedBy: currentUser.uid
+        }, { merge: true });
+        setStatus(settingsStatus, "설정이 저장되었습니다.", "success");
+      } catch (error) {
+        setStatus(settingsStatus, "설정 저장에 실패했습니다. 관리자 권한을 확인해주세요.", "error");
+      } finally {
+        saveSettingsBtn.disabled = false;
+      }
+    }
+
+    googleLoginBtn.addEventListener("click", async () => {
+      setStatus(loginStatus, "구글 로그인으로 이동합니다...");
+      try {
+        await signInWithRedirect(auth, provider);
+      } catch (error) {
+        setStatus(loginStatus, "로그인에 실패했습니다.", "error");
       }
     });
 
-    /********************************************************************
-     * 10) 메뉴 버튼 임시 기능
-     ********************************************************************/
-    menuBtn.addEventListener("click", () => {
-      showToast("메뉴는 다음 단계에서 연결할 예정입니다.");
+    nicknameInput.addEventListener("input", () => {
+      startBtn.disabled = nicknameInput.value.trim().length === 0;
+    });
+    startBtn.addEventListener("click", createNewUser);
+    earnBtn.addEventListener("click", handleEarn);
+    menuBtn.addEventListener("click", toggleAdminMenu);
+    adminMenuPanel.addEventListener("click", (event) => event.stopPropagation());
+    document.addEventListener("click", () => closeAdminMenu());
+    openSettingsBtn.addEventListener("click", () => {
+      closeAdminMenu();
+      fillSettingsInputs();
+      setStatus(settingsStatus, "");
+      showScreen("settings");
+    });
+    saveSettingsBtn.addEventListener("click", saveSettings);
+    backToGameBtn.addEventListener("click", () => showScreen("game"));
+
+    getRedirectResult(auth).catch(() => {});
+
+    onAuthStateChanged(auth, async (user) => {
+      currentUser = user;
+      if (!user) {
+        currentUserData = null;
+        if (unsubscribeUser) unsubscribeUser();
+        if (unsubscribeSettings) unsubscribeSettings();
+        showScreen("login");
+        return;
+      }
+
+      try {
+        await ensureSettingsDocForAdmin();
+        listenSettings();
+        await updateDoc(userRef(user.uid), { lastLoginAt: serverTimestamp() }).catch(() => {});
+        const snap = await getDoc(userRef(user.uid));
+        if (snap.exists()) {
+          listenUser(user.uid);
+        } else {
+          currentUserData = null;
+          showScreen("nickname");
+        }
+      } catch (error) {
+        setStatus(loginStatus, "데이터를 불러오지 못했습니다. Firebase 규칙을 확인해주세요.", "error");
+        showScreen("login");
+      }
     });
   </script>
 </body>
