@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
-  <title>주식 게임 v11</title>
+  <title>주식 게임 v12</title>
   <style>
     * { box-sizing: border-box; }
     html, body { margin: 0; padding: 0; height: 100%; font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; background: #1f2937; color: #fff; }
@@ -91,16 +91,16 @@
     .market-head { display: flex; justify-content: space-between; align-items: flex-end; gap: 10px; margin-bottom: 12px; }
     .market-note { font-size: 12px; color: var(--muted); line-height: 1.45; margin-bottom: 10px; }
     .stock-list { border-top: 1px solid var(--line-strong); }
-    .stock-list-head { display: grid; grid-template-columns: minmax(76px, 0.8fr) minmax(94px, 1fr) minmax(104px, 0.95fr); gap: 10px; align-items: center; padding: 10px 0; border-bottom: 1px solid var(--line); color: var(--muted); font-size: 11px; font-weight: 950; letter-spacing: -0.2px; }
-    .stock-list-head .head-quote { text-align: right; }
+    .stock-list-head { display: grid; grid-template-columns: minmax(72px, 0.82fr) minmax(84px, 1.05fr) minmax(74px, 0.78fr) minmax(66px, 0.72fr); gap: 8px; align-items: center; padding: 10px 0; border-bottom: 1px solid var(--line); color: var(--muted); font-size: 11px; font-weight: 950; letter-spacing: -0.2px; }
+    .stock-list-head .head-price, .stock-list-head .head-change { text-align: right; }
     .stock-row { border-bottom: 1px solid var(--line-strong); padding: 0; cursor: pointer; user-select: none; }
-    .stock-summary { display: grid; grid-template-columns: minmax(76px, 0.8fr) minmax(94px, 1fr) minmax(104px, 0.95fr); gap: 10px; align-items: center; min-height: 78px; padding: 12px 0; }
+    .stock-summary { display: grid; grid-template-columns: minmax(72px, 0.82fr) minmax(84px, 1.05fr) minmax(74px, 0.78fr) minmax(66px, 0.72fr); gap: 8px; align-items: center; min-height: 78px; padding: 12px 0; }
     .stock-left { min-width: 0; }
     .stock-name { font-size: 16px; font-weight: 950; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; letter-spacing: -0.4px; }
     .mini-wrap { height: 34px; width: 100%; display: flex; align-items: center; }
     .mini-chart { width: 100%; height: 34px; display: block; }
-    .stock-right { text-align: right; min-width: 0; }
-    .price { font-size: 18px; font-weight: 950; margin-bottom: 5px; white-space: nowrap; letter-spacing: -0.5px; }
+    .stock-price-col, .stock-change-col { text-align: right; min-width: 0; }
+    .price { font-size: 17px; font-weight: 950; white-space: nowrap; letter-spacing: -0.6px; }
     .change-money { font-size: 13px; font-weight: 950; line-height: 1.2; white-space: nowrap; }
     .change-rate { font-size: 12px; font-weight: 900; margin-top: 2px; line-height: 1.2; white-space: nowrap; }
     .up { color: var(--green); }
@@ -115,8 +115,10 @@
     .buy-btn { background: var(--green); }
     .sell-btn { background: var(--red); }
     @media (max-width: 360px) {
-      .stock-list-head, .stock-summary { grid-template-columns: minmax(70px, 0.75fr) minmax(78px, 0.9fr) minmax(94px, 0.95fr); gap: 8px; }
-      .price { font-size: 16px; }
+      .stock-list-head, .stock-summary { grid-template-columns: minmax(66px, 0.75fr) minmax(70px, 0.85fr) minmax(70px, 0.78fr) minmax(60px, 0.68fr); gap: 6px; }
+      .price { font-size: 15px; }
+      .change-money { font-size: 12px; }
+      .change-rate { font-size: 11px; }
       .stock-name { font-size: 15px; }
       .mini-wrap, .mini-chart { height: 30px; }
     }
@@ -622,7 +624,8 @@
         <div class="stock-list-head">
           <div>종목명</div>
           <div>그래프</div>
-          <div class="head-quote">현재가 / 등락</div>
+          <div class="head-price">현재가</div>
+          <div class="head-change">등락</div>
         </div>
       `;
       for (const stock of stocks) {
@@ -641,8 +644,10 @@
               <div class="stock-name">${escapeHtml(stock.name || "이름 없음")}</div>
             </div>
             <div class="mini-wrap"><canvas class="mini-chart" width="180" height="46"></canvas></div>
-            <div class="stock-right">
+            <div class="stock-price-col">
               <div class="price ${directionClass}">${formatWon(current)}</div>
+            </div>
+            <div class="stock-change-col">
               <div class="change-money ${directionClass}">${change > 0 ? "▲" : change < 0 ? "▼" : "-"} ${formatWon(Math.abs(change))}</div>
               <div class="change-rate ${directionClass}">${change > 0 ? "+" : change < 0 ? "-" : ""}${Math.abs(rate).toFixed(2)}%</div>
             </div>
