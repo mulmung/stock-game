@@ -595,9 +595,7 @@
     import {
       getAuth,
       GoogleAuthProvider,
-      signInWithRedirect,
       signInWithPopup,
-      getRedirectResult,
       setPersistence,
       browserLocalPersistence,
       onAuthStateChanged
@@ -2414,36 +2412,29 @@
 
     googleLoginBtn.addEventListener("click", async () => {
       redirectLoginErrorMessage = "";
-      setStatus(loginStatus, isMobileDevice() ? "구글 로그인으로 이동합니다..." : "구글 로그인 팝업을 엽니다...");
-      setLoginButtonLoading(isMobileDevice() ? "이동 중..." : "로그인 중...");
+      setStatus(loginStatus, "구글 로그인 팝업을 엽니다...");
+      setLoginButtonLoading("로그인 중...");
       try {
         await authPersistenceReady;
-        if (isMobileDevice()) {
-          await signInWithRedirect(auth, provider);
-        } else {
-          await signInWithPopup(auth, provider);
-        }
+        await signInWithPopup(auth, provider);
       } catch (error) {
-        const fallbackCodes = [
+        console.error("Popup login failed", error);
+        const popupBlockedCodes = [
           "auth/popup-blocked",
           "auth/popup-closed-by-user",
           "auth/cancelled-popup-request",
           "auth/operation-not-supported-in-this-environment"
         ];
-        if (!isMobileDevice() && fallbackCodes.includes(error.code)) {
-          setStatus(loginStatus, "팝업 로그인이 막혀서 이동 방식으로 다시 시도합니다...");
-          try {
-            await signInWithRedirect(auth, provider);
-          } catch (redirectError) {
-            console.error("Redirect login failed", redirectError);
-            setStatus(loginStatus, "로그인에 실패했습니다. 다시 시도해주세요.", "error");
-            resetLoginButton();
-          }
+        if (popupBlockedCodes.includes(error.code)) {
+          setStatus(
+            loginStatus,
+            "현재 브라우저에서 팝업 로그인이 차단됐습니다. 주소를 복사해 Chrome 또는 삼성 인터넷에서 다시 열어주세요.",
+            "error"
+          );
         } else {
-          console.error("Login failed", error);
-          setStatus(loginStatus, "로그인에 실패했습니다. 다시 시도해주세요.", "error");
-          resetLoginButton();
+          setStatus(loginStatus, "로그인에 실패했습니다. Chrome 또는 삼성 인터넷에서 다시 시도해주세요.", "error");
         }
+        resetLoginButton();
       }
     });
     nicknameInput.addEventListener("input", () => { startBtn.disabled = nicknameInput.value.trim().length === 0; });
@@ -2570,16 +2561,6 @@
         await authPersistenceReady;
       } catch (error) {
         console.warn("Auth persistence was not ready", error);
-      }
-
-      try {
-        const redirectResult = await getRedirectResult(auth);
-        if (redirectResult && redirectResult.user) {
-          setLoadingStatus("구글 로그인 결과를 확인했습니다. 게임 데이터를 불러오는 중...");
-        }
-      } catch (error) {
-        console.error("Redirect result check failed", error);
-        redirectLoginErrorMessage = "구글 로그인 결과를 확인하지 못했습니다. 다시 시도해주세요.";
       }
 
       onAuthStateChanged(auth, async (user) => {
