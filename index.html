@@ -181,6 +181,9 @@
     .bank-balance-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
     .bank-balance-label { color: var(--muted); font-size: 13px; font-weight: 950; }
     .bank-balance-value { font-size: 22px; font-weight: 950; letter-spacing: -0.8px; text-align: right; white-space: nowrap; }
+    .bank-interest-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-top: 14px; padding-top: 12px; border-top: 1px solid var(--line); }
+    .bank-interest-label { color: var(--muted); font-size: 12px; font-weight: 950; }
+    .bank-interest-value { font-size: 18px; font-weight: 950; color: var(--blue); letter-spacing: -0.4px; text-align: right; font-variant-numeric: tabular-nums; }
     .bank-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin: 14px 0 0; }
     .deposit-btn, .withdraw-btn { height: 44px; color: #fff; font-weight: 950; border-radius: 0; }
     .deposit-btn { background: var(--green); }
@@ -300,6 +303,10 @@
             <div class="bank-balance-row">
               <div class="bank-balance-label">잔액</div>
               <div id="bankBalanceValue" class="bank-balance-value">0원</div>
+            </div>
+            <div class="bank-interest-row">
+              <div class="bank-interest-label">다음 이자까지</div>
+              <div id="bankInterestCountdown" class="bank-interest-value">00:00</div>
             </div>
             <div class="bank-actions">
               <button id="openDepositBtn" class="deposit-btn" type="button">입금</button>
@@ -543,7 +550,8 @@
     const CANDLE_COUNT = 15;
     const PRICE_MOVE_RATE = 0.02;
     const TRADE_HISTORY_LIMIT = 20;
-    const BANK_LOG_LIMIT = 30;
+    const BANK_LOG_LIMIT = 10;
+    const BANK_INTEREST_INTERVAL_MS = 10 * 60 * 1000;
 
     const app = initializeApp(firebaseConfig);
     const auth = getAuth(app);
@@ -610,6 +618,7 @@
     const bankInfoPanel = document.getElementById("bankInfoPanel");
     const bankOwnerName = document.getElementById("bankOwnerName");
     const bankBalanceValue = document.getElementById("bankBalanceValue");
+    const bankInterestCountdown = document.getElementById("bankInterestCountdown");
     const bankTotalDepositsValue = document.getElementById("bankTotalDepositsValue");
     const openDepositBtn = document.getElementById("openDepositBtn");
     const openWithdrawBtn = document.getElementById("openWithdrawBtn");
@@ -661,6 +670,7 @@
     let infoTab = "stock";
     let bankModalState = null;
     let bankInterestTimer = null;
+    let bankInterestProcessing = false;
     let tradeModalState = null;
     let marketUpdating = false;
 
@@ -951,7 +961,7 @@
           nickname,
           cash: Number(currentSettings.signupBonus || DEFAULT_SETTINGS.signupBonus),
           bankBalance: 0,
-          lastBankInterestKey: null,
+          nextBankInterestAt: null,
           lastEarnAt: null,
           createdAt: serverTimestamp(),
           lastLoginAt: serverTimestamp()
@@ -1193,6 +1203,37 @@
       return `${y}.${m}.${d}<br />${h}:${min}`;
     }
 
+    function getNextBankInterestDate(data = currentUserData) {
+      const value = data?.nextBankInterestAt;
+      if (!value) return null;
+      if (value instanceof Timestamp) return value.toDate();
+      if (value?.toDate) return value.toDate();
+      if (value instanceof Date) return value;
+      return null;
+    }
+
+    function formatCountdown(ms) {
+      const safe = Math.max(0, Math.ceil(ms / 1000));
+      const minutes = Math.floor(safe / 60);
+      const seconds = safe % 60;
+      return `${String(minutes).padStart(2, "0")}:${String(seconds).padStart(2, "0")}`;
+    }
+
+    function updateBankInterestCountdown() {
+      if (!bankInterestCountdown) return;
+      const bankBalance = Number(currentUserData?.bankBalance || 0);
+      const nextDate = getNextBankInterestDate();
+      if (!currentUser || bankBalance <= 0 || !nextDate) {
+        bankInterestCountdown.textContent = "00:00";
+        return;
+      }
+      bankInterestCountdown.textContent = formatCountdown(nextDate.getTime() - Date.now());
+    }
+
+    function nextBankInterestTimestampFromNow() {
+      return Timestamp.fromMillis(Date.now() + BANK_INTEREST_INTERVAL_MS);
+    }
+
     function renderGlobalBank() {
       if (!bankTotalDepositsValue) return;
       const total = Number(bankGlobalData?.totalDeposits || 0);
@@ -1201,6 +1242,7 @@
 
     function renderBank() {
       if (!bankOwnerName || !bankBalanceValue || !bankLogList) return;
+      updateBankInterestCountdown();
       const nickname = currentUserData?.nickname || "-";
       const balance = Number(currentUserData?.bankBalance || 0);
       bankOwnerName.textContent = `${nickname} 님`;
@@ -1298,18 +1340,26 @@
           const cash = Number(data.cash || 0);
           const bankBalance = Number(data.bankBalance || 0);
           const totalDeposits = Number(bankSnap.exists() ? (bankSnap.data().totalDeposits || 0) : 0);
+          const existingNext = getNextBankInterestDate(data);
+
           if (isDeposit) {
             if (cash < amount) throw new Error("보유현금이 부족합니다.");
             const nextBank = bankBalance + amount;
             const nextTotalDeposits = totalDeposits + amount;
-            transaction.update(uRef, { cash: cash - amount, bankBalance: nextBank, lastBankAt: serverTimestamp() });
+            const userUpdate = { cash: cash - amount, bankBalance: nextBank, lastBankAt: serverTimestamp() };
+            if (bankBalance <= 0 && nextBank > 0) userUpdate.nextBankInterestAt = nextBankInterestTimestampFromNow();
+            else if (nextBank > 0 && !existingNext) userUpdate.nextBankInterestAt = nextBankInterestTimestampFromNow();
+            transaction.update(uRef, userUpdate);
             transaction.set(bRef, { totalDeposits: nextTotalDeposits, updatedAt: serverTimestamp() }, { merge: true });
             transaction.set(logRef, { type: "deposit", label: "입금", amount, balanceAfter: nextBank, createdAt: serverTimestamp() });
           } else {
             if (bankBalance < amount) throw new Error("통장 잔액이 부족합니다.");
             const nextBank = bankBalance - amount;
             const nextTotalDeposits = Math.max(0, totalDeposits - amount);
-            transaction.update(uRef, { cash: cash + amount, bankBalance: nextBank, lastBankAt: serverTimestamp() });
+            const userUpdate = { cash: cash + amount, bankBalance: nextBank, lastBankAt: serverTimestamp() };
+            if (nextBank <= 0) userUpdate.nextBankInterestAt = null;
+            else if (!existingNext) userUpdate.nextBankInterestAt = nextBankInterestTimestampFromNow();
+            transaction.update(uRef, userUpdate);
             transaction.set(bRef, { totalDeposits: nextTotalDeposits, updatedAt: serverTimestamp() }, { merge: true });
             transaction.set(logRef, { type: "withdraw", label: "출금", amount: -amount, balanceAfter: nextBank, createdAt: serverTimestamp() });
           }
@@ -1327,15 +1377,34 @@
     }
 
     async function payBankInterestIfNeeded() {
-      if (!currentUser || !currentUserData) return;
-      const key = tenMinuteKey();
-      if (currentUserData.lastBankInterestKey === key) return;
+      if (!currentUser || !currentUserData || bankInterestProcessing) return;
       const hourlyRate = Number(currentSettings.bankHourlyInterestRate ?? DEFAULT_SETTINGS.bankHourlyInterestRate);
       const bankBalance = Number(currentUserData.bankBalance || 0);
       if (bankBalance <= 0 || hourlyRate <= 0) return;
+
+      const nextDate = getNextBankInterestDate();
+      if (!nextDate) {
+        bankInterestProcessing = true;
+        try {
+          await updateDoc(userRef(currentUser.uid), {
+            nextBankInterestAt: nextBankInterestTimestampFromNow(),
+            lastBankAt: serverTimestamp()
+          });
+        } catch (error) {
+          console.warn("이자 타이머 시작에 실패했습니다.", error);
+        } finally {
+          bankInterestProcessing = false;
+        }
+        return;
+      }
+
+      if (Date.now() < nextDate.getTime()) return;
       const interest = Math.floor(bankBalance * (hourlyRate / 100) / 6);
       if (interest <= 0) return;
+
+      bankInterestProcessing = true;
       try {
+        let paidInterest = 0;
         await runTransaction(db, async (transaction) => {
           const uRef = userRef(currentUser.uid);
           const bRef = bankGlobalRef();
@@ -1344,41 +1413,63 @@
           const bankSnap = await transaction.get(bRef);
           if (!snap.exists()) return;
           const data = snap.data();
-          if (data.lastBankInterestKey === key) return;
           const currentBank = Number(data.bankBalance || 0);
+          if (currentBank <= 0) {
+            transaction.update(uRef, { nextBankInterestAt: null, lastBankAt: serverTimestamp() });
+            return;
+          }
+          const liveNextDate = getNextBankInterestDate(data);
+          if (!liveNextDate) {
+            transaction.update(uRef, { nextBankInterestAt: nextBankInterestTimestampFromNow(), lastBankAt: serverTimestamp() });
+            return;
+          }
+          if (Date.now() < liveNextDate.getTime()) return;
+
           const liveInterest = Math.floor(currentBank * (hourlyRate / 100) / 6);
-          if (currentBank <= 0 || liveInterest <= 0) return;
+          if (liveInterest <= 0) return;
           const nextBank = currentBank + liveInterest;
           const totalDeposits = Number(bankSnap.exists() ? (bankSnap.data().totalDeposits || 0) : 0);
           const nextTotalDeposits = totalDeposits + liveInterest;
-          transaction.update(uRef, { bankBalance: nextBank, lastBankInterestKey: key, lastBankAt: serverTimestamp() });
+          paidInterest = liveInterest;
+          transaction.update(uRef, {
+            bankBalance: nextBank,
+            nextBankInterestAt: nextBankInterestTimestampFromNow(),
+            lastBankAt: serverTimestamp()
+          });
           transaction.set(bRef, { totalDeposits: nextTotalDeposits, updatedAt: serverTimestamp() }, { merge: true });
           transaction.set(logRef, { type: "interest", label: "이자", amount: liveInterest, balanceAfter: nextBank, createdAt: serverTimestamp() });
         });
-        await pruneOldBankLogs(currentUser.uid);
-        await listenBankLogs(currentUser.uid).catch(() => {});
-        await listenBankGlobal().catch(() => {});
-        showEarnPopup(`이자 +${formatWon(interest)}`);
+        if (paidInterest > 0) {
+          await pruneOldBankLogs(currentUser.uid);
+          await listenBankLogs(currentUser.uid).catch(() => {});
+          await listenBankGlobal().catch(() => {});
+          showEarnPopup(`이자 +${formatWon(paidInterest)}`);
+        }
       } catch (error) {
         console.warn("이자 지급에 실패했습니다.", error);
+      } finally {
+        bankInterestProcessing = false;
       }
     }
 
     function startBankInterestTimer() {
-      if (bankInterestTimer) clearTimeout(bankInterestTimer);
+      if (bankInterestTimer) clearInterval(bankInterestTimer);
       if (!currentUser) return;
       const run = async () => {
+        updateBankInterestCountdown();
         await payBankInterestIfNeeded();
-        bankInterestTimer = setTimeout(run, msUntilNextTenMinute());
       };
-      bankInterestTimer = setTimeout(run, msUntilNextTenMinute());
+      run();
+      bankInterestTimer = setInterval(run, 1000);
     }
 
     function stopBankInterestTimer() {
       if (bankInterestTimer) {
-        clearTimeout(bankInterestTimer);
+        clearInterval(bankInterestTimer);
         bankInterestTimer = null;
       }
+      bankInterestProcessing = false;
+      updateBankInterestCountdown();
     }
 
     function renderPortfolio() {
