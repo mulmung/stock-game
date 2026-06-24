@@ -1092,6 +1092,22 @@
       bankInterestRateInput.value = currentSettings.bankHourlyInterestRate;
     }
 
+    async function ensureUserUpgradeSchema(uid, data) {
+      const updates = {};
+      const hasMoneyEarnLevel = Object.prototype.hasOwnProperty.call(data || {}, "moneyEarnLevel");
+      const level = Number(data?.moneyEarnLevel);
+
+      // 기존 가입자는 v36 이전에 moneyEarnLevel 필드가 없을 수 있습니다.
+      // 앱 접속 시 1회만 Lv.1 필드를 자동으로 추가해서 업그레이드 저장 오류를 방지합니다.
+      if (!hasMoneyEarnLevel || !Number.isFinite(level) || level < 1) {
+        updates.moneyEarnLevel = 1;
+      }
+
+      if (Object.keys(updates).length > 0) {
+        await updateDoc(userRef(uid), updates);
+      }
+    }
+
     function listenUser(uid) {
       if (unsubscribeUser) unsubscribeUser();
       unsubscribeUser = onSnapshot(userRef(uid), (snap) => {
@@ -2685,6 +2701,7 @@
         await listenStocks();
         const snap = await getDoc(userRef(user.uid));
         if (snap.exists()) {
+          await ensureUserUpgradeSchema(user.uid, snap.data());
           await listenHoldings(user.uid);
           startMarketTimer();
           await updateDoc(userRef(user.uid), { lastLoginAt: serverTimestamp() }).catch(() => {});
