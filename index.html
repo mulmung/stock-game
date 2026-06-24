@@ -3,28 +3,37 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
-  <title>주식 게임 v6</title>
+  <title>주식 게임 v7</title>
   <style>
     * { box-sizing: border-box; }
-    html, body { margin: 0; padding: 0; height: 100%; font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; background: #0f172a; color: #fff; }
+    html, body { margin: 0; padding: 0; height: 100%; font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; background: #1f2937; color: #fff; }
+    :root {
+      --app-bg: #1f2937;
+      --panel-bg: #1f2937;
+      --bottom-bg: #111827;
+      --input-bg: #111827;
+      --line: rgba(255,255,255,0.14);
+      --blue: #2563eb;
+      --blue-dark: #1d4ed8;
+    }
     body { overflow: hidden; }
     button, input { font: inherit; }
     button { border: 0; cursor: pointer; }
     button:disabled { opacity: 0.45; cursor: not-allowed; }
 
-    .app { min-height: 100dvh; display: flex; flex-direction: column; background: radial-gradient(circle at top, #1e3a8a 0%, #0f172a 48%, #020617 100%); }
+    .app { min-height: 100dvh; display: flex; flex-direction: column; background: var(--app-bg); }
     .screen { flex: 1; display: none; padding: 24px; align-items: center; justify-content: center; padding-bottom: 96px; }
     .screen.active { display: flex; }
-    .card { width: min(420px, 100%); background: rgba(15, 23, 42, 0.92); border: 1px solid rgba(255,255,255,0.12); padding: 24px; box-shadow: 0 18px 50px rgba(0,0,0,0.35); }
+    .card { width: min(420px, 100%); background: var(--panel-bg); border: 1px solid var(--line); padding: 24px; box-shadow: 0 18px 50px rgba(0,0,0,0.28); }
     .title { font-size: 26px; font-weight: 900; text-align: center; margin: 0 0 8px; }
     .subtitle { margin: 0 0 22px; color: #cbd5e1; text-align: center; line-height: 1.5; font-size: 14px; }
     .field { display: flex; flex-direction: column; gap: 8px; margin-bottom: 16px; }
     .field label { color: #cbd5e1; font-size: 13px; font-weight: 800; }
-    input { width: 100%; height: 48px; border: 1px solid rgba(255,255,255,0.18); background: rgba(2,6,23,0.75); color: #fff; padding: 0 14px; outline: none; border-radius: 0; }
+    input { width: 100%; height: 48px; border: 1px solid var(--line); background: var(--input-bg); color: #fff; padding: 0 14px; outline: none; border-radius: 0; }
     input:focus { border-color: #60a5fa; }
-    .primary-btn { width: 100%; height: 48px; background: #2563eb; color: #fff; font-weight: 900; border-radius: 0; }
+    .primary-btn { width: 100%; height: 48px; background: var(--blue); color: #fff; font-weight: 900; border-radius: 0; }
     .primary-btn:active { transform: translateY(1px); }
-    .ghost-btn { width: 100%; height: 46px; background: rgba(255,255,255,0.08); color: #fff; border: 1px solid rgba(255,255,255,0.14); font-weight: 800; border-radius: 0; margin-top: 10px; }
+    .ghost-btn { width: 100%; height: 46px; background: var(--panel-bg); color: #fff; border: 1px solid var(--line); font-weight: 800; border-radius: 0; margin-top: 10px; }
     .status { min-height: 22px; color: #93c5fd; font-size: 13px; margin-top: 12px; text-align: center; line-height: 1.5; }
     .error { color: #fca5a5; }
     .success { color: #86efac; }
@@ -35,17 +44,17 @@
     .main-box p { margin: 0; color: #cbd5e1; line-height: 1.6; }
     .earned-toast { margin-top: 18px; min-height: 28px; color: #86efac; font-weight: 900; }
 
-    .bottom-bar { position: fixed; left: 0; right: 0; bottom: 0; height: 72px; padding-bottom: env(safe-area-inset-bottom); background: rgba(2, 6, 23, 0.94); border-top: 1px solid rgba(255,255,255,0.16); display: none; grid-template-columns: 58px 1fr 72px; z-index: 50; }
+    .bottom-bar { position: fixed; left: 0; right: 0; bottom: 0; height: 72px; padding-bottom: env(safe-area-inset-bottom); background: var(--bottom-bg); border-top: 1px solid var(--line); display: none; grid-template-columns: 58px 1fr 72px; z-index: 50; }
     .bottom-bar.active { display: grid; }
-    .bar-btn { height: 72px; background: #1d4ed8; color: #fff; font-weight: 900; border-radius: 0; border-right: 1px solid rgba(255,255,255,0.14); white-space: nowrap; }
-    .bar-btn:last-child { border-right: 0; border-left: 1px solid rgba(255,255,255,0.14); }
+    .bar-btn { height: 72px; background: var(--blue-dark); color: #fff; font-weight: 900; border-radius: 0; border-right: 1px solid var(--line); white-space: nowrap; }
+    .bar-btn:last-child { border-right: 0; border-left: 1px solid var(--line); }
     .bar-btn.menu { font-size: 25px; }
     .bar-btn.earn { font-size: 13px; padding: 0 4px; }
-    .center-info { min-width: 0; height: 72px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px; padding: 0 8px; }
+    .center-info { min-width: 0; height: 72px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px; padding: 0 8px; background: var(--panel-bg); }
     .nickname { font-size: 14px; color: #bfdbfe; font-weight: 900; max-width: 100%; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
     .cash { font-size: 18px; font-weight: 950; max-width: 100%; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
 
-    .menu-panel { position: fixed; left: 8px; bottom: calc(80px + env(safe-area-inset-bottom)); width: 132px; background: rgba(15, 23, 42, 0.98); border: 1px solid rgba(255,255,255,0.18); box-shadow: 0 18px 45px rgba(0,0,0,0.4); display: none; z-index: 80; }
+    .menu-panel { position: fixed; left: 8px; bottom: calc(80px + env(safe-area-inset-bottom)); width: 132px; background: var(--panel-bg); border: 1px solid var(--line); box-shadow: 0 18px 45px rgba(0,0,0,0.35); display: none; z-index: 80; }
     .menu-panel.active { display: block; }
     .menu-item { width: 100%; height: 48px; background: transparent; color: #fff; text-align: left; padding: 0 16px; font-weight: 900; border-radius: 0; }
     .menu-item:active { background: rgba(255,255,255,0.08); }
@@ -58,7 +67,7 @@
     .settings-row { display: grid; grid-template-columns: 1fr 34px; gap: 8px; align-items: center; }
     .won { color: #cbd5e1; font-weight: 800; }
     .hint { font-size: 12px; color: #94a3b8; line-height: 1.5; margin-top: -6px; margin-bottom: 18px; }
-    .settings-divider { height: 1px; background: rgba(255,255,255,0.12); margin: 22px 0; }
+    .settings-divider { height: 1px; background: var(--line); margin: 22px 0; }
 
     .loading { color: #cbd5e1; text-align: center; }
   </style>
