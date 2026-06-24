@@ -206,6 +206,16 @@
     .global-bank-value { font-size: 26px; font-weight: 950; letter-spacing: -1px; text-align: right; white-space: nowrap; }
     .global-bank-desc { margin-top: 14px; padding-top: 12px; border-top: 1px solid var(--line); color: var(--text-soft); font-size: 12px; line-height: 1.55; }
 
+
+    .upgrade-card { border-top: 1px solid var(--line-strong); border-bottom: 1px solid var(--line-strong); padding: 18px 0; }
+    .upgrade-level { font-size: 22px; font-weight: 950; letter-spacing: -0.7px; color: #fff; margin-bottom: 16px; }
+    .upgrade-row { padding: 13px 0; border-top: 1px solid var(--line); display: flex; justify-content: space-between; align-items: center; gap: 14px; }
+    .upgrade-row:first-of-type { border-top: 0; }
+    .upgrade-label { color: var(--muted); font-size: 12px; font-weight: 950; letter-spacing: -0.35px; }
+    .upgrade-value { color: #fff; font-size: 16px; font-weight: 950; text-align: right; letter-spacing: -0.55px; word-break: keep-all; }
+    .upgrade-cost { color: var(--green); }
+    .upgrade-max { color: var(--muted); font-size: 13px; font-weight: 900; text-align: center; padding: 15px 0 3px; }
+    .upgrade-status { min-height: 20px; margin-top: 12px; text-align: center; font-size: 12px; font-weight: 850; color: var(--muted); }
     .ranking-note { font-size: 12px; color: var(--muted); line-height: 1.55; margin: 0 0 16px; }
     .ranking-list { border-top: 1px solid var(--line-strong); }
     .ranking-row { display: grid; grid-template-columns: 54px 1fr; gap: 12px; padding: 14px 0; border-bottom: 1px solid var(--line-strong); align-items: start; cursor: pointer; user-select: none; -webkit-tap-highlight-color: transparent; }
@@ -391,6 +401,30 @@
 
 
 
+    <section id="upgradeScreen" class="screen page-screen">
+      <div class="page">
+        <div class="settings-top market-top">
+          <h1 class="title">업그레이드</h1>
+          <button id="backFromUpgradeBtn" class="settings-back-btn">뒤로가기</button>
+        </div>
+        <p class="subtitle">돈벌기 수익 범위를 업그레이드할 수 있습니다.</p>
+        <div class="upgrade-card">
+          <div id="upgradeLevelTitle" class="upgrade-level">돈벌기 Lv. 1</div>
+          <div class="upgrade-row">
+            <div class="upgrade-label">범위</div>
+            <div id="upgradeRangeValue" class="upgrade-value">0원 - 0원</div>
+          </div>
+          <div class="upgrade-row">
+            <div class="upgrade-label">다음 업그레이드 비용</div>
+            <div id="upgradeCostValue" class="upgrade-value upgrade-cost">0원</div>
+          </div>
+          <div id="upgradeMaxMessage" class="upgrade-max"></div>
+          <button id="upgradeEarnBtn" class="primary-btn" type="button">업그레이드</button>
+          <div id="upgradeStatus" class="upgrade-status"></div>
+        </div>
+      </div>
+    </section>
+
     <section id="rankingScreen" class="screen page-screen">
       <div class="page">
         <div class="settings-top market-top">
@@ -445,7 +479,15 @@
               </div>
             </div>
 
-            <div class="hint">기본값: 신규 가입 1,000,000원 / 돈벌기 10,000원~50,000원</div>
+            <div class="field">
+              <label for="earnMaxLevelInput">돈벌기 최대 레벨</label>
+              <div class="settings-row">
+                <input id="earnMaxLevelInput" type="number" inputmode="numeric" min="1" max="30" step="1" />
+                <div class="won">Lv</div>
+              </div>
+            </div>
+
+            <div class="hint">기본값: 신규 가입 1,000,000원 / 돈벌기 10,000원~50,000원 / 최대 Lv.10</div>
             <button id="saveSettingsBtn" class="primary-btn">저장하기</button>
             <div id="settingsStatus" class="status"></div>
           </div>
@@ -491,6 +533,7 @@
     <div id="adminMenuPanel" class="menu-panel">
       <button id="openMarketBtn" class="menu-item">시세</button>
       <button id="openBankBtn" class="menu-item">은행</button>
+      <button id="openUpgradeBtn" class="menu-item">업그레이드</button>
       <button id="openRankingBtn" class="menu-item">순위</button>
       <button id="openSettingsBtn" class="menu-item admin-only">설정</button>
     </div>
@@ -629,7 +672,7 @@
     };
 
     const ADMIN_EMAIL = "khu9918@gmail.com";
-    const DEFAULT_SETTINGS = { signupBonus: 1000000, earnMin: 10000, earnMax: 50000, bankHourlyInterestRate: 1 };
+    const DEFAULT_SETTINGS = { signupBonus: 1000000, earnMin: 10000, earnMax: 50000, earnMaxLevel: 10, bankHourlyInterestRate: 1 };
     const EARN_COOLDOWN_SECONDS = 60;
     const PRICE_HISTORY_LIMIT = 30;
     const CANDLE_COUNT = 15;
@@ -656,6 +699,7 @@
       game: document.getElementById("gameScreen"),
       market: document.getElementById("marketScreen"),
       bank: document.getElementById("bankScreen"),
+      upgrade: document.getElementById("upgradeScreen"),
       ranking: document.getElementById("rankingScreen"),
       settings: document.getElementById("settingsScreen")
     };
@@ -676,15 +720,18 @@
     const adminMenuPanel = document.getElementById("adminMenuPanel");
     const openMarketBtn = document.getElementById("openMarketBtn");
     const openBankBtn = document.getElementById("openBankBtn");
+    const openUpgradeBtn = document.getElementById("openUpgradeBtn");
     const openRankingBtn = document.getElementById("openRankingBtn");
     const openSettingsBtn = document.getElementById("openSettingsBtn");
     const signupBonusInput = document.getElementById("signupBonusInput");
     const earnMinInput = document.getElementById("earnMinInput");
     const earnMaxInput = document.getElementById("earnMaxInput");
+    const earnMaxLevelInput = document.getElementById("earnMaxLevelInput");
     const saveSettingsBtn = document.getElementById("saveSettingsBtn");
     const backToGameBtn = document.getElementById("backToGameBtn");
     const backFromMarketBtn = document.getElementById("backFromMarketBtn");
     const backFromBankBtn = document.getElementById("backFromBankBtn");
+    const backFromUpgradeBtn = document.getElementById("backFromUpgradeBtn");
     const backFromRankingBtn = document.getElementById("backFromRankingBtn");
     const settingsDefaultTab = document.getElementById("settingsDefaultTab");
     const settingsStockTab = document.getElementById("settingsStockTab");
@@ -723,6 +770,12 @@
     const bankLogList = document.getElementById("bankLogList");
     const rankingList = document.getElementById("rankingList");
     const rankingStatus = document.getElementById("rankingStatus");
+    const upgradeLevelTitle = document.getElementById("upgradeLevelTitle");
+    const upgradeRangeValue = document.getElementById("upgradeRangeValue");
+    const upgradeCostValue = document.getElementById("upgradeCostValue");
+    const upgradeMaxMessage = document.getElementById("upgradeMaxMessage");
+    const upgradeEarnBtn = document.getElementById("upgradeEarnBtn");
+    const upgradeStatus = document.getElementById("upgradeStatus");
     const tradeModalOverlay = document.getElementById("tradeModalOverlay");
     const tradeModal = document.getElementById("tradeModal");
     const tradeModalTitle = document.getElementById("tradeModalTitle");
@@ -794,7 +847,7 @@
     let authFlowStarted = false;
 
     function isAdmin() { return currentUser && currentUser.email === ADMIN_EMAIL; }
-    function activeMainScreens() { return ["game", "market", "bank", "ranking", "settings"]; }
+    function activeMainScreens() { return ["game", "market", "bank", "upgrade", "ranking", "settings"]; }
 
     function showScreen(name) {
       const wasMarket = currentScreenName === "market";
@@ -810,6 +863,7 @@
       if (activeMainScreens().includes(name)) ensureAppBackHistory();
       if (name === "market") { renderStocks(); listenStocks().catch(() => {}); startMarketCountdownTimer(); } else { stopMarketCountdownTimer(); }
       if (name === "bank") { renderGlobalBank(); listenBankGlobal().catch(() => {}); }
+      if (name === "upgrade") { renderUpgrade(); }
       if (name === "ranking") { renderRankings(); loadRankings().catch(() => {}); }
       if (name === "game") {
         renderPortfolio(); renderBank();
@@ -845,7 +899,7 @@
       if (userAdminModalOverlay.classList.contains("active")) { closeUserAdminModal(); return true; }
       if (adminMenuPanel.classList.contains("active")) { closeAdminMenu(); return true; }
       if (currentScreenName === "market") { expandedStockId = null; showScreen("game"); return true; }
-      if (currentScreenName === "bank" || currentScreenName === "ranking" || currentScreenName === "settings") { showScreen("game"); return true; }
+      if (currentScreenName === "bank" || currentScreenName === "upgrade" || currentScreenName === "ranking" || currentScreenName === "settings") { showScreen("game"); return true; }
       return false;
     }
 
@@ -1021,6 +1075,7 @@
           signupBonus: Number(data.signupBonus ?? DEFAULT_SETTINGS.signupBonus),
           earnMin: Number(data.earnMin ?? DEFAULT_SETTINGS.earnMin),
           earnMax: Number(data.earnMax ?? DEFAULT_SETTINGS.earnMax),
+          earnMaxLevel: Number(data.earnMaxLevel ?? DEFAULT_SETTINGS.earnMaxLevel),
           bankHourlyInterestRate: Number(data.bankHourlyInterestRate ?? DEFAULT_SETTINGS.bankHourlyInterestRate)
         };
       } else {
@@ -1033,6 +1088,7 @@
       signupBonusInput.value = currentSettings.signupBonus;
       earnMinInput.value = currentSettings.earnMin;
       earnMaxInput.value = currentSettings.earnMax;
+      earnMaxLevelInput.value = currentSettings.earnMaxLevel;
       bankInterestRateInput.value = currentSettings.bankHourlyInterestRate;
     }
 
@@ -1048,6 +1104,7 @@
         renderUserBar();
         renderPortfolio();
         renderBank();
+        if (currentScreenName === "upgrade") renderUpgrade();
         if (!activeMainScreens().includes(currentScreenName)) showScreen("game");
         updateEarnButton();
         startBankInterestTimer();
@@ -1058,6 +1115,91 @@
       if (!currentUserData) return;
       barNickname.textContent = currentUserData.nickname || "-";
       barCash.textContent = formatWon(currentUserData.cash || 0);
+    }
+
+    function getMoneyEarnLevel(data = currentUserData) {
+      const level = Math.floor(Number(data?.moneyEarnLevel || 1));
+      return Math.max(1, level);
+    }
+
+    function getEarnMaxLevel() {
+      const level = Math.floor(Number(currentSettings.earnMaxLevel || DEFAULT_SETTINGS.earnMaxLevel));
+      return Math.max(1, Math.min(30, level));
+    }
+
+    function getEarnMultiplier(level) {
+      return Math.pow(2, Math.max(0, Math.floor(Number(level || 1)) - 1));
+    }
+
+    function getEarnRange(level = getMoneyEarnLevel()) {
+      const multiplier = getEarnMultiplier(level);
+      const baseMin = Math.max(1, Math.floor(Number(currentSettings.earnMin || DEFAULT_SETTINGS.earnMin)));
+      const baseMax = Math.max(baseMin, Math.floor(Number(currentSettings.earnMax || DEFAULT_SETTINGS.earnMax)));
+      return {
+        min: baseMin * multiplier,
+        max: baseMax * multiplier
+      };
+    }
+
+    function getUpgradeCost(level = getMoneyEarnLevel()) {
+      return getEarnRange(level).max * 100;
+    }
+
+    function renderUpgrade() {
+      if (!upgradeLevelTitle || !currentUserData) return;
+      const level = getMoneyEarnLevel();
+      const maxLevel = getEarnMaxLevel();
+      const range = getEarnRange(level);
+      const isMax = level >= maxLevel;
+      upgradeLevelTitle.textContent = `돈벌기 Lv. ${level}`;
+      upgradeRangeValue.textContent = `${formatWon(range.min)} - ${formatWon(range.max)}`;
+      upgradeCostValue.textContent = isMax ? "최대 레벨" : formatWon(getUpgradeCost(level));
+      upgradeMaxMessage.textContent = isMax ? "최대 레벨에 도달했습니다." : `최대 Lv. ${maxLevel}까지 업그레이드할 수 있습니다.`;
+      upgradeEarnBtn.disabled = isMax;
+      upgradeEarnBtn.textContent = isMax ? "최대 레벨" : "업그레이드";
+      if (upgradeStatus) upgradeStatus.textContent = "";
+    }
+
+    async function handleEarnUpgrade() {
+      if (!currentUser || !currentUserData) return;
+      const level = getMoneyEarnLevel();
+      const maxLevel = getEarnMaxLevel();
+      if (level >= maxLevel) { renderUpgrade(); return; }
+      const cost = getUpgradeCost(level);
+      if (Number(currentUserData.cash || 0) < cost) {
+        if (upgradeStatus) upgradeStatus.textContent = "보유 현금이 부족합니다.";
+        showEarnPopup("보유 현금이 부족합니다.", "error");
+        return;
+      }
+      upgradeEarnBtn.disabled = true;
+      if (upgradeStatus) upgradeStatus.textContent = "업그레이드 중...";
+      try {
+        await runTransaction(db, async (transaction) => {
+          const ref = userRef(currentUser.uid);
+          const snap = await transaction.get(ref);
+          if (!snap.exists()) throw new Error("유저 데이터가 없습니다.");
+          const data = snap.data();
+          const nowLevel = getMoneyEarnLevel(data);
+          const nowMaxLevel = getEarnMaxLevel();
+          if (nowLevel >= nowMaxLevel) throw new Error("이미 최대 레벨입니다.");
+          const nowCost = getUpgradeCost(nowLevel);
+          const cash = Number(data.cash || 0);
+          if (cash < nowCost) throw new Error("보유 현금이 부족합니다.");
+          transaction.update(ref, {
+            cash: cash - nowCost,
+            moneyEarnLevel: nowLevel + 1,
+            lastUpgradeAt: serverTimestamp()
+          });
+        });
+        showEarnPopup(`돈벌기 Lv.${level + 1} 업그레이드 완료`);
+        if (upgradeStatus) upgradeStatus.textContent = "업그레이드가 완료되었습니다.";
+      } catch (error) {
+        const message = error.message || "업그레이드에 실패했습니다.";
+        if (upgradeStatus) upgradeStatus.textContent = message;
+        showEarnPopup(message, "error");
+      } finally {
+        renderUpgrade();
+      }
     }
 
     function getLastEarnDate() {
@@ -1096,7 +1238,7 @@
       if (!currentUser || !currentUserData) return;
       const left = getCooldownLeft();
       if (left > 0) { updateEarnButton(); return; }
-      const amount = randomEarnAmount(currentSettings.earnMin, currentSettings.earnMax);
+      let earnedAmount = 0;
       earnBtn.disabled = true; earnBtn.textContent = "처리중";
       try {
         await runTransaction(db, async (transaction) => {
@@ -1109,10 +1251,12 @@
             const passed = Math.floor((Date.now() - lastEarnAt.getTime()) / 1000);
             if (passed < EARN_COOLDOWN_SECONDS) throw new Error("아직 돈벌기 시간이 남았습니다.");
           }
-          transaction.update(ref, { cash: Number(data.cash || 0) + amount, lastEarnAt: serverTimestamp() });
+          const range = getEarnRange(getMoneyEarnLevel(data));
+          earnedAmount = randomEarnAmount(range.min, range.max);
+          transaction.update(ref, { cash: Number(data.cash || 0) + earnedAmount, lastEarnAt: serverTimestamp() });
         });
         if (earnedToast) earnedToast.textContent = "";
-        showEarnPopup(`+${formatWon(amount)} 획득`);
+        showEarnPopup(`+${formatWon(earnedAmount)} 획득`);
       } catch (error) {
         const message = error.message || "돈벌기에 실패했습니다.";
         if (earnedToast) earnedToast.textContent = "";
@@ -1137,6 +1281,7 @@
           nickname,
           cash: Number(currentSettings.signupBonus || DEFAULT_SETTINGS.signupBonus),
           bankBalance: 0,
+          moneyEarnLevel: 1,
           nextBankInterestAt: null,
           lastEarnAt: null,
           createdAt: serverTimestamp(),
@@ -1335,8 +1480,10 @@
             transaction.update(uRef, {
               cash: Number(currentSettings.signupBonus || DEFAULT_SETTINGS.signupBonus),
               bankBalance: 0,
+              moneyEarnLevel: 1,
               nextBankInterestAt: null,
               lastEarnAt: null,
+              lastUpgradeAt: null,
               lastBankAt: serverTimestamp(),
               lastTradeAt: serverTimestamp(),
               lastAdminAt: serverTimestamp()
@@ -1381,13 +1528,15 @@
       const signupBonus = Number(signupBonusInput.value);
       const earnMin = Number(earnMinInput.value);
       const earnMax = Number(earnMaxInput.value);
+      const earnMaxLevel = Math.floor(Number(earnMaxLevelInput.value));
       if (!Number.isFinite(signupBonus) || signupBonus <= 0) { setStatus(settingsStatus, "신규 가입 지급 금액은 0보다 커야 합니다.", "error"); return; }
       if (!Number.isFinite(earnMin) || earnMin <= 0) { setStatus(settingsStatus, "돈벌기 최소 지급 금액은 0보다 커야 합니다.", "error"); return; }
       if (!Number.isFinite(earnMax) || earnMax < earnMin) { setStatus(settingsStatus, "돈벌기 최대 지급 금액은 최소 지급 금액보다 크거나 같아야 합니다.", "error"); return; }
+      if (!Number.isFinite(earnMaxLevel) || earnMaxLevel < 1 || earnMaxLevel > 30) { setStatus(settingsStatus, "돈벌기 최대 레벨은 1~30 사이로 입력해주세요.", "error"); return; }
       saveSettingsBtn.disabled = true;
       setStatus(settingsStatus, "저장 중...");
       try {
-        await setDoc(settingsRef(), { signupBonus, earnMin, earnMax, bankHourlyInterestRate: Number(currentSettings.bankHourlyInterestRate || DEFAULT_SETTINGS.bankHourlyInterestRate), updatedAt: serverTimestamp(), updatedBy: currentUser.uid }, { merge: true });
+        await setDoc(settingsRef(), { signupBonus, earnMin, earnMax, earnMaxLevel, bankHourlyInterestRate: Number(currentSettings.bankHourlyInterestRate || DEFAULT_SETTINGS.bankHourlyInterestRate), updatedAt: serverTimestamp(), updatedBy: currentUser.uid }, { merge: true });
         await listenSettings();
         setStatus(settingsStatus, "설정이 저장되었습니다.", "success");
       } catch (error) { setStatus(settingsStatus, "설정 저장에 실패했습니다. 관리자 권한을 확인해주세요.", "error"); }
@@ -1409,6 +1558,7 @@
           signupBonus: Number(currentSettings.signupBonus || DEFAULT_SETTINGS.signupBonus),
           earnMin: Number(currentSettings.earnMin || DEFAULT_SETTINGS.earnMin),
           earnMax: Number(currentSettings.earnMax || DEFAULT_SETTINGS.earnMax),
+          earnMaxLevel: Number(currentSettings.earnMaxLevel || DEFAULT_SETTINGS.earnMaxLevel),
           bankHourlyInterestRate,
           updatedAt: serverTimestamp(),
           updatedBy: currentUser.uid
@@ -2440,11 +2590,13 @@
     nicknameInput.addEventListener("input", () => { startBtn.disabled = nicknameInput.value.trim().length === 0; });
     startBtn.addEventListener("click", createNewUser);
     earnBtn.addEventListener("click", handleEarn);
+    upgradeEarnBtn.addEventListener("click", handleEarnUpgrade);
     menuBtn.addEventListener("click", toggleAdminMenu);
     adminMenuPanel.addEventListener("click", (event) => event.stopPropagation());
     document.addEventListener("click", () => closeAdminMenu());
     openMarketBtn.addEventListener("click", () => { closeAdminMenu(); showScreen("market"); });
     openBankBtn.addEventListener("click", () => { closeAdminMenu(); showScreen("bank"); });
+    openUpgradeBtn.addEventListener("click", () => { closeAdminMenu(); showScreen("upgrade"); });
     openRankingBtn.addEventListener("click", () => { closeAdminMenu(); showScreen("ranking"); });
     openSettingsBtn.addEventListener("click", () => { closeAdminMenu(); fillSettingsInputs(); setSettingsTab("default"); showScreen("settings"); });
     settingsDefaultTab.addEventListener("click", () => setSettingsTab("default"));
@@ -2457,6 +2609,7 @@
     backToGameBtn.addEventListener("click", () => showScreen("game"));
     backFromMarketBtn.addEventListener("click", () => showScreen("game"));
     backFromBankBtn.addEventListener("click", () => showScreen("game"));
+    backFromUpgradeBtn.addEventListener("click", () => showScreen("game"));
     backFromRankingBtn.addEventListener("click", () => showScreen("game"));
     infoStockTab.addEventListener("click", () => setInfoTab("stock"));
     infoBankTab.addEventListener("click", () => setInfoTab("bank"));
