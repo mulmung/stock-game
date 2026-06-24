@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
-  <title>주식 게임 v12</title>
+  <title>주식 게임 v13</title>
   <style>
     * { box-sizing: border-box; }
     html, body { margin: 0; padding: 0; height: 100%; font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; background: #1f2937; color: #fff; }
@@ -669,7 +669,7 @@
         });
         row.querySelectorAll("button").forEach(btn => btn.addEventListener("click", (e) => e.stopPropagation()));
         stockList.appendChild(row);
-        drawMiniChart(row.querySelector(".mini-chart"), history, current);
+        drawMiniChart(row.querySelector(".mini-chart"), history, current, change);
         if (expandedStockId === stock.id) drawCandleChart(row.querySelector(".candle-chart"), history);
       }
     }
@@ -678,7 +678,7 @@
       return String(str).replace(/[&<>"]/g, ch => ({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;"}[ch]));
     }
 
-    function drawMiniChart(canvas, history, fallbackPrice) {
+    function drawMiniChart(canvas, history, fallbackPrice, directionValue = 0) {
       if (!canvas) return;
       const rect = canvas.getBoundingClientRect();
       const scale = window.devicePixelRatio || 1;
@@ -700,7 +700,7 @@
       }
       const min = Math.min(...points), max = Math.max(...points);
       const range = Math.max(1, max - min);
-      const color = getDirectionColor(points[points.length - 1] - points[0]);
+      const color = getDirectionColor(directionValue);
       ctx.strokeStyle = color; ctx.lineWidth = 2.35; ctx.lineJoin = "round"; ctx.lineCap = "round";
       ctx.beginPath();
       points.forEach((price, i) => {
