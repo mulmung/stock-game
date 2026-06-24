@@ -186,14 +186,15 @@
     .deposit-btn { background: var(--green); }
     .withdraw-btn { background: var(--red); }
     .bank-log-list { border-top: 1px solid var(--line-strong); }
-    .bank-log-head, .bank-log-row { display: grid; grid-template-columns: minmax(88px, 1.05fr) minmax(42px, 0.55fr) minmax(76px, 0.9fr) minmax(88px, 1fr); gap: 6px; align-items: center; }
+    .bank-log-head, .bank-log-row { display: grid; grid-template-columns: minmax(82px, 0.9fr) minmax(42px, 0.48fr) minmax(150px, 1.35fr); gap: 8px; align-items: center; }
     .bank-log-head { padding: 9px 0; color: var(--muted); font-size: 10.5px; font-weight: 950; border-bottom: 1px solid var(--line); }
-    .bank-log-row { min-height: 48px; padding: 10px 0; border-bottom: 1px solid var(--line-strong); font-size: 11.5px; font-weight: 850; letter-spacing: -0.45px; }
+    .bank-log-row { min-height: 58px; padding: 10px 0; border-bottom: 1px solid var(--line-strong); font-size: 11.5px; font-weight: 850; letter-spacing: -0.45px; }
     .bank-log-head .right, .bank-log-row .right { text-align: right; }
     .bank-log-date { color: var(--text-soft); line-height: 1.25; }
     .bank-log-label { text-align: center; font-weight: 950; }
-    .bank-log-amount { white-space: nowrap; font-weight: 950; }
-    .bank-log-balance { white-space: nowrap; color: var(--text-soft); }
+    .bank-log-money { display: flex; flex-direction: column; align-items: flex-end; justify-content: center; gap: 5px; min-width: 0; }
+    .bank-log-amount { max-width: 100%; white-space: nowrap; font-weight: 950; font-size: 11.5px; line-height: 1.08; }
+    .bank-log-balance { max-width: 100%; white-space: nowrap; color: var(--text-soft); font-size: 11px; line-height: 1.08; }
     .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.55); display: none; align-items: center; justify-content: center; padding: 18px; z-index: 200; }
     .modal-overlay.active { display: flex; }
     .trade-modal { width: min(420px, 100%); background: var(--panel-bg); border: 1px solid var(--line-strong); box-shadow: 0 24px 80px rgba(0,0,0,0.55); padding: 20px; }
@@ -1159,8 +1160,7 @@
         <div class="bank-log-head">
           <div>년월일<br />시간</div>
           <div>내역</div>
-          <div class="right">금액</div>
-          <div class="right">잔액</div>
+          <div class="right">금액<br />잔액</div>
         </div>
       `;
       for (const log of bankLogs) {
@@ -1170,8 +1170,10 @@
         row.innerHTML = `
           <div class="bank-log-date">${formatDateTime(log.createdAt)}</div>
           <div class="bank-log-label">${escapeHtml(log.label || "-")}</div>
-          <div class="bank-log-amount right ${getDirectionClass(amount)}">${amount > 0 ? "+" : amount < 0 ? "-" : ""}${formatWon(Math.abs(amount))}</div>
-          <div class="bank-log-balance right">${formatWon(log.balanceAfter || 0)}</div>
+          <div class="bank-log-money right">
+            <div class="bank-log-amount ${getDirectionClass(amount)}">${amount > 0 ? "+" : amount < 0 ? "-" : ""}${formatWon(Math.abs(amount))}</div>
+            <div class="bank-log-balance">${formatWon(log.balanceAfter || 0)}</div>
+          </div>
         `;
         bankLogList.appendChild(row);
       }
