@@ -673,6 +673,8 @@
     let bankInterestProcessing = false;
     let tradeModalState = null;
     let marketUpdating = false;
+    let appBackHistoryReady = false;
+    let appBackPushTimer = null;
 
     function isAdmin() { return currentUser && currentUser.email === ADMIN_EMAIL; }
     function activeMainScreens() { return ["game", "market", "bank", "settings"]; }
@@ -686,6 +688,7 @@
       screens[name].classList.add("active");
       bottomBar.classList.toggle("active", activeMainScreens().includes(name));
       closeAdminMenu();
+      if (activeMainScreens().includes(name)) ensureAppBackHistory();
       if (name === "market") { renderStocks(); listenStocks().catch(() => {}); }
       if (name === "bank") { renderGlobalBank(); listenBankGlobal().catch(() => {}); }
       if (name === "game") {
@@ -695,6 +698,34 @@
           if (infoTab === "bank") listenBankLogs(currentUser.uid).catch(() => {});
         }
       }
+    }
+
+    function ensureAppBackHistory() {
+      if (appBackHistoryReady || !window.history || !history.pushState) return;
+      try {
+        history.replaceState({ stockGameBase: true }, "", location.href);
+        history.pushState({ stockGameBack: true }, "", location.href);
+        appBackHistoryReady = true;
+      } catch (error) {}
+    }
+
+    function pushAppBackHistorySoon() {
+      if (!appBackHistoryReady || !window.history || !history.pushState) return;
+      if (appBackPushTimer) clearTimeout(appBackPushTimer);
+      appBackPushTimer = setTimeout(() => {
+        try { history.pushState({ stockGameBack: true }, "", location.href); }
+        catch (error) {}
+        appBackPushTimer = null;
+      }, 0);
+    }
+
+    function handleAppBackButton() {
+      if (tradeModalOverlay.classList.contains("active")) { closeTradeModal(); return true; }
+      if (bankModalOverlay.classList.contains("active")) { closeBankModal(); return true; }
+      if (adminMenuPanel.classList.contains("active")) { closeAdminMenu(); return true; }
+      if (currentScreenName === "market") { expandedStockId = null; showScreen("game"); return true; }
+      if (currentScreenName === "bank" || currentScreenName === "settings") { showScreen("game"); return true; }
+      return false;
     }
 
     function formatWon(value) {
@@ -1928,6 +1959,11 @@
     openDepositBtn.addEventListener("click", () => openBankModal("deposit"));
     openWithdrawBtn.addEventListener("click", () => openBankModal("withdraw"));
     window.addEventListener("resize", () => { renderStocks(); renderPortfolio(); renderBank(); });
+    window.addEventListener("popstate", () => {
+      if (!appBackHistoryReady) return;
+      const handled = handleAppBackButton();
+      if (handled) pushAppBackHistorySoon();
+    });
 
     tradeQtyInput.addEventListener("input", updateTradeExpected);
     tradeMaxBtn.addEventListener("click", () => { if (tradeModalState) setTradeQty(tradeModalState.maxQty); });
