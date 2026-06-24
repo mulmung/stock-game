@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
-  <title>주식 게임 v15</title>
+  <title>주식 게임 v20</title>
   <style>
     * { box-sizing: border-box; }
     html, body { margin: 0; padding: 0; height: 100%; font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; background: #1f2937; color: #fff; }
@@ -150,6 +150,42 @@
     .buy-btn, .sell-btn { height: 44px; color: #fff; font-weight: 950; border-radius: 0; }
     .buy-btn { background: var(--green); }
     .sell-btn { background: var(--red); }
+
+
+    .portfolio-summary { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; border-top: 1px solid var(--line-strong); border-bottom: 1px solid var(--line-strong); padding: 14px 0; margin: 18px 0 22px; text-align: center; }
+    .portfolio-stat-title { color: var(--muted); font-size: 12px; font-weight: 900; line-height: 1.25; }
+    .portfolio-stat-value { margin-top: 10px; font-size: 15px; font-weight: 950; letter-spacing: -0.4px; white-space: nowrap; }
+    .holding-list { border-top: 1px solid var(--line-strong); }
+    .holding-list-head { display: grid; grid-template-columns: minmax(86px, 1fr) minmax(92px, 1fr) minmax(104px, 1.1fr); gap: 8px; align-items: center; padding: 10px 0; border-bottom: 1px solid var(--line); color: var(--muted); font-size: 11px; font-weight: 950; }
+    .holding-list-head .head-pnl, .holding-list-head .head-qty { text-align: right; }
+    .holding-row { border-bottom: 1px solid var(--line-strong); cursor: pointer; user-select: none; }
+    .holding-summary { display: grid; grid-template-columns: minmax(86px, 1fr) minmax(92px, 1fr) minmax(104px, 1.1fr); gap: 8px; align-items: center; min-height: 84px; padding: 14px 0; }
+    .holding-name { font-size: 19px; font-weight: 950; letter-spacing: -0.5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .holding-sub { color: var(--muted); font-size: 12px; font-weight: 850; margin-top: 6px; }
+    .holding-pnl, .holding-qty { text-align: right; min-width: 0; }
+    .holding-pnl-money { font-size: 17px; font-weight: 950; line-height: 1.2; white-space: nowrap; }
+    .holding-pnl-rate { font-size: 14px; font-weight: 950; margin-top: 6px; white-space: nowrap; }
+    .holding-qty-main { font-size: 18px; font-weight: 950; line-height: 1.2; white-space: nowrap; }
+    .holding-value { font-size: 14px; font-weight: 900; margin-top: 6px; white-space: nowrap; }
+    .holding-detail { padding: 12px 0 18px; border-top: 1px solid var(--line); }
+    .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.55); display: none; align-items: center; justify-content: center; padding: 18px; z-index: 200; }
+    .modal-overlay.active { display: flex; }
+    .trade-modal { width: min(420px, 100%); background: var(--panel-bg); border: 1px solid var(--line-strong); box-shadow: 0 24px 80px rgba(0,0,0,0.55); padding: 20px; }
+    .trade-modal-title { font-size: 22px; font-weight: 950; margin: 0 0 6px; }
+    .trade-modal-sub { color: var(--muted); font-size: 13px; font-weight: 800; margin-bottom: 18px; }
+    .qty-row { display: grid; grid-template-columns: 1fr 72px; gap: 8px; align-items: center; }
+    .max-btn { height: 48px; background: var(--panel-bg); color: #fff; border: 1px solid var(--line); font-weight: 950; border-radius: 0; }
+    .percent-row { display: grid; grid-template-columns: repeat(5, 1fr); gap: 6px; margin: 10px 0 16px; }
+    .percent-btn { height: 38px; background: rgba(255,255,255,0.06); color: #fff; border: 1px solid var(--line); font-size: 12px; font-weight: 950; border-radius: 0; }
+    .expected-box { border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); padding: 14px 0; display: flex; justify-content: space-between; align-items: center; gap: 10px; margin-bottom: 14px; }
+    .expected-label { color: var(--text-soft); font-size: 13px; font-weight: 900; }
+    .expected-value { font-size: 18px; font-weight: 950; white-space: nowrap; }
+    .modal-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+    .confirm-buy { height: 46px; background: var(--green); color: #fff; font-weight: 950; border-radius: 0; }
+    .confirm-sell { height: 46px; background: var(--red); color: #fff; font-weight: 950; border-radius: 0; }
+    .cancel-btn { height: 46px; background: var(--panel-bg); color: #fff; border: 1px solid var(--line); font-weight: 950; border-radius: 0; }
+    .modal-status { min-height: 20px; color: #fca5a5; font-size: 12px; font-weight: 800; text-align: center; margin-top: 12px; }
+
     @media (max-width: 360px) {
       .stock-list-head, .stock-summary { grid-template-columns: minmax(66px, 0.75fr) minmax(70px, 0.85fr) minmax(70px, 0.78fr) minmax(60px, 0.68fr); gap: 6px; }
       .price { font-size: 15px; }
@@ -191,13 +227,26 @@
       </div>
     </section>
 
-    <section id="gameScreen" class="screen">
-      <div class="main">
-        <div class="main-box">
-          <h1>주식 게임</h1>
-          <p>아래 돈벌기 버튼을 눌러 현금을 모아보세요.<br />돈벌기는 60초마다 한 번씩 가능합니다.</p>
-          <div id="earnedToast" class="earned-toast"></div>
+    <section id="gameScreen" class="screen page-screen">
+      <div class="page">
+        <h1 class="title">내 정보</h1>
+        <p class="subtitle">보유 중인 주식과 평가손익을 확인할 수 있습니다.</p>
+        <div id="portfolioSummary" class="portfolio-summary">
+          <div>
+            <div class="portfolio-stat-title">총 매수가</div>
+            <div id="totalBuyAmount" class="portfolio-stat-value">0원</div>
+          </div>
+          <div>
+            <div class="portfolio-stat-title">총 손익률</div>
+            <div id="totalProfitRate" class="portfolio-stat-value flat">0.00%</div>
+          </div>
+          <div>
+            <div class="portfolio-stat-title">총 평가손익</div>
+            <div id="totalProfitAmount" class="portfolio-stat-value flat">0원</div>
+          </div>
         </div>
+        <div id="holdingList" class="holding-list"></div>
+        <div id="earnedToast" class="earned-toast"></div>
       </div>
     </section>
 
@@ -283,6 +332,37 @@
 
     <div id="floatingEarnPopup" class="floating-earn-popup"></div>
 
+
+    <div id="tradeModalOverlay" class="modal-overlay">
+      <div id="tradeModal" class="trade-modal">
+        <h2 id="tradeModalTitle" class="trade-modal-title">매수</h2>
+        <div id="tradeModalSub" class="trade-modal-sub">-</div>
+        <div class="field">
+          <label for="tradeQtyInput">수량</label>
+          <div class="qty-row">
+            <input id="tradeQtyInput" type="number" inputmode="numeric" min="1" step="1" placeholder="수량 입력" />
+            <button id="tradeMaxBtn" class="max-btn" type="button">최대</button>
+          </div>
+        </div>
+        <div class="percent-row">
+          <button class="percent-btn" type="button" data-percent="10">10%</button>
+          <button class="percent-btn" type="button" data-percent="25">25%</button>
+          <button class="percent-btn" type="button" data-percent="50">50%</button>
+          <button class="percent-btn" type="button" data-percent="75">75%</button>
+          <button class="percent-btn" type="button" data-percent="90">90%</button>
+        </div>
+        <div class="expected-box">
+          <div id="tradeExpectedLabel" class="expected-label">예상 결제금액</div>
+          <div id="tradeExpectedValue" class="expected-value">0원</div>
+        </div>
+        <div class="modal-actions">
+          <button id="tradeConfirmBtn" class="confirm-buy" type="button">매수하기</button>
+          <button id="tradeCancelBtn" class="cancel-btn" type="button">취소</button>
+        </div>
+        <div id="tradeModalStatus" class="modal-status"></div>
+      </div>
+    </div>
+
     <footer id="bottomBar" class="bottom-bar">
       <button id="menuBtn" class="bar-btn menu">☰</button>
       <div class="center-info">
@@ -339,6 +419,7 @@
     const PRICE_HISTORY_LIMIT = 30;
     const CANDLE_COUNT = 15;
     const PRICE_MOVE_RATE = 0.02;
+    const TRADE_HISTORY_LIMIT = 100;
 
     const app = initializeApp(firebaseConfig);
     const auth = getAuth(app);
@@ -387,6 +468,21 @@
     const addStockBtn = document.getElementById("addStockBtn");
     const stockAddStatus = document.getElementById("stockAddStatus");
     const stockList = document.getElementById("stockList");
+    const holdingList = document.getElementById("holdingList");
+    const totalBuyAmountEl = document.getElementById("totalBuyAmount");
+    const totalProfitRateEl = document.getElementById("totalProfitRate");
+    const totalProfitAmountEl = document.getElementById("totalProfitAmount");
+    const tradeModalOverlay = document.getElementById("tradeModalOverlay");
+    const tradeModal = document.getElementById("tradeModal");
+    const tradeModalTitle = document.getElementById("tradeModalTitle");
+    const tradeModalSub = document.getElementById("tradeModalSub");
+    const tradeQtyInput = document.getElementById("tradeQtyInput");
+    const tradeMaxBtn = document.getElementById("tradeMaxBtn");
+    const tradeExpectedLabel = document.getElementById("tradeExpectedLabel");
+    const tradeExpectedValue = document.getElementById("tradeExpectedValue");
+    const tradeConfirmBtn = document.getElementById("tradeConfirmBtn");
+    const tradeCancelBtn = document.getElementById("tradeCancelBtn");
+    const tradeModalStatus = document.getElementById("tradeModalStatus");
 
     let currentUser = null;
     let currentUserData = null;
@@ -402,6 +498,10 @@
     let stocks = [];
     let priceHistories = new Map();
     let expandedStockId = null;
+    let expandedHoldingStockId = null;
+    let holdings = [];
+    let unsubscribeHoldings = null;
+    let tradeModalState = null;
     let marketUpdating = false;
 
     function isAdmin() { return currentUser && currentUser.email === ADMIN_EMAIL; }
@@ -417,6 +517,7 @@
       bottomBar.classList.toggle("active", activeMainScreens().includes(name));
       closeAdminMenu();
       if (name === "market") renderStocks();
+      if (name === "game") renderPortfolio();
     }
 
     function formatWon(value) {
@@ -452,6 +553,27 @@
     function stockRef(id) { return doc(db, "stocks", id); }
     function pricesCol(stockId) { return collection(db, "stocks", stockId, "prices"); }
     function priceRef(stockId, minuteKey) { return doc(db, "stocks", stockId, "prices", minuteKey); }
+    function holdingsCol(uid) { return collection(db, "users", uid, "holdings"); }
+    function holdingRef(uid, stockId) { return doc(db, "users", uid, "holdings", stockId); }
+    function tradesCol(uid) { return collection(db, "users", uid, "trades"); }
+
+    async function pruneOldTrades(uid) {
+      try {
+        const tradeSnap = await getDocs(query(
+          tradesCol(uid),
+          orderBy("createdAt", "desc"),
+          limit(TRADE_HISTORY_LIMIT + 30)
+        ));
+        if (tradeSnap.size <= TRADE_HISTORY_LIMIT) return;
+        const batch = writeBatch(db);
+        tradeSnap.docs.slice(TRADE_HISTORY_LIMIT).forEach((tradeDoc) => {
+          batch.delete(tradeDoc.ref);
+        });
+        await batch.commit();
+      } catch (error) {
+        console.warn("최근 거래내역 정리에 실패했습니다.", error);
+      }
+    }
 
     function minuteKey(date = new Date()) {
       const y = date.getFullYear();
@@ -516,6 +638,7 @@
         }
         currentUserData = snap.data();
         renderUserBar();
+        renderPortfolio();
         if (!activeMainScreens().includes(currentScreenName)) showScreen("game");
         updateEarnButton();
       });
@@ -679,6 +802,16 @@
       });
     }
 
+
+
+    function listenHoldings(uid) {
+      if (unsubscribeHoldings) unsubscribeHoldings();
+      unsubscribeHoldings = onSnapshot(query(holdingsCol(uid), orderBy("updatedAt", "desc")), (snap) => {
+        holdings = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+        renderPortfolio();
+      });
+    }
+
     function syncPriceListeners() {
       const activeIds = new Set(stocks.map(s => s.id));
       for (const [id, unsub] of priceUnsubs.entries()) {
@@ -691,6 +824,7 @@
           const history = snap.docs.map(d => ({ id: d.id, ...d.data() })).reverse();
           priceHistories.set(stock.id, history);
           renderStocks();
+          renderPortfolio();
         });
         priceUnsubs.set(stock.id, unsub);
       }
@@ -748,11 +882,245 @@
         row.addEventListener("click", () => {
           expandedStockId = expandedStockId === stock.id ? null : stock.id;
           renderStocks();
+          renderPortfolio();
         });
         row.querySelectorAll("button").forEach(btn => btn.addEventListener("click", (e) => e.stopPropagation()));
+        const buyBtn = row.querySelector(".buy-btn");
+        const sellBtn = row.querySelector(".sell-btn");
+        if (buyBtn) buyBtn.addEventListener("click", (e) => { e.stopPropagation(); openTradeModal("buy", stock); });
+        if (sellBtn) sellBtn.addEventListener("click", (e) => { e.stopPropagation(); openTradeModal("sell", stock); });
         stockList.appendChild(row);
         drawMiniChart(row.querySelector(".mini-chart"), history, current, change);
         if (expandedStockId === stock.id) drawCandleChart(row.querySelector(".candle-chart"), history);
+      }
+    }
+
+
+
+    function getStockById(stockId) {
+      return stocks.find(s => s.id === stockId) || null;
+    }
+
+    function getHoldingByStockId(stockId) {
+      return holdings.find(h => (h.stockId || h.id) === stockId) || null;
+    }
+
+    function renderPortfolio() {
+      if (!holdingList) return;
+      let totalBuy = 0;
+      let totalValue = 0;
+      const rows = holdings
+        .map(h => {
+          const stockId = h.stockId || h.id;
+          const stock = getStockById(stockId);
+          const quantity = Math.max(0, Math.floor(Number(h.quantity || 0)));
+          const avgPrice = Number(h.avgPrice || 0);
+          const totalBuyAmount = Number(h.totalBuyAmount || (avgPrice * quantity));
+          const currentPrice = Number(stock?.currentPrice || avgPrice || 0);
+          const value = currentPrice * quantity;
+          const pnl = value - totalBuyAmount;
+          const rate = totalBuyAmount > 0 ? (pnl / totalBuyAmount) * 100 : 0;
+          totalBuy += totalBuyAmount;
+          totalValue += value;
+          return { ...h, stockId, stock, quantity, avgPrice, totalBuyAmount, currentPrice, value, pnl, rate };
+        })
+        .filter(h => h.quantity > 0);
+
+      const totalPnl = totalValue - totalBuy;
+      const totalRate = totalBuy > 0 ? (totalPnl / totalBuy) * 100 : 0;
+      totalBuyAmountEl.textContent = formatWon(totalBuy);
+      totalProfitAmountEl.textContent = (totalPnl > 0 ? "+" : totalPnl < 0 ? "-" : "") + formatWon(Math.abs(totalPnl));
+      totalProfitRateEl.textContent = (totalRate > 0 ? "+" : totalRate < 0 ? "-" : "") + Math.abs(totalRate).toFixed(2) + "%";
+      totalProfitAmountEl.className = "portfolio-stat-value " + getDirectionClass(totalPnl);
+      totalProfitRateEl.className = "portfolio-stat-value " + getDirectionClass(totalRate);
+
+      if (!rows.length) {
+        holdingList.innerHTML = `<div class="empty">보유 중인 주식이 없습니다.<br />시세 화면에서 종목을 매수해보세요.</div>`;
+        return;
+      }
+      holdingList.innerHTML = `
+        <div class="holding-list-head">
+          <div>종목명</div>
+          <div class="head-pnl">평가손익<br />수익률</div>
+          <div class="head-qty">보유수량<br />평가금액</div>
+        </div>
+      `;
+      for (const item of rows) {
+        const directionClass = getDirectionClass(item.pnl);
+        const history = priceHistories.get(item.stockId) || [];
+        const row = document.createElement("div");
+        row.className = "holding-row";
+        row.dataset.stockId = item.stockId;
+        row.innerHTML = `
+          <div class="holding-summary">
+            <div>
+              <div class="holding-name">${escapeHtml(item.name || item.stock?.name || "이름 없음")}</div>
+              <div class="holding-sub">평균 ${formatWon(item.avgPrice || 0)}</div>
+            </div>
+            <div class="holding-pnl">
+              <div class="holding-pnl-money ${directionClass}">${item.pnl > 0 ? "+" : item.pnl < 0 ? "-" : ""}${formatWon(Math.abs(item.pnl))}</div>
+              <div class="holding-pnl-rate ${directionClass}">${item.rate > 0 ? "+" : item.rate < 0 ? "-" : ""}${Math.abs(item.rate).toFixed(2)}%</div>
+            </div>
+            <div class="holding-qty">
+              <div class="holding-qty-main">${item.quantity.toLocaleString("ko-KR")}주</div>
+              <div class="holding-value">${formatWon(item.value)}</div>
+            </div>
+          </div>
+          ${expandedHoldingStockId === item.stockId ? `
+            <div class="holding-detail">
+              <div class="candle-label">최근 15개 캔들</div>
+              <canvas class="candle-chart" width="600" height="150"></canvas>
+              <div class="trade-buttons">
+                <button class="buy-btn" type="button">매수</button>
+                <button class="sell-btn" type="button">매도</button>
+              </div>
+            </div>
+          ` : ""}
+        `;
+        row.addEventListener("click", () => {
+          expandedHoldingStockId = expandedHoldingStockId === item.stockId ? null : item.stockId;
+          renderPortfolio();
+        });
+        row.querySelectorAll("button").forEach(btn => btn.addEventListener("click", (e) => e.stopPropagation()));
+        const buyBtn = row.querySelector(".buy-btn");
+        const sellBtn = row.querySelector(".sell-btn");
+        if (buyBtn && item.stock) buyBtn.addEventListener("click", (e) => { e.stopPropagation(); openTradeModal("buy", item.stock); });
+        if (sellBtn && item.stock) sellBtn.addEventListener("click", (e) => { e.stopPropagation(); openTradeModal("sell", item.stock); });
+        holdingList.appendChild(row);
+        if (expandedHoldingStockId === item.stockId) drawCandleChart(row.querySelector(".candle-chart"), history);
+      }
+    }
+
+    function openTradeModal(type, stock) {
+      if (!currentUser || !currentUserData || !stock) return;
+      const currentPrice = Math.max(1, Number(stock.currentPrice || stock.startPrice || 1));
+      const holding = getHoldingByStockId(stock.id);
+      const cash = Number(currentUserData.cash || 0);
+      const maxQty = type === "buy" ? Math.floor(cash / currentPrice) : Math.floor(Number(holding?.quantity || 0));
+      if (type === "sell" && maxQty <= 0) { showEarnPopup("보유 수량이 없습니다.", "error"); return; }
+      if (type === "buy" && maxQty <= 0) { showEarnPopup("보유현금이 부족합니다.", "error"); return; }
+      tradeModalState = { type, stockId: stock.id, stockName: stock.name || "이름 없음", price: currentPrice, maxQty };
+      tradeModalTitle.textContent = `${stock.name || "종목"} ${type === "buy" ? "매수" : "매도"}`;
+      tradeModalSub.textContent = `현재가 ${formatWon(currentPrice)} · 최대 ${maxQty.toLocaleString("ko-KR")}주`;
+      tradeExpectedLabel.textContent = type === "buy" ? "예상 결제금액" : "예상 수령금액";
+      tradeConfirmBtn.textContent = type === "buy" ? "매수하기" : "매도하기";
+      tradeConfirmBtn.className = type === "buy" ? "confirm-buy" : "confirm-sell";
+      tradeQtyInput.value = "";
+      tradeModalStatus.textContent = "";
+      updateTradeExpected();
+      tradeModalOverlay.classList.add("active");
+      setTimeout(() => tradeQtyInput.focus(), 50);
+    }
+
+    function closeTradeModal() {
+      tradeModalOverlay.classList.remove("active");
+      tradeModalState = null;
+      tradeModalStatus.textContent = "";
+    }
+
+    function getTradeQty() {
+      return Math.max(0, Math.floor(Number(tradeQtyInput.value || 0)));
+    }
+
+    function setTradeQty(qty) {
+      if (!tradeModalState) return;
+      const safe = Math.max(0, Math.min(tradeModalState.maxQty, Math.floor(qty || 0)));
+      tradeQtyInput.value = safe || "";
+      updateTradeExpected();
+    }
+
+    function updateTradeExpected() {
+      if (!tradeModalState) { tradeExpectedValue.textContent = "0원"; return; }
+      const qty = getTradeQty();
+      const total = qty * tradeModalState.price;
+      tradeExpectedValue.textContent = formatWon(total);
+    }
+
+    async function confirmTrade() {
+      if (!tradeModalState || !currentUser) return;
+      const qty = getTradeQty();
+      if (qty <= 0) { tradeModalStatus.textContent = "수량을 입력해주세요."; return; }
+      if (qty > tradeModalState.maxQty) { tradeModalStatus.textContent = "최대 가능 수량을 초과했습니다."; return; }
+      const { type, stockId, stockName, price } = tradeModalState;
+      const totalAmount = qty * price;
+      tradeConfirmBtn.disabled = true;
+      tradeModalStatus.textContent = "처리 중...";
+      try {
+        await runTransaction(db, async (transaction) => {
+          const uRef = userRef(currentUser.uid);
+          const hRef = holdingRef(currentUser.uid, stockId);
+          const sRef = stockRef(stockId);
+          const userSnap = await transaction.get(uRef);
+          const holdingSnap = await transaction.get(hRef);
+          const stockSnap = await transaction.get(sRef);
+          if (!userSnap.exists()) throw new Error("유저 데이터가 없습니다.");
+          if (!stockSnap.exists()) throw new Error("종목 데이터가 없습니다.");
+          const userData = userSnap.data();
+          const stockData = stockSnap.data();
+          const livePrice = Math.max(1, Number(stockData.currentPrice || price));
+          const liveTotal = qty * livePrice;
+          const cash = Number(userData.cash || 0);
+          const oldHolding = holdingSnap.exists() ? holdingSnap.data() : null;
+          const oldQty = Math.max(0, Math.floor(Number(oldHolding?.quantity || 0)));
+          const oldTotalBuy = Number(oldHolding?.totalBuyAmount || 0);
+          const tradeRef = doc(tradesCol(currentUser.uid));
+          if (type === "buy") {
+            if (cash < liveTotal) throw new Error("보유현금이 부족합니다.");
+            const newQty = oldQty + qty;
+            const newTotalBuy = oldTotalBuy + liveTotal;
+            const newAvg = Math.round(newTotalBuy / newQty);
+            transaction.update(uRef, { cash: cash - liveTotal, lastTradeAt: serverTimestamp() });
+            transaction.set(hRef, {
+              stockId,
+              name: stockData.name || stockName,
+              quantity: newQty,
+              avgPrice: newAvg,
+              totalBuyAmount: newTotalBuy,
+              updatedAt: serverTimestamp()
+            }, { merge: true });
+            transaction.set(tradeRef, {
+              stockId,
+              name: stockData.name || stockName,
+              type: "buy",
+              quantity: qty,
+              price: livePrice,
+              totalAmount: liveTotal,
+              createdAt: serverTimestamp()
+            });
+          } else {
+            if (oldQty < qty) throw new Error("보유수량이 부족합니다.");
+            const sellRatio = oldQty > 0 ? qty / oldQty : 0;
+            const reduceBuyAmount = Math.round(oldTotalBuy * sellRatio);
+            const newQty = oldQty - qty;
+            const newTotalBuy = Math.max(0, oldTotalBuy - reduceBuyAmount);
+            transaction.update(uRef, { cash: cash + liveTotal, lastTradeAt: serverTimestamp() });
+            if (newQty <= 0) transaction.delete(hRef);
+            else transaction.set(hRef, {
+              stockId,
+              name: stockData.name || stockName,
+              quantity: newQty,
+              avgPrice: Math.round(newTotalBuy / newQty),
+              totalBuyAmount: newTotalBuy,
+              updatedAt: serverTimestamp()
+            }, { merge: true });
+            transaction.set(tradeRef, {
+              stockId,
+              name: stockData.name || stockName,
+              type: "sell",
+              quantity: qty,
+              price: livePrice,
+              totalAmount: liveTotal,
+              createdAt: serverTimestamp()
+            });
+          }
+        });
+        await pruneOldTrades(currentUser.uid);
+        closeTradeModal();
+        showEarnPopup(`${type === "buy" ? "매수" : "매도"} 완료`);
+      } catch (error) {
+        tradeModalStatus.textContent = error.message || "거래에 실패했습니다.";
+      } finally {
+        tradeConfirmBtn.disabled = false;
       }
     }
 
@@ -977,7 +1345,21 @@
     addStockBtn.addEventListener("click", addStock);
     backToGameBtn.addEventListener("click", () => showScreen("game"));
     backFromMarketBtn.addEventListener("click", () => showScreen("game"));
-    window.addEventListener("resize", () => renderStocks());
+    window.addEventListener("resize", () => { renderStocks(); renderPortfolio(); });
+
+    tradeQtyInput.addEventListener("input", updateTradeExpected);
+    tradeMaxBtn.addEventListener("click", () => { if (tradeModalState) setTradeQty(tradeModalState.maxQty); });
+    document.querySelectorAll(".percent-btn").forEach(btn => btn.addEventListener("click", () => {
+      if (!tradeModalState) return;
+      const percent = Number(btn.dataset.percent || 0);
+      const qty = Math.floor(tradeModalState.maxQty * percent / 100);
+      setTradeQty(qty <= 0 && tradeModalState.maxQty > 0 ? 1 : qty);
+    }));
+    tradeConfirmBtn.addEventListener("click", confirmTrade);
+    tradeCancelBtn.addEventListener("click", closeTradeModal);
+    tradeModalOverlay.addEventListener("click", closeTradeModal);
+    tradeModal.addEventListener("click", (event) => event.stopPropagation());
+
 
     getRedirectResult(auth).catch(() => {
       setStatus(loginStatus, "로그인 결과를 확인하지 못했습니다. 다시 시도해주세요.", "error");
@@ -990,8 +1372,9 @@
         if (unsubscribeUser) unsubscribeUser();
         if (unsubscribeSettings) unsubscribeSettings();
         if (unsubscribeStocks) unsubscribeStocks();
+        if (unsubscribeHoldings) unsubscribeHoldings();
         for (const unsub of priceUnsubs.values()) unsub();
-        priceUnsubs.clear(); priceHistories.clear(); stocks = [];
+        priceUnsubs.clear(); priceHistories.clear(); stocks = []; holdings = [];
         stopMarketTimer();
         showScreen("login");
         return;
@@ -1000,6 +1383,7 @@
         await ensureSettingsDocForAdmin();
         listenSettings();
         listenStocks();
+        listenHoldings(user.uid);
         startMarketTimer();
         await updateDoc(userRef(user.uid), { lastLoginAt: serverTimestamp() }).catch(() => {});
         const snap = await getDoc(userRef(user.uid));
