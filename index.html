@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
-  <title>주식 게임 v10</title>
+  <title>주식 게임 v11</title>
   <style>
     * { box-sizing: border-box; }
     html, body { margin: 0; padding: 0; height: 100%; font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; background: #1f2937; color: #fff; }
@@ -89,33 +89,36 @@
     .section-title { font-size: 17px; font-weight: 950; margin: 0 0 14px; }
 
     .market-head { display: flex; justify-content: space-between; align-items: flex-end; gap: 10px; margin-bottom: 12px; }
-    .market-note { font-size: 12px; color: var(--muted); line-height: 1.45; }
+    .market-note { font-size: 12px; color: var(--muted); line-height: 1.45; margin-bottom: 10px; }
     .stock-list { border-top: 1px solid var(--line-strong); }
-    .stock-row { border-bottom: 1px solid var(--line-strong); padding: 14px 0; cursor: pointer; user-select: none; }
-    .stock-summary { display: grid; grid-template-columns: 1fr 126px; gap: 12px; align-items: center; }
+    .stock-list-head { display: grid; grid-template-columns: minmax(76px, 0.8fr) minmax(94px, 1fr) minmax(104px, 0.95fr); gap: 10px; align-items: center; padding: 10px 0; border-bottom: 1px solid var(--line); color: var(--muted); font-size: 11px; font-weight: 950; letter-spacing: -0.2px; }
+    .stock-list-head .head-quote { text-align: right; }
+    .stock-row { border-bottom: 1px solid var(--line-strong); padding: 0; cursor: pointer; user-select: none; }
+    .stock-summary { display: grid; grid-template-columns: minmax(76px, 0.8fr) minmax(94px, 1fr) minmax(104px, 0.95fr); gap: 10px; align-items: center; min-height: 78px; padding: 12px 0; }
     .stock-left { min-width: 0; }
-    .stock-name { font-size: 17px; font-weight: 950; margin-bottom: 8px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-    .mini-wrap { height: 42px; width: 100%; }
-    .mini-chart { width: 100%; height: 42px; display: block; }
-    .stock-right { text-align: right; }
-    .price { font-size: 16px; font-weight: 950; margin-bottom: 6px; }
-    .change-money { font-size: 13px; font-weight: 950; }
-    .change-rate { font-size: 12px; font-weight: 900; margin-top: 2px; }
+    .stock-name { font-size: 16px; font-weight: 950; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; letter-spacing: -0.4px; }
+    .mini-wrap { height: 34px; width: 100%; display: flex; align-items: center; }
+    .mini-chart { width: 100%; height: 34px; display: block; }
+    .stock-right { text-align: right; min-width: 0; }
+    .price { font-size: 18px; font-weight: 950; margin-bottom: 5px; white-space: nowrap; letter-spacing: -0.5px; }
+    .change-money { font-size: 13px; font-weight: 950; line-height: 1.2; white-space: nowrap; }
+    .change-rate { font-size: 12px; font-weight: 900; margin-top: 2px; line-height: 1.2; white-space: nowrap; }
     .up { color: var(--green); }
     .down { color: var(--red); }
     .flat { color: var(--text-soft); }
     .empty { color: var(--muted); text-align: center; padding: 40px 0; line-height: 1.6; }
-    .stock-detail { margin-top: 14px; padding-top: 14px; border-top: 1px solid var(--line); }
-    .candle-label { color: var(--text-soft); font-size: 12px; font-weight: 800; margin-bottom: 8px; }
-    .candle-chart { width: 100%; height: 150px; display: block; background: rgba(17,24,39,0.45); border: 1px solid var(--line); }
+    .stock-detail { padding: 12px 0 18px; border-top: 1px solid var(--line); }
+    .candle-label { color: var(--text-soft); font-size: 12px; font-weight: 900; margin-bottom: 8px; }
+    .candle-chart { width: 100%; height: 132px; display: block; background: rgba(17,24,39,0.38); border: 1px solid var(--line); border-radius: 10px; }
     .trade-buttons { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 10px; }
     .buy-btn, .sell-btn { height: 44px; color: #fff; font-weight: 950; border-radius: 0; }
     .buy-btn { background: var(--green); }
     .sell-btn { background: var(--red); }
     @media (max-width: 360px) {
-      .stock-summary { grid-template-columns: 1fr 112px; gap: 8px; }
-      .price { font-size: 14px; }
-      .stock-name { font-size: 16px; }
+      .stock-list-head, .stock-summary { grid-template-columns: minmax(70px, 0.75fr) minmax(78px, 0.9fr) minmax(94px, 0.95fr); gap: 8px; }
+      .price { font-size: 16px; }
+      .stock-name { font-size: 15px; }
+      .mini-wrap, .mini-chart { height: 30px; }
     }
   </style>
 </head>
@@ -615,7 +618,13 @@
         stockList.innerHTML = `<div class="empty">등록된 종목이 없습니다.<br />관리자 설정에서 종목을 추가해주세요.</div>`;
         return;
       }
-      stockList.innerHTML = "";
+      stockList.innerHTML = `
+        <div class="stock-list-head">
+          <div>종목명</div>
+          <div>그래프</div>
+          <div class="head-quote">현재가 / 등락</div>
+        </div>
+      `;
       for (const stock of stocks) {
         const history = priceHistories.get(stock.id) || [];
         const current = Number(stock.currentPrice || stock.startPrice || 0);
@@ -630,8 +639,8 @@
           <div class="stock-summary">
             <div class="stock-left">
               <div class="stock-name">${escapeHtml(stock.name || "이름 없음")}</div>
-              <div class="mini-wrap"><canvas class="mini-chart" width="240" height="60"></canvas></div>
             </div>
+            <div class="mini-wrap"><canvas class="mini-chart" width="180" height="46"></canvas></div>
             <div class="stock-right">
               <div class="price ${directionClass}">${formatWon(current)}</div>
               <div class="change-money ${directionClass}">${change > 0 ? "▲" : change < 0 ? "▼" : "-"} ${formatWon(Math.abs(change))}</div>
@@ -641,7 +650,7 @@
           ${expandedStockId === stock.id ? `
             <div class="stock-detail">
               <div class="candle-label">최근 15개 캔들</div>
-              <canvas class="candle-chart" width="520" height="180"></canvas>
+              <canvas class="candle-chart" width="600" height="150"></canvas>
               <div class="trade-buttons">
                 <button class="buy-btn" type="button">매수</button>
                 <button class="sell-btn" type="button">매도</button>
@@ -676,18 +685,22 @@
       ctx.clearRect(0, 0, w, h);
       const points = history.map(p => Number(p.price)).filter(n => Number.isFinite(n));
       if (!points.length && fallbackPrice) points.push(Number(fallbackPrice));
+      const midY = h / 2;
+      ctx.strokeStyle = "rgba(255,255,255,0.06)";
+      ctx.lineWidth = 1;
+      ctx.beginPath(); ctx.moveTo(0, midY); ctx.lineTo(w, midY); ctx.stroke();
       if (points.length < 2) {
         ctx.strokeStyle = getCss("--muted"); ctx.lineWidth = 2;
-        ctx.beginPath(); ctx.moveTo(0, h / 2); ctx.lineTo(w, h / 2); ctx.stroke(); return;
+        ctx.beginPath(); ctx.moveTo(0, midY); ctx.lineTo(w, midY); ctx.stroke(); return;
       }
       const min = Math.min(...points), max = Math.max(...points);
       const range = Math.max(1, max - min);
       const color = getDirectionColor(points[points.length - 1] - points[0]);
-      ctx.strokeStyle = color; ctx.lineWidth = 2.2; ctx.lineJoin = "round"; ctx.lineCap = "round";
+      ctx.strokeStyle = color; ctx.lineWidth = 2.35; ctx.lineJoin = "round"; ctx.lineCap = "round";
       ctx.beginPath();
       points.forEach((price, i) => {
         const x = points.length === 1 ? w : (i / (points.length - 1)) * w;
-        const y = h - ((price - min) / range) * (h - 6) - 3;
+        const y = h - ((price - min) / range) * (h - 8) - 4;
         if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
       });
       ctx.stroke();
@@ -716,28 +729,34 @@
       const w = rect.width, h = rect.height;
       ctx.clearRect(0, 0, w, h);
       const candles = makeCandles(history);
-      ctx.strokeStyle = "rgba(255,255,255,0.08)"; ctx.lineWidth = 1;
-      for (let i = 1; i < 4; i++) { const y = (h / 4) * i; ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(w, y); ctx.stroke(); }
+      const padX = 12;
+      const padY = 12;
+      ctx.strokeStyle = "rgba(255,255,255,0.075)"; ctx.lineWidth = 1;
+      for (let i = 1; i < 4; i++) {
+        const y = padY + ((h - padY * 2) / 4) * i;
+        ctx.beginPath(); ctx.moveTo(padX, y); ctx.lineTo(w - padX, y); ctx.stroke();
+      }
       if (!candles.length) {
         ctx.fillStyle = getCss("--muted"); ctx.font = "12px system-ui"; ctx.textAlign = "center";
         ctx.fillText("가격 기록이 쌓이면 캔들이 표시됩니다.", w / 2, h / 2); return;
       }
       const lows = candles.map(c => c.low), highs = candles.map(c => c.high);
       const min = Math.min(...lows), max = Math.max(...highs), range = Math.max(1, max - min);
-      const pad = 10;
-      const slot = w / CANDLE_COUNT;
-      const bodyW = Math.max(5, Math.min(16, slot * 0.55));
-      const toY = (price) => h - pad - ((price - min) / range) * (h - pad * 2);
+      const chartW = w - padX * 2;
+      const chartH = h - padY * 2;
+      const slot = chartW / CANDLE_COUNT;
+      const bodyW = Math.max(4, Math.min(12, slot * 0.42));
+      const toY = (price) => padY + chartH - ((price - min) / range) * chartH;
       const offset = CANDLE_COUNT - candles.length;
       candles.forEach((c, idx) => {
-        const x = (idx + offset + 0.5) * slot;
+        const x = padX + (idx + offset + 0.5) * slot;
         const openY = toY(c.open), closeY = toY(c.close), highY = toY(c.high), lowY = toY(c.low);
         const diff = c.close - c.open;
         const color = getDirectionColor(diff);
-        ctx.strokeStyle = color; ctx.fillStyle = color; ctx.lineWidth = 2;
+        ctx.strokeStyle = color; ctx.fillStyle = color; ctx.lineWidth = 1.7;
         ctx.beginPath(); ctx.moveTo(x, highY); ctx.lineTo(x, lowY); ctx.stroke();
         const top = Math.min(openY, closeY);
-        const bodyH = Math.max(3, Math.abs(closeY - openY));
+        const bodyH = Math.max(2.5, Math.abs(closeY - openY));
         ctx.fillRect(x - bodyW / 2, top, bodyW, bodyH);
       });
     }
