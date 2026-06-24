@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
-  <title>주식 게임 v30</title>
+  <title>주식 게임 v33</title>
   <style>
     * { box-sizing: border-box; }
     html, body { margin: 0; padding: 0; height: 100%; font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; background: #1f2937; color: #fff; }
@@ -114,8 +114,8 @@
     .settings-top { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 8px; }
     .settings-top .title { margin: 0; }
     .settings-back-btn { width: auto; min-width: 78px; height: 38px; padding: 0 12px; margin: 0; background: var(--panel-bg); color: #fff; border: 1px solid var(--line); font-size: 13px; font-weight: 900; border-radius: 0; }
-    .settings-tabs { display: flex; align-items: center; gap: 26px; border-bottom: 1px solid var(--line-strong); margin: 2px 0 22px; }
-    .settings-tab { height: 46px; padding: 0; background: transparent; color: var(--muted); font-size: 15px; font-weight: 750; border-radius: 0; }
+    .settings-tabs { display: flex; align-items: center; gap: 22px; border-bottom: 1px solid var(--line-strong); margin: 2px 0 22px; overflow-x: auto; -webkit-overflow-scrolling: touch; }
+    .settings-tab { flex: 0 0 auto; height: 46px; padding: 0; background: transparent; color: var(--muted); font-size: 15px; font-weight: 750; border-radius: 0; }
     .settings-tab.active { color: #fff; font-weight: 950; }
     .settings-panel { display: none; }
     .settings-panel.active { display: block; }
@@ -225,6 +225,22 @@
     .ranking-detail-label { color: var(--muted); font-weight: 950; }
     .ranking-detail-value { color: #fff; font-weight: 950; text-align: right; word-break: break-all; }
     .ranking-status { min-height: 20px; color: var(--muted); font-size: 12px; font-weight: 800; text-align: center; margin-top: 12px; }
+
+    .user-manage-desc { font-size: 12px; color: var(--muted); line-height: 1.55; margin: 0 0 16px; }
+    .user-manage-list { border-top: 1px solid var(--line-strong); }
+    .user-manage-card { padding: 16px 0; border-bottom: 1px solid var(--line-strong); }
+    .user-manage-name-label, .user-manage-money-label { color: var(--muted); font-size: 12px; font-weight: 950; margin-bottom: 7px; }
+    .user-manage-name { font-size: 20px; font-weight: 950; letter-spacing: -0.6px; margin-bottom: 14px; }
+    .user-manage-money-block { padding: 13px 0; border-top: 1px solid var(--line); }
+    .user-manage-money-value { font-size: 18px; font-weight: 950; letter-spacing: -0.6px; text-align: right; word-break: break-all; }
+    .user-manage-actions { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; margin-top: 14px; }
+    .user-manage-actions button { height: 40px; color: #fff; font-size: 12px; font-weight: 950; border-radius: 0; }
+    .user-pay-btn { background: var(--green); }
+    .user-reclaim-btn { background: var(--red); }
+    .user-reset-btn { background: #64748b; }
+    .user-delete-btn { background: #991b1b; }
+    .user-manage-status { min-height: 20px; color: var(--muted); font-size: 12px; font-weight: 800; text-align: center; margin-top: 12px; }
+    .danger-message { color: var(--text-soft); font-size: 12px; line-height: 1.6; margin: 4px 0 16px; }
     .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.55); display: none; align-items: center; justify-content: center; padding: 18px; z-index: 200; }
     .modal-overlay.active { display: flex; }
     .trade-modal { width: min(420px, 100%); background: var(--panel-bg); border: 1px solid var(--line-strong); box-shadow: 0 24px 80px rgba(0,0,0,0.55); padding: 20px; }
@@ -400,6 +416,7 @@
           <button id="settingsDefaultTab" class="settings-tab active" type="button">게임 기본값</button>
           <button id="settingsStockTab" class="settings-tab" type="button">종목 추가</button>
           <button id="settingsBankTab" class="settings-tab" type="button">은행 관리</button>
+          <button id="settingsUserTab" class="settings-tab" type="button">유저 관리</button>
         </div>
 
         <div class="settings-section">
@@ -460,6 +477,12 @@
             <div class="hint">기본값: 시간당 1% / 통장 잔액이 1원 이상이면 10분마다 시간당 이자율의 1/6만큼 지급됩니다.</div>
             <button id="saveBankSettingsBtn" class="primary-btn">은행 설정 저장하기</button>
             <div id="bankSettingsStatus" class="status"></div>
+          </div>
+
+          <div id="settingsUserPanel" class="settings-panel">
+            <div class="user-manage-desc">가입한 유저를 닉네임 가나다 / abc 순서로 관리할 수 있습니다.</div>
+            <div id="userManageList" class="user-manage-list"></div>
+            <div id="userManageStatus" class="user-manage-status"></div>
           </div>
         </div>
       </div>
@@ -532,6 +555,27 @@
           <button id="bankCancelBtn" class="cancel-btn" type="button">취소</button>
         </div>
         <div id="bankModalStatus" class="modal-status"></div>
+      </div>
+    </div>
+
+
+    <div id="userAdminModalOverlay" class="modal-overlay">
+      <div id="userAdminModal" class="trade-modal">
+        <h2 id="userAdminModalTitle" class="trade-modal-title">유저 관리</h2>
+        <div id="userAdminModalSub" class="trade-modal-sub">-</div>
+        <div id="userAdminAmountArea" class="field">
+          <label for="userAdminAmountInput">금액</label>
+          <div class="settings-row">
+            <input id="userAdminAmountInput" type="number" inputmode="numeric" min="1" step="1" placeholder="금액 입력" />
+            <div class="won">원</div>
+          </div>
+        </div>
+        <div id="userAdminDangerMessage" class="danger-message"></div>
+        <div class="modal-actions">
+          <button id="userAdminConfirmBtn" class="confirm-buy" type="button">확인</button>
+          <button id="userAdminCancelBtn" class="cancel-btn" type="button">취소</button>
+        </div>
+        <div id="userAdminModalStatus" class="modal-status"></div>
       </div>
     </div>
 
@@ -643,9 +687,13 @@
     const settingsDefaultTab = document.getElementById("settingsDefaultTab");
     const settingsStockTab = document.getElementById("settingsStockTab");
     const settingsBankTab = document.getElementById("settingsBankTab");
+    const settingsUserTab = document.getElementById("settingsUserTab");
     const settingsDefaultPanel = document.getElementById("settingsDefaultPanel");
     const settingsStockPanel = document.getElementById("settingsStockPanel");
     const settingsBankPanel = document.getElementById("settingsBankPanel");
+    const settingsUserPanel = document.getElementById("settingsUserPanel");
+    const userManageList = document.getElementById("userManageList");
+    const userManageStatus = document.getElementById("userManageStatus");
     const settingsStatus = document.getElementById("settingsStatus");
     const stockNameInput = document.getElementById("stockNameInput");
     const stockStartPriceInput = document.getElementById("stockStartPriceInput");
@@ -695,6 +743,16 @@
     const bankConfirmBtn = document.getElementById("bankConfirmBtn");
     const bankCancelBtn = document.getElementById("bankCancelBtn");
     const bankModalStatus = document.getElementById("bankModalStatus");
+    const userAdminModalOverlay = document.getElementById("userAdminModalOverlay");
+    const userAdminModal = document.getElementById("userAdminModal");
+    const userAdminModalTitle = document.getElementById("userAdminModalTitle");
+    const userAdminModalSub = document.getElementById("userAdminModalSub");
+    const userAdminAmountArea = document.getElementById("userAdminAmountArea");
+    const userAdminAmountInput = document.getElementById("userAdminAmountInput");
+    const userAdminDangerMessage = document.getElementById("userAdminDangerMessage");
+    const userAdminConfirmBtn = document.getElementById("userAdminConfirmBtn");
+    const userAdminCancelBtn = document.getElementById("userAdminCancelBtn");
+    const userAdminModalStatus = document.getElementById("userAdminModalStatus");
 
     let currentUser = null;
     let currentUserData = null;
@@ -719,7 +777,9 @@
     let bankLogs = [];
     let bankGlobalData = { totalDeposits: 0 };
     let rankings = [];
+    let adminUsers = [];
     let expandedRankingId = null;
+    let userAdminModalState = null;
     let infoTab = "stock";
     let bankModalState = null;
     let bankInterestTimer = null;
@@ -778,6 +838,7 @@
     function handleAppBackButton() {
       if (tradeModalOverlay.classList.contains("active")) { closeTradeModal(); return true; }
       if (bankModalOverlay.classList.contains("active")) { closeBankModal(); return true; }
+      if (userAdminModalOverlay.classList.contains("active")) { closeUserAdminModal(); return true; }
       if (adminMenuPanel.classList.contains("active")) { closeAdminMenu(); return true; }
       if (currentScreenName === "market") { expandedStockId = null; showScreen("game"); return true; }
       if (currentScreenName === "bank" || currentScreenName === "ranking" || currentScreenName === "settings") { showScreen("game"); return true; }
@@ -806,15 +867,20 @@
       const isDefault = tab === "default";
       const isStock = tab === "stock";
       const isBank = tab === "bank";
+      const isUser = tab === "user";
       settingsDefaultTab.classList.toggle("active", isDefault);
       settingsStockTab.classList.toggle("active", isStock);
       settingsBankTab.classList.toggle("active", isBank);
+      settingsUserTab.classList.toggle("active", isUser);
       settingsDefaultPanel.classList.toggle("active", isDefault);
       settingsStockPanel.classList.toggle("active", isStock);
       settingsBankPanel.classList.toggle("active", isBank);
+      settingsUserPanel.classList.toggle("active", isUser);
       setStatus(settingsStatus, "");
       setStatus(stockAddStatus, "");
       setStatus(bankSettingsStatus, "");
+      if (userManageStatus) userManageStatus.textContent = "";
+      if (isUser) loadAdminUsers().catch(() => {});
     }
 
     function setInfoTab(tab) {
@@ -830,6 +896,7 @@
     }
     function settingsRef() { return doc(db, "settings", "game"); }
     function userRef(uid) { return doc(db, "users", uid); }
+    function usersCol() { return collection(db, "users"); }
     function stocksCol() { return collection(db, "stocks"); }
     function stockRef(id) { return doc(db, "stocks", id); }
     function pricesCol(stockId) { return collection(db, "stocks", stockId, "prices"); }
@@ -1059,6 +1126,233 @@
       } catch (error) {
         setStatus(nicknameStatus, "닉네임 저장에 실패했습니다. Firestore 규칙과 설정값을 확인해주세요.", "error");
         startBtn.disabled = false;
+      }
+    }
+
+    function renderAdminUsers() {
+      if (!userManageList) return;
+      if (!adminUsers.length) {
+        userManageList.innerHTML = `<div class="empty">가입한 유저가 없습니다.</div>`;
+        return;
+      }
+      userManageList.innerHTML = "";
+      adminUsers.forEach((user) => {
+        const card = document.createElement("div");
+        card.className = "user-manage-card";
+        card.innerHTML = `
+          <div class="user-manage-name-label">닉네임</div>
+          <div class="user-manage-name">${escapeHtml(user.nickname || "-")}</div>
+          <div class="user-manage-money-block">
+            <div class="user-manage-money-label">보유 현금</div>
+            <div class="user-manage-money-value">${formatWon(user.cash || 0)}</div>
+          </div>
+          <div class="user-manage-money-block">
+            <div class="user-manage-money-label">통장 잔액</div>
+            <div class="user-manage-money-value">${formatWon(user.bankBalance || 0)}</div>
+          </div>
+          <div class="user-manage-actions">
+            <button class="user-pay-btn" type="button">지급</button>
+            <button class="user-reclaim-btn" type="button">회수</button>
+            <button class="user-reset-btn" type="button">초기화</button>
+            <button class="user-delete-btn" type="button">탈퇴</button>
+          </div>
+        `;
+        card.querySelector(".user-pay-btn").addEventListener("click", () => openUserAdminModal("pay", user));
+        card.querySelector(".user-reclaim-btn").addEventListener("click", () => openUserAdminModal("reclaim", user));
+        card.querySelector(".user-reset-btn").addEventListener("click", () => openUserAdminModal("reset", user));
+        card.querySelector(".user-delete-btn").addEventListener("click", () => openUserAdminModal("delete", user));
+        userManageList.appendChild(card);
+      });
+    }
+
+    async function loadAdminUsers() {
+      if (!isAdmin() || !userManageList) return;
+      userManageStatus.textContent = "유저 목록을 불러오는 중입니다...";
+      try {
+        const snap = await getDocs(query(usersCol(), orderBy("nickname", "asc")));
+        adminUsers = snap.docs.map(d => ({ id: d.id, uid: d.id, ...d.data() }));
+        renderAdminUsers();
+        userManageStatus.textContent = "";
+      } catch (error) {
+        userManageStatus.textContent = "유저 목록을 불러오지 못했습니다.";
+      }
+    }
+
+    function openUserAdminModal(action, user) {
+      if (!isAdmin() || !user) return;
+      userAdminModalState = { action, user };
+      userAdminAmountInput.value = "";
+      userAdminModalStatus.textContent = "";
+      userAdminDangerMessage.textContent = "";
+      userAdminConfirmBtn.className = "confirm-buy";
+      userAdminAmountArea.style.display = "block";
+
+      const nickname = user.nickname || "-";
+      if (action === "pay") {
+        userAdminModalTitle.textContent = "지급";
+        userAdminModalSub.textContent = `${nickname} 님에게 지급할 금액을 입력해주세요.`;
+        userAdminConfirmBtn.textContent = "지급하기";
+        userAdminConfirmBtn.className = "confirm-buy";
+      } else if (action === "reclaim") {
+        userAdminModalTitle.textContent = "회수";
+        userAdminModalSub.textContent = `${nickname} 님으로부터 회수할 금액을 입력해주세요.`;
+        userAdminDangerMessage.textContent = "보유 현금에서 먼저 회수하고, 부족하면 통장 잔액에서 회수됩니다.";
+        userAdminConfirmBtn.textContent = "회수하기";
+        userAdminConfirmBtn.className = "confirm-sell";
+      } else if (action === "reset") {
+        userAdminModalTitle.textContent = "초기화";
+        userAdminModalSub.textContent = `${nickname} 님의 데이터를 초기화할까요?`;
+        userAdminAmountArea.style.display = "none";
+        userAdminDangerMessage.textContent = "보유 주식, 거래 내역, 통장 내역이 삭제되고 보유 현금은 신규 가입 금액으로 돌아갑니다.";
+        userAdminConfirmBtn.textContent = "초기화";
+        userAdminConfirmBtn.className = "confirm-sell";
+      } else if (action === "delete") {
+        userAdminModalTitle.textContent = "탈퇴";
+        userAdminModalSub.textContent = `${nickname} 님을 탈퇴 처리할까요?`;
+        userAdminAmountArea.style.display = "none";
+        userAdminDangerMessage.textContent = "가입 정보가 삭제되며, 다시 접속하면 신규 가입을 해야 합니다.";
+        userAdminConfirmBtn.textContent = "탈퇴 처리";
+        userAdminConfirmBtn.className = "confirm-sell";
+      }
+      userAdminModalOverlay.classList.add("active");
+      setTimeout(() => { if (userAdminAmountArea.style.display !== "none") userAdminAmountInput.focus(); }, 80);
+    }
+
+    function closeUserAdminModal() {
+      userAdminModalOverlay.classList.remove("active");
+      userAdminModalState = null;
+      userAdminModalStatus.textContent = "";
+    }
+
+    function getUserAdminAmount() {
+      return Math.floor(Number(userAdminAmountInput.value || 0));
+    }
+
+    async function deleteCollectionDocs(colRef) {
+      const snap = await getDocs(colRef);
+      if (snap.empty) return;
+      let batch = writeBatch(db);
+      let count = 0;
+      for (const d of snap.docs) {
+        batch.delete(d.ref);
+        count += 1;
+        if (count >= 450) {
+          await batch.commit();
+          batch = writeBatch(db);
+          count = 0;
+        }
+      }
+      if (count > 0) await batch.commit();
+    }
+
+    async function deleteUserSubData(uid) {
+      await deleteCollectionDocs(holdingsCol(uid));
+      await deleteCollectionDocs(tradesCol(uid));
+      await deleteCollectionDocs(bankLogsCol(uid));
+    }
+
+    async function confirmUserAdminAction() {
+      if (!userAdminModalState || !isAdmin()) return;
+      const { action, user } = userAdminModalState;
+      const uid = user.uid || user.id;
+      const nickname = user.nickname || "-";
+      const amount = getUserAdminAmount();
+
+      if ((action === "pay" || action === "reclaim") && (!Number.isFinite(amount) || amount <= 0)) {
+        userAdminModalStatus.textContent = "금액을 입력해주세요.";
+        return;
+      }
+
+      userAdminConfirmBtn.disabled = true;
+      userAdminModalStatus.textContent = "처리 중...";
+      try {
+        if (action === "pay") {
+          await runTransaction(db, async (transaction) => {
+            const uRef = userRef(uid);
+            const snap = await transaction.get(uRef);
+            if (!snap.exists()) throw new Error("유저 데이터가 없습니다.");
+            const data = snap.data();
+            const cash = Number(data.cash || 0);
+            transaction.update(uRef, { cash: cash + amount, lastAdminAt: serverTimestamp() });
+          });
+          showEarnPopup(`${nickname}님에게 ${formatWon(amount)} 지급`);
+        } else if (action === "reclaim") {
+          let reclaimedFromBank = 0;
+          await runTransaction(db, async (transaction) => {
+            const uRef = userRef(uid);
+            const bRef = bankGlobalRef();
+            const snap = await transaction.get(uRef);
+            const bankSnap = await transaction.get(bRef);
+            if (!snap.exists()) throw new Error("유저 데이터가 없습니다.");
+            const data = snap.data();
+            const cash = Number(data.cash || 0);
+            const bankBalance = Number(data.bankBalance || 0);
+            if (cash + bankBalance < amount) throw new Error("회수 가능한 금액이 부족합니다.");
+            const cashTake = Math.min(cash, amount);
+            const bankTake = amount - cashTake;
+            reclaimedFromBank = bankTake;
+            const nextBank = bankBalance - bankTake;
+            const updateData = { cash: cash - cashTake, bankBalance: nextBank, lastAdminAt: serverTimestamp() };
+            if (nextBank <= 0) updateData.nextBankInterestAt = null;
+            transaction.update(uRef, updateData);
+            if (bankTake > 0) {
+              const totalDeposits = Number(bankSnap.exists() ? (bankSnap.data().totalDeposits || 0) : 0);
+              transaction.set(bRef, { totalDeposits: Math.max(0, totalDeposits - bankTake), updatedAt: serverTimestamp() }, { merge: true });
+            }
+          });
+          showEarnPopup(`${nickname}님으로부터 ${formatWon(amount)} 회수`, "error");
+        } else if (action === "reset") {
+          await runTransaction(db, async (transaction) => {
+            const uRef = userRef(uid);
+            const bRef = bankGlobalRef();
+            const rRef = rankingRef(uid);
+            const snap = await transaction.get(uRef);
+            const bankSnap = await transaction.get(bRef);
+            if (!snap.exists()) throw new Error("유저 데이터가 없습니다.");
+            const data = snap.data();
+            const oldBank = Number(data.bankBalance || 0);
+            const totalDeposits = Number(bankSnap.exists() ? (bankSnap.data().totalDeposits || 0) : 0);
+            transaction.update(uRef, {
+              cash: Number(currentSettings.signupBonus || DEFAULT_SETTINGS.signupBonus),
+              bankBalance: 0,
+              nextBankInterestAt: null,
+              lastEarnAt: null,
+              lastBankAt: serverTimestamp(),
+              lastTradeAt: serverTimestamp(),
+              lastAdminAt: serverTimestamp()
+            });
+            transaction.set(bRef, { totalDeposits: Math.max(0, totalDeposits - oldBank), updatedAt: serverTimestamp() }, { merge: true });
+            transaction.delete(rRef);
+          });
+          await deleteUserSubData(uid);
+          showEarnPopup(`${nickname}님 데이터 초기화 완료`);
+        } else if (action === "delete") {
+          await runTransaction(db, async (transaction) => {
+            const uRef = userRef(uid);
+            const bRef = bankGlobalRef();
+            const rRef = rankingRef(uid);
+            const snap = await transaction.get(uRef);
+            const bankSnap = await transaction.get(bRef);
+            if (!snap.exists()) throw new Error("유저 데이터가 없습니다.");
+            const oldBank = Number(snap.data().bankBalance || 0);
+            const totalDeposits = Number(bankSnap.exists() ? (bankSnap.data().totalDeposits || 0) : 0);
+            transaction.set(bRef, { totalDeposits: Math.max(0, totalDeposits - oldBank), updatedAt: serverTimestamp() }, { merge: true });
+            transaction.delete(rRef);
+            transaction.delete(uRef);
+          });
+          await deleteUserSubData(uid);
+          showEarnPopup(`${nickname}님 탈퇴 처리 완료`, "error");
+        }
+        closeUserAdminModal();
+        await loadAdminUsers().catch(() => {});
+        if (currentUser && uid === currentUser.uid) {
+          await listenUser(uid).catch(() => {});
+        }
+        await listenBankGlobal().catch(() => {});
+      } catch (error) {
+        userAdminModalStatus.textContent = error.message || "처리에 실패했습니다.";
+      } finally {
+        userAdminConfirmBtn.disabled = false;
       }
     }
 
@@ -2134,6 +2428,7 @@
     settingsDefaultTab.addEventListener("click", () => setSettingsTab("default"));
     settingsStockTab.addEventListener("click", () => setSettingsTab("stock"));
     settingsBankTab.addEventListener("click", () => setSettingsTab("bank"));
+    settingsUserTab.addEventListener("click", () => setSettingsTab("user"));
     saveSettingsBtn.addEventListener("click", saveSettings);
     saveBankSettingsBtn.addEventListener("click", saveBankSettings);
     addStockBtn.addEventListener("click", addStock);
@@ -2176,6 +2471,10 @@
     bankConfirmBtn.addEventListener("click", confirmBankTransfer);
     bankCancelBtn.addEventListener("click", closeBankModal);
     bankModalOverlay.addEventListener("click", closeBankModal);
+    userAdminConfirmBtn.addEventListener("click", confirmUserAdminAction);
+    userAdminCancelBtn.addEventListener("click", closeUserAdminModal);
+    userAdminModalOverlay.addEventListener("click", closeUserAdminModal);
+    userAdminModal.addEventListener("click", (event) => event.stopPropagation());
     bankModal.addEventListener("click", (event) => event.stopPropagation());
 
 
