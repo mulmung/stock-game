@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
-  <title>주식 게임 v14</title>
+  <title>주식 게임 v15</title>
   <style>
     * { box-sizing: border-box; }
     html, body { margin: 0; padding: 0; height: 100%; font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; background: #1f2937; color: #fff; }
@@ -111,10 +111,17 @@
     .page .title { text-align: left; margin-bottom: 8px; }
     .page .subtitle { text-align: left; margin-bottom: 22px; }
     .settings-section { width: 100%; }
+    .settings-top { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 8px; }
+    .settings-top .title { margin: 0; }
+    .settings-back-btn { width: auto; min-width: 78px; height: 38px; padding: 0 12px; margin: 0; background: var(--panel-bg); color: #fff; border: 1px solid var(--line); font-size: 13px; font-weight: 900; border-radius: 0; }
+    .settings-tabs { display: flex; align-items: center; gap: 26px; border-bottom: 1px solid var(--line-strong); margin: 2px 0 22px; }
+    .settings-tab { height: 46px; padding: 0; background: transparent; color: var(--muted); font-size: 15px; font-weight: 750; border-radius: 0; }
+    .settings-tab.active { color: #fff; font-weight: 950; }
+    .settings-panel { display: none; }
+    .settings-panel.active { display: block; }
     .settings-row { display: grid; grid-template-columns: 1fr 34px; gap: 8px; align-items: center; }
     .won { color: var(--text-soft); font-size: 13px; font-weight: 900; }
     .hint { font-size: 12px; color: var(--muted); line-height: 1.5; margin-top: -6px; margin-bottom: 18px; }
-    .settings-divider { height: 1px; background: var(--line); margin: 22px 0; }
     .section-title { font-size: 17px; font-weight: 950; margin: 0 0 14px; }
 
     .market-head { display: flex; justify-content: space-between; align-items: flex-end; gap: 10px; margin-bottom: 12px; }
@@ -209,57 +216,63 @@
 
     <section id="settingsScreen" class="screen page-screen">
       <div class="page">
-        <h1 class="title">설정</h1>
-        <p class="subtitle">관리자만 수정할 수 있는 게임 기본값입니다.</p>
+        <div class="settings-top">
+          <h1 class="title">설정</h1>
+          <button id="backToGameBtn" class="settings-back-btn">뒤로가기</button>
+        </div>
+        <p class="subtitle">관리자만 수정할 수 있는 게임 설정입니다.</p>
+
+        <div class="settings-tabs">
+          <button id="settingsDefaultTab" class="settings-tab active" type="button">게임 기본값</button>
+          <button id="settingsStockTab" class="settings-tab" type="button">종목 추가</button>
+        </div>
 
         <div class="settings-section">
-          <h2 class="section-title">게임 기본값</h2>
-          <div class="field">
-            <label for="signupBonusInput">신규 가입 지급 금액</label>
-            <div class="settings-row">
-              <input id="signupBonusInput" type="number" inputmode="numeric" min="1" step="1" />
-              <div class="won">원</div>
+          <div id="settingsDefaultPanel" class="settings-panel active">
+            <div class="field">
+              <label for="signupBonusInput">신규 가입 지급 금액</label>
+              <div class="settings-row">
+                <input id="signupBonusInput" type="number" inputmode="numeric" min="1" step="1" />
+                <div class="won">원</div>
+              </div>
             </div>
-          </div>
 
-          <div class="field">
-            <label for="earnMinInput">돈벌기 최소 지급 금액</label>
-            <div class="settings-row">
-              <input id="earnMinInput" type="number" inputmode="numeric" min="1" step="1" />
-              <div class="won">원</div>
+            <div class="field">
+              <label for="earnMinInput">돈벌기 최소 지급 금액</label>
+              <div class="settings-row">
+                <input id="earnMinInput" type="number" inputmode="numeric" min="1" step="1" />
+                <div class="won">원</div>
+              </div>
             </div>
-          </div>
 
-          <div class="field">
-            <label for="earnMaxInput">돈벌기 최대 지급 금액</label>
-            <div class="settings-row">
-              <input id="earnMaxInput" type="number" inputmode="numeric" min="1" step="1" />
-              <div class="won">원</div>
+            <div class="field">
+              <label for="earnMaxInput">돈벌기 최대 지급 금액</label>
+              <div class="settings-row">
+                <input id="earnMaxInput" type="number" inputmode="numeric" min="1" step="1" />
+                <div class="won">원</div>
+              </div>
             </div>
+
+            <div class="hint">기본값: 신규 가입 1,000,000원 / 돈벌기 10,000원~50,000원</div>
+            <button id="saveSettingsBtn" class="primary-btn">저장하기</button>
+            <div id="settingsStatus" class="status"></div>
           </div>
 
-          <div class="hint">기본값: 신규 가입 1,000,000원 / 돈벌기 10,000원~50,000원</div>
-          <button id="saveSettingsBtn" class="primary-btn">저장하기</button>
-          <div id="settingsStatus" class="status"></div>
-
-          <div class="settings-divider"></div>
-
-          <h2 class="section-title">종목 추가</h2>
-          <div class="field">
-            <label for="stockNameInput">종목명</label>
-            <input id="stockNameInput" type="text" maxlength="18" placeholder="예: 대한금융" autocomplete="off" />
-          </div>
-          <div class="field">
-            <label for="stockStartPriceInput">시작가</label>
-            <div class="settings-row">
-              <input id="stockStartPriceInput" type="number" inputmode="numeric" min="1" step="1" placeholder="예: 10000" />
-              <div class="won">원</div>
+          <div id="settingsStockPanel" class="settings-panel">
+            <div class="field">
+              <label for="stockNameInput">종목명</label>
+              <input id="stockNameInput" type="text" maxlength="18" placeholder="예: 대한금융" autocomplete="off" />
             </div>
+            <div class="field">
+              <label for="stockStartPriceInput">시작가</label>
+              <div class="settings-row">
+                <input id="stockStartPriceInput" type="number" inputmode="numeric" min="1" step="1" placeholder="예: 10000" />
+                <div class="won">원</div>
+              </div>
+            </div>
+            <button id="addStockBtn" class="primary-btn">종목 추가하기</button>
+            <div id="stockAddStatus" class="status"></div>
           </div>
-          <button id="addStockBtn" class="primary-btn">종목 추가하기</button>
-          <div id="stockAddStatus" class="status"></div>
-
-          <button id="backToGameBtn" class="ghost-btn">뒤로가기</button>
         </div>
       </div>
     </section>
@@ -359,6 +372,10 @@
     const earnMaxInput = document.getElementById("earnMaxInput");
     const saveSettingsBtn = document.getElementById("saveSettingsBtn");
     const backToGameBtn = document.getElementById("backToGameBtn");
+    const settingsDefaultTab = document.getElementById("settingsDefaultTab");
+    const settingsStockTab = document.getElementById("settingsStockTab");
+    const settingsDefaultPanel = document.getElementById("settingsDefaultPanel");
+    const settingsStockPanel = document.getElementById("settingsStockPanel");
     const settingsStatus = document.getElementById("settingsStatus");
     const stockNameInput = document.getElementById("stockNameInput");
     const stockStartPriceInput = document.getElementById("stockStartPriceInput");
@@ -411,6 +428,15 @@
         floatingEarnPopup.classList.remove("show");
         earnPopupTimer = null;
       }, 1800);
+    }
+    function setSettingsTab(tab) {
+      const isStock = tab === "stock";
+      settingsDefaultTab.classList.toggle("active", !isStock);
+      settingsStockTab.classList.toggle("active", isStock);
+      settingsDefaultPanel.classList.toggle("active", !isStock);
+      settingsStockPanel.classList.toggle("active", isStock);
+      setStatus(settingsStatus, "");
+      setStatus(stockAddStatus, "");
     }
     function settingsRef() { return doc(db, "settings", "game"); }
     function userRef(uid) { return doc(db, "users", uid); }
@@ -869,7 +895,9 @@
     adminMenuPanel.addEventListener("click", (event) => event.stopPropagation());
     document.addEventListener("click", () => closeAdminMenu());
     openMarketBtn.addEventListener("click", () => { closeAdminMenu(); showScreen("market"); });
-    openSettingsBtn.addEventListener("click", () => { closeAdminMenu(); fillSettingsInputs(); setStatus(settingsStatus, ""); setStatus(stockAddStatus, ""); showScreen("settings"); });
+    openSettingsBtn.addEventListener("click", () => { closeAdminMenu(); fillSettingsInputs(); setSettingsTab("default"); showScreen("settings"); });
+    settingsDefaultTab.addEventListener("click", () => setSettingsTab("default"));
+    settingsStockTab.addEventListener("click", () => setSettingsTab("stock"));
     saveSettingsBtn.addEventListener("click", saveSettings);
     addStockBtn.addEventListener("click", addStock);
     backToGameBtn.addEventListener("click", () => showScreen("game"));
