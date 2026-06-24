@@ -208,6 +208,7 @@
             <h1 class="title">시세</h1>
             <p class="subtitle">종목별 현재가와 최근 30분 흐름입니다.</p>
           </div>
+          <button id="backFromMarketBtn" class="settings-back-btn">뒤로가기</button>
         </div>
         <div class="market-note">종목을 누르면 최근 15개 캔들과 매수/매도 버튼이 열립니다.</div>
         <div id="stockList" class="stock-list"></div>
@@ -372,6 +373,7 @@
     const earnMaxInput = document.getElementById("earnMaxInput");
     const saveSettingsBtn = document.getElementById("saveSettingsBtn");
     const backToGameBtn = document.getElementById("backToGameBtn");
+    const backFromMarketBtn = document.getElementById("backFromMarketBtn");
     const settingsDefaultTab = document.getElementById("settingsDefaultTab");
     const settingsStockTab = document.getElementById("settingsStockTab");
     const settingsDefaultPanel = document.getElementById("settingsDefaultPanel");
@@ -403,6 +405,9 @@
     function activeMainScreens() { return ["game", "market", "settings"]; }
 
     function showScreen(name) {
+      const wasMarket = currentScreenName === "market";
+      if (wasMarket && name !== "market") expandedStockId = null;
+      if (name === "market" && currentScreenName !== "market") expandedStockId = null;
       currentScreenName = name;
       Object.values(screens).forEach(screen => screen.classList.remove("active"));
       screens[name].classList.add("active");
@@ -901,6 +906,7 @@
     saveSettingsBtn.addEventListener("click", saveSettings);
     addStockBtn.addEventListener("click", addStock);
     backToGameBtn.addEventListener("click", () => showScreen("game"));
+    backFromMarketBtn.addEventListener("click", () => showScreen("game"));
     window.addEventListener("resize", () => renderStocks());
 
     getRedirectResult(auth).catch(() => {});
