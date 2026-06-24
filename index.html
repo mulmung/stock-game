@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
-  <title>주식 게임 v13</title>
+  <title>주식 게임 v14</title>
   <style>
     * { box-sizing: border-box; }
     html, body { margin: 0; padding: 0; height: 100%; font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; background: #1f2937; color: #fff; }
@@ -47,7 +47,36 @@
     .main { width: 100%; max-width: 520px; text-align: center; }
     .main-box h1 { margin: 0 0 10px; font-size: 30px; font-weight: 950; }
     .main-box p { margin: 0; color: var(--text-soft); line-height: 1.65; font-size: 14px; }
-    .earned-toast { margin-top: 18px; min-height: 28px; color: #86efac; font-weight: 900; }
+    .earned-toast { display: none; }
+    .floating-earn-popup {
+      position: fixed;
+      left: 50%;
+      bottom: calc(92px + env(safe-area-inset-bottom));
+      transform: translate(-50%, 14px);
+      min-width: 176px;
+      max-width: calc(100vw - 48px);
+      padding: 13px 18px;
+      background: rgba(17, 24, 39, 0.96);
+      border: 1px solid var(--line-strong);
+      color: #86efac;
+      font-size: 15px;
+      font-weight: 950;
+      text-align: center;
+      letter-spacing: -0.2px;
+      box-shadow: 0 18px 45px rgba(0,0,0,0.36);
+      opacity: 0;
+      pointer-events: none;
+      z-index: 120;
+      transition: opacity 220ms ease, transform 220ms ease;
+      white-space: nowrap;
+    }
+    .floating-earn-popup.show {
+      opacity: 1;
+      transform: translate(-50%, 0);
+    }
+    .floating-earn-popup.error {
+      color: #fca5a5;
+    }
 
     .bottom-bar { position: fixed; left: 0; right: 0; bottom: 0; height: 72px; padding-bottom: env(safe-area-inset-bottom); background: var(--bottom-bg); border-top: 1px solid var(--line); display: none; grid-template-columns: 58px 1fr 72px; z-index: 50; }
     .bottom-bar.active { display: grid; }
@@ -240,6 +269,8 @@
       <button id="openSettingsBtn" class="menu-item admin-only">설정</button>
     </div>
 
+    <div id="floatingEarnPopup" class="floating-earn-popup"></div>
+
     <footer id="bottomBar" class="bottom-bar">
       <button id="menuBtn" class="bar-btn menu">☰</button>
       <div class="center-info">
@@ -318,6 +349,7 @@
     const barCash = document.getElementById("barCash");
     const earnBtn = document.getElementById("earnBtn");
     const earnedToast = document.getElementById("earnedToast");
+    const floatingEarnPopup = document.getElementById("floatingEarnPopup");
     const menuBtn = document.getElementById("menuBtn");
     const adminMenuPanel = document.getElementById("adminMenuPanel");
     const openMarketBtn = document.getElementById("openMarketBtn");
@@ -343,6 +375,7 @@
     let unsubscribeStocks = null;
     let priceUnsubs = new Map();
     let cooldownTimer = null;
+    let earnPopupTimer = null;
     let marketTimer = null;
     let stocks = [];
     let priceHistories = new Map();
@@ -368,6 +401,16 @@
     function setStatus(el, text, type = "") {
       el.textContent = text || "";
       el.className = "status" + (type ? " " + type : "");
+    }
+    function showEarnPopup(text, type = "success") {
+      if (!floatingEarnPopup) return;
+      if (earnPopupTimer) clearTimeout(earnPopupTimer);
+      floatingEarnPopup.textContent = text;
+      floatingEarnPopup.className = "floating-earn-popup" + (type === "error" ? " error" : "") + " show";
+      earnPopupTimer = setTimeout(() => {
+        floatingEarnPopup.classList.remove("show");
+        earnPopupTimer = null;
+      }, 1800);
     }
     function settingsRef() { return doc(db, "settings", "game"); }
     function userRef(uid) { return doc(db, "users", uid); }
@@ -501,11 +544,12 @@
           }
           transaction.update(ref, { cash: Number(data.cash || 0) + amount, lastEarnAt: serverTimestamp() });
         });
-        earnedToast.textContent = `+${formatWon(amount)} 획득!`;
-        setTimeout(() => { earnedToast.textContent = ""; }, 2500);
+        if (earnedToast) earnedToast.textContent = "";
+        showEarnPopup(`+${formatWon(amount)} 획득`);
       } catch (error) {
-        earnedToast.textContent = error.message || "돈벌기에 실패했습니다.";
-        setTimeout(() => { earnedToast.textContent = ""; }, 2500);
+        const message = error.message || "돈벌기에 실패했습니다.";
+        if (earnedToast) earnedToast.textContent = "";
+        showEarnPopup(message, "error");
       } finally { updateEarnButton(); }
     }
 
