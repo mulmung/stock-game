@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
-  <title>주식 게임 v24</title>
+  <title>주식 게임 v27</title>
   <style>
     * { box-sizing: border-box; }
     html, body { margin: 0; padding: 0; height: 100%; font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; background: #1f2937; color: #fff; }
@@ -676,9 +676,15 @@
       screens[name].classList.add("active");
       bottomBar.classList.toggle("active", activeMainScreens().includes(name));
       closeAdminMenu();
-      if (name === "market") renderStocks();
-      if (name === "bank") renderGlobalBank();
-      if (name === "game") { renderPortfolio(); renderBank(); }
+      if (name === "market") { renderStocks(); listenStocks().catch(() => {}); }
+      if (name === "bank") { renderGlobalBank(); listenBankGlobal().catch(() => {}); }
+      if (name === "game") {
+        renderPortfolio(); renderBank();
+        if (currentUser) {
+          listenHoldings(currentUser.uid).catch(() => {});
+          if (infoTab === "bank") listenBankLogs(currentUser.uid).catch(() => {});
+        }
+      }
     }
 
     function formatWon(value) {
@@ -723,6 +729,7 @@
       bankInfoPanel.classList.toggle("active", isBank);
       renderPortfolio();
       renderBank();
+      if (isBank && currentUser) listenBankLogs(currentUser.uid).catch(() => {});
     }
     function settingsRef() { return doc(db, "settings", "game"); }
     function userRef(uid) { return doc(db, "users", uid); }
@@ -818,20 +825,22 @@
       }
     }
 
-    function listenSettings() {
-      if (unsubscribeSettings) unsubscribeSettings();
-      unsubscribeSettings = onSnapshot(settingsRef(), (snap) => {
-        if (snap.exists()) {
-          const data = snap.data();
-          currentSettings = {
-            signupBonus: Number(data.signupBonus ?? DEFAULT_SETTINGS.signupBonus),
-            earnMin: Number(data.earnMin ?? DEFAULT_SETTINGS.earnMin),
-            earnMax: Number(data.earnMax ?? DEFAULT_SETTINGS.earnMax),
-            bankHourlyInterestRate: Number(data.bankHourlyInterestRate ?? DEFAULT_SETTINGS.bankHourlyInterestRate)
-          };
-        } else currentSettings = { ...DEFAULT_SETTINGS };
-        fillSettingsInputs();
-      });
+    async function listenSettings() {
+      // 읽기 최적화: 설정은 실시간 감시하지 않고 필요할 때 1회만 읽습니다.
+      if (unsubscribeSettings) { unsubscribeSettings(); unsubscribeSettings = null; }
+      const snap = await getDoc(settingsRef());
+      if (snap.exists()) {
+        const data = snap.data();
+        currentSettings = {
+          signupBonus: Number(data.signupBonus ?? DEFAULT_SETTINGS.signupBonus),
+          earnMin: Number(data.earnMin ?? DEFAULT_SETTINGS.earnMin),
+          earnMax: Number(data.earnMax ?? DEFAULT_SETTINGS.earnMax),
+          bankHourlyInterestRate: Number(data.bankHourlyInterestRate ?? DEFAULT_SETTINGS.bankHourlyInterestRate)
+        };
+      } else {
+        currentSettings = { ...DEFAULT_SETTINGS };
+      }
+      fillSettingsInputs();
     }
 
     function fillSettingsInputs() {
@@ -966,6 +975,7 @@
       setStatus(settingsStatus, "저장 중...");
       try {
         await setDoc(settingsRef(), { signupBonus, earnMin, earnMax, bankHourlyInterestRate: Number(currentSettings.bankHourlyInterestRate || DEFAULT_SETTINGS.bankHourlyInterestRate), updatedAt: serverTimestamp(), updatedBy: currentUser.uid }, { merge: true });
+        await listenSettings();
         setStatus(settingsStatus, "설정이 저장되었습니다.", "success");
       } catch (error) { setStatus(settingsStatus, "설정 저장에 실패했습니다. 관리자 권한을 확인해주세요.", "error"); }
       finally { saveSettingsBtn.disabled = false; }
@@ -990,6 +1000,7 @@
           updatedAt: serverTimestamp(),
           updatedBy: currentUser.uid
         }, { merge: true });
+        await listenSettings();
         setStatus(bankSettingsStatus, "은행 설정이 저장되었습니다.", "success");
       } catch (error) {
         setStatus(bankSettingsStatus, "은행 설정 저장에 실패했습니다.", "error");
@@ -1030,6 +1041,7 @@
           createdAt: serverTimestamp()
         });
         await batch.commit();
+        await listenStocks().catch(() => {});
         stockNameInput.value = "";
         stockStartPriceInput.value = "";
         setStatus(stockAddStatus, "종목이 추가되었습니다.", "success");
@@ -1037,59 +1049,57 @@
       finally { addStockBtn.disabled = false; }
     }
 
-    function listenStocks() {
-      if (unsubscribeStocks) unsubscribeStocks();
-      unsubscribeStocks = onSnapshot(query(stocksCol(), orderBy("createdAt", "asc")), (snap) => {
-        stocks = snap.docs.map(d => ({ id: d.id, ...d.data() }));
-        syncPriceListeners();
-        renderStocks();
-      });
+    async function listenStocks() {
+      // 읽기 최적화: 종목 목록은 실시간 감시하지 않고 필요할 때 1회만 읽습니다.
+      if (unsubscribeStocks) { unsubscribeStocks(); unsubscribeStocks = null; }
+      for (const unsub of priceUnsubs.values()) {
+        try { unsub(); } catch (e) {}
+      }
+      priceUnsubs.clear();
+      const snap = await getDocs(query(stocksCol(), orderBy("createdAt", "asc")));
+      stocks = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+      renderStocks();
+      renderPortfolio();
     }
 
-
-
-    function listenHoldings(uid) {
-      if (unsubscribeHoldings) unsubscribeHoldings();
-        if (unsubscribeBankLogs) unsubscribeBankLogs();
-      unsubscribeHoldings = onSnapshot(query(holdingsCol(uid), orderBy("updatedAt", "desc")), (snap) => {
-        holdings = snap.docs.map(d => ({ id: d.id, ...d.data() }));
-        renderPortfolio();
-      });
+    async function listenHoldings(uid) {
+      // 읽기 최적화: 보유 주식은 필요할 때 1회만 읽습니다.
+      if (unsubscribeHoldings) { unsubscribeHoldings(); unsubscribeHoldings = null; }
+      const snap = await getDocs(query(holdingsCol(uid), orderBy("updatedAt", "desc")));
+      holdings = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+      renderPortfolio();
     }
 
-
-    function listenBankLogs(uid) {
-      if (unsubscribeBankLogs) unsubscribeBankLogs();
-      unsubscribeBankLogs = onSnapshot(query(bankLogsCol(uid), orderBy("createdAt", "desc"), limit(BANK_LOG_LIMIT)), (snap) => {
-        bankLogs = snap.docs.map(d => ({ id: d.id, ...d.data() }));
-        renderBank();
-      });
+    async function listenBankLogs(uid) {
+      // 읽기 최적화: 통장 내역은 통장 탭/입출금/이자 후에만 1회 읽습니다.
+      if (unsubscribeBankLogs) { unsubscribeBankLogs(); unsubscribeBankLogs = null; }
+      const snap = await getDocs(query(bankLogsCol(uid), orderBy("createdAt", "desc"), limit(BANK_LOG_LIMIT)));
+      bankLogs = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+      renderBank();
     }
 
-    function listenBankGlobal() {
-      if (unsubscribeBankGlobal) unsubscribeBankGlobal();
-      unsubscribeBankGlobal = onSnapshot(bankGlobalRef(), (snap) => {
-        bankGlobalData = snap.exists() ? snap.data() : { totalDeposits: 0 };
-        renderGlobalBank();
-      });
+    async function listenBankGlobal() {
+      // 읽기 최적화: 은행 총 예치금은 은행 화면/입출금/이자 후에만 1회 읽습니다.
+      if (unsubscribeBankGlobal) { unsubscribeBankGlobal(); unsubscribeBankGlobal = null; }
+      const snap = await getDoc(bankGlobalRef());
+      bankGlobalData = snap.exists() ? snap.data() : { totalDeposits: 0 };
+      renderGlobalBank();
+    }
+
+    async function loadPriceHistoryForStock(stockId) {
+      if (!stockId) return [];
+      const snap = await getDocs(query(pricesCol(stockId), orderBy("createdAt", "desc"), limit(PRICE_HISTORY_LIMIT)));
+      const history = snap.docs.map(d => ({ id: d.id, ...d.data() })).reverse();
+      priceHistories.set(stockId, history);
+      return history;
     }
 
     function syncPriceListeners() {
-      const activeIds = new Set(stocks.map(s => s.id));
-      for (const [id, unsub] of priceUnsubs.entries()) {
-        if (!activeIds.has(id)) { unsub(); priceUnsubs.delete(id); priceHistories.delete(id); }
+      // v27부터 모든 종목의 가격 기록 실시간 감시는 사용하지 않습니다.
+      for (const unsub of priceUnsubs.values()) {
+        try { unsub(); } catch (e) {}
       }
-      for (const stock of stocks) {
-        if (priceUnsubs.has(stock.id)) continue;
-        const q = query(pricesCol(stock.id), orderBy("createdAt", "desc"), limit(PRICE_HISTORY_LIMIT));
-        const unsub = onSnapshot(q, (snap) => {
-          const history = snap.docs.map(d => ({ id: d.id, ...d.data() })).reverse();
-          priceHistories.set(stock.id, history);
-          renderStocks();
-          renderPortfolio();
-        });
-        priceUnsubs.set(stock.id, unsub);
-      }
+      priceUnsubs.clear();
     }
 
     function renderStocks() {
@@ -1141,8 +1151,9 @@
             </div>
           ` : ""}
         `;
-        row.addEventListener("click", () => {
+        row.addEventListener("click", async () => {
           expandedStockId = expandedStockId === stock.id ? null : stock.id;
+          if (expandedStockId) await loadPriceHistoryForStock(expandedStockId).catch(() => []);
           renderStocks();
           renderPortfolio();
         });
@@ -1304,6 +1315,8 @@
           }
         });
         await pruneOldBankLogs(currentUser.uid);
+        await listenBankLogs(currentUser.uid).catch(() => {});
+        await listenBankGlobal().catch(() => {});
         closeBankModal();
         showEarnPopup(`${isDeposit ? "입금" : "출금"} 완료`);
       } catch (error) {
@@ -1343,6 +1356,8 @@
           transaction.set(logRef, { type: "interest", label: "이자", amount: liveInterest, balanceAfter: nextBank, createdAt: serverTimestamp() });
         });
         await pruneOldBankLogs(currentUser.uid);
+        await listenBankLogs(currentUser.uid).catch(() => {});
+        await listenBankGlobal().catch(() => {});
         showEarnPopup(`이자 +${formatWon(interest)}`);
       } catch (error) {
         console.warn("이자 지급에 실패했습니다.", error);
@@ -1440,8 +1455,9 @@
             </div>
           ` : ""}
         `;
-        row.addEventListener("click", () => {
+        row.addEventListener("click", async () => {
           expandedHoldingStockId = expandedHoldingStockId === item.stockId ? null : item.stockId;
+          if (expandedHoldingStockId) await loadPriceHistoryForStock(expandedHoldingStockId).catch(() => []);
           renderPortfolio();
         });
         row.querySelectorAll("button").forEach(btn => btn.addEventListener("click", (e) => e.stopPropagation()));
@@ -1578,6 +1594,8 @@
           }
         });
         await pruneOldTrades(currentUser.uid);
+        await listenHoldings(currentUser.uid).catch(() => {});
+        await listenStocks().catch(() => {});
         closeTradeModal();
         showEarnPopup(`${type === "buy" ? "매수" : "매도"} 완료`);
       } catch (error) {
@@ -1741,13 +1759,15 @@
               createdAt: serverTimestamp()
             });
           }).catch(() => {});
-          cleanupOldPrices(stock.id).catch(() => {});
+          const cleanupNow = new Date().getMinutes() === 0 && new Date().getHours() % 6 === 0;
+          if (cleanupNow) cleanupOldPrices(stock.id).catch(() => {});
         }
+        await listenStocks().catch(() => {});
       } finally { marketUpdating = false; }
     }
 
     async function cleanupOldPrices(stockId) {
-      const all = await getDocs(query(pricesCol(stockId), orderBy("createdAt", "desc"), limit(PRICE_HISTORY_LIMIT + 12)));
+      const all = await getDocs(query(pricesCol(stockId), orderBy("createdAt", "desc"), limit(PRICE_HISTORY_LIMIT + 1)));
       const docs = all.docs;
       if (docs.length <= PRICE_HISTORY_LIMIT) return;
       const batch = writeBatch(db);
@@ -1868,11 +1888,9 @@
       }
       try {
         await ensureSettingsDocForAdmin();
-        listenSettings();
-        listenStocks();
-        listenHoldings(user.uid);
-        listenBankLogs(user.uid);
-        listenBankGlobal();
+        await listenSettings();
+        await listenStocks();
+        await listenHoldings(user.uid);
         startMarketTimer();
         await updateDoc(userRef(user.uid), { lastLoginAt: serverTimestamp() }).catch(() => {});
         const snap = await getDoc(userRef(user.uid));
