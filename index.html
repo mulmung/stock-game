@@ -124,7 +124,7 @@
     .hint { font-size: 12px; color: var(--muted); line-height: 1.5; margin-top: -6px; margin-bottom: 18px; }
     .section-title { font-size: 17px; font-weight: 950; margin: 0 0 14px; }
 
-    .market-head { display: flex; justify-content: space-between; align-items: flex-end; gap: 10px; margin-bottom: 12px; }
+    .market-top { margin-bottom: 8px; }
     .market-note { font-size: 12px; color: var(--muted); line-height: 1.45; margin-bottom: 10px; }
     .stock-list { border-top: 1px solid var(--line-strong); }
     .stock-list-head { display: grid; grid-template-columns: minmax(72px, 0.82fr) minmax(84px, 1.05fr) minmax(74px, 0.78fr) minmax(66px, 0.72fr); gap: 8px; align-items: center; padding: 10px 0; border-bottom: 1px solid var(--line); color: var(--muted); font-size: 11px; font-weight: 950; letter-spacing: -0.2px; }
@@ -203,13 +203,11 @@
 
     <section id="marketScreen" class="screen page-screen">
       <div class="page">
-        <div class="market-head">
-          <div>
-            <h1 class="title">시세</h1>
-            <p class="subtitle">종목별 현재가와 최근 30분 흐름입니다.</p>
-          </div>
+        <div class="settings-top market-top">
+          <h1 class="title">시세</h1>
           <button id="backFromMarketBtn" class="settings-back-btn">뒤로가기</button>
         </div>
+        <p class="subtitle">종목별 현재가와 최근 30분 흐름입니다.</p>
         <div class="market-note">종목을 누르면 최근 15개 캔들과 매수/매도 버튼이 열립니다.</div>
         <div id="stockList" class="stock-list"></div>
       </div>
