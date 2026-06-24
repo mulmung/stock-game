@@ -652,6 +652,10 @@
         });
         batch.set(priceRef(newRef.id, key), {
           price: startPrice,
+          open: startPrice,
+          high: startPrice,
+          low: startPrice,
+          close: startPrice,
           minuteKey: key,
           createdAt: serverTimestamp()
         });
@@ -786,16 +790,40 @@
       ctx.stroke();
     }
 
+    function hasOhlcPoint(point) {
+      return ["open", "high", "low", "close"].every(key => Number.isFinite(Number(point?.[key])));
+    }
+
+    function normalizeCandle(point) {
+      const open = Number(point.open);
+      const high = Number(point.high);
+      const low = Number(point.low);
+      const close = Number(point.close);
+      return {
+        open,
+        high: Math.max(high, open, close),
+        low: Math.max(1, Math.min(low, open, close)),
+        close
+      };
+    }
+
     function makeCandles(history) {
-      const prices = history.map(p => Number(p.price)).filter(n => Number.isFinite(n));
-      const start = Math.max(1, prices.length - CANDLE_COUNT);
       const candles = [];
-      for (let i = start; i < prices.length; i++) {
-        const open = prices[i - 1];
-        const close = prices[i];
-        candles.push({ open, close, high: Math.max(open, close), low: Math.min(open, close) });
+      for (let i = 0; i < history.length; i++) {
+        const point = history[i];
+        if (hasOhlcPoint(point)) {
+          candles.push(normalizeCandle(point));
+          continue;
+        }
+        if (i > 0) {
+          const open = Number(history[i - 1]?.price);
+          const close = Number(point?.price);
+          if (Number.isFinite(open) && Number.isFinite(close)) {
+            candles.push({ open, close, high: Math.max(open, close), low: Math.min(open, close) });
+          }
+        }
       }
-      return candles;
+      return candles.slice(-CANDLE_COUNT);
     }
 
     function drawCandleChart(canvas, history) {
@@ -862,7 +890,22 @@
               lastMinuteKey: key,
               updatedAt: serverTimestamp()
             });
-            transaction.set(priceRef(stock.id, key), { price: next, minuteKey: key, createdAt: serverTimestamp() });
+            const bodyHigh = Math.max(current, next);
+            const bodyLow = Math.min(current, next);
+            const maxWick = Math.max(1, Math.round(current * 0.008));
+            const upperWick = Math.floor(Math.random() * (maxWick + 1));
+            const lowerWick = Math.floor(Math.random() * (maxWick + 1));
+            const high = bodyHigh + upperWick;
+            const low = Math.max(1, bodyLow - lowerWick);
+            transaction.set(priceRef(stock.id, key), {
+              price: next,
+              open: current,
+              high,
+              low,
+              close: next,
+              minuteKey: key,
+              createdAt: serverTimestamp()
+            });
           }).catch(() => {});
           cleanupOldPrices(stock.id).catch(() => {});
         }
