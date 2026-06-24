@@ -195,6 +195,10 @@
     .bank-log-money { display: flex; flex-direction: column; align-items: flex-end; justify-content: center; gap: 5px; min-width: 0; }
     .bank-log-amount { max-width: 100%; white-space: nowrap; font-weight: 950; font-size: 11.5px; line-height: 1.08; }
     .bank-log-balance { max-width: 100%; white-space: nowrap; color: var(--text-soft); font-size: 11px; line-height: 1.08; }
+    .global-bank-card { border-top: 1px solid var(--line-strong); border-bottom: 1px solid var(--line-strong); padding: 18px 0; margin-top: 18px; }
+    .global-bank-label { color: var(--muted); font-size: 13px; font-weight: 950; margin-bottom: 8px; }
+    .global-bank-value { font-size: 26px; font-weight: 950; letter-spacing: -1px; text-align: right; white-space: nowrap; }
+    .global-bank-desc { margin-top: 14px; padding-top: 12px; border-top: 1px solid var(--line); color: var(--text-soft); font-size: 12px; line-height: 1.55; }
     .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.55); display: none; align-items: center; justify-content: center; padding: 18px; z-index: 200; }
     .modal-overlay.active { display: flex; }
     .trade-modal { width: min(420px, 100%); background: var(--panel-bg); border: 1px solid var(--line-strong); box-shadow: 0 24px 80px rgba(0,0,0,0.55); padding: 20px; }
@@ -320,6 +324,21 @@
       </div>
     </section>
 
+    <section id="bankScreen" class="screen page-screen">
+      <div class="page">
+        <div class="settings-top market-top">
+          <h1 class="title">은행</h1>
+          <button id="backFromBankBtn" class="settings-back-btn">뒤로가기</button>
+        </div>
+        <p class="subtitle">전체 유저의 통장 예치 현황을 확인할 수 있습니다.</p>
+        <div class="global-bank-card">
+          <div class="global-bank-label">총 예치금</div>
+          <div id="bankTotalDepositsValue" class="global-bank-value">0원</div>
+          <div class="global-bank-desc">모든 유저가 통장에 예치한 금액의 합계입니다.</div>
+        </div>
+      </div>
+    </section>
+
     <section id="settingsScreen" class="screen page-screen">
       <div class="page">
         <div class="settings-top">
@@ -399,6 +418,7 @@
 
     <div id="adminMenuPanel" class="menu-panel">
       <button id="openMarketBtn" class="menu-item">시세</button>
+      <button id="openBankBtn" class="menu-item">은행</button>
       <button id="openSettingsBtn" class="menu-item admin-only">설정</button>
     </div>
 
@@ -538,6 +558,7 @@
       nickname: document.getElementById("nicknameScreen"),
       game: document.getElementById("gameScreen"),
       market: document.getElementById("marketScreen"),
+      bank: document.getElementById("bankScreen"),
       settings: document.getElementById("settingsScreen")
     };
 
@@ -555,6 +576,7 @@
     const menuBtn = document.getElementById("menuBtn");
     const adminMenuPanel = document.getElementById("adminMenuPanel");
     const openMarketBtn = document.getElementById("openMarketBtn");
+    const openBankBtn = document.getElementById("openBankBtn");
     const openSettingsBtn = document.getElementById("openSettingsBtn");
     const signupBonusInput = document.getElementById("signupBonusInput");
     const earnMinInput = document.getElementById("earnMinInput");
@@ -562,6 +584,7 @@
     const saveSettingsBtn = document.getElementById("saveSettingsBtn");
     const backToGameBtn = document.getElementById("backToGameBtn");
     const backFromMarketBtn = document.getElementById("backFromMarketBtn");
+    const backFromBankBtn = document.getElementById("backFromBankBtn");
     const settingsDefaultTab = document.getElementById("settingsDefaultTab");
     const settingsStockTab = document.getElementById("settingsStockTab");
     const settingsBankTab = document.getElementById("settingsBankTab");
@@ -587,6 +610,7 @@
     const bankInfoPanel = document.getElementById("bankInfoPanel");
     const bankOwnerName = document.getElementById("bankOwnerName");
     const bankBalanceValue = document.getElementById("bankBalanceValue");
+    const bankTotalDepositsValue = document.getElementById("bankTotalDepositsValue");
     const openDepositBtn = document.getElementById("openDepositBtn");
     const openWithdrawBtn = document.getElementById("openWithdrawBtn");
     const bankLogList = document.getElementById("bankLogList");
@@ -631,7 +655,9 @@
     let holdings = [];
     let unsubscribeHoldings = null;
     let unsubscribeBankLogs = null;
+    let unsubscribeBankGlobal = null;
     let bankLogs = [];
+    let bankGlobalData = { totalDeposits: 0 };
     let infoTab = "stock";
     let bankModalState = null;
     let bankInterestTimer = null;
@@ -639,7 +665,7 @@
     let marketUpdating = false;
 
     function isAdmin() { return currentUser && currentUser.email === ADMIN_EMAIL; }
-    function activeMainScreens() { return ["game", "market", "settings"]; }
+    function activeMainScreens() { return ["game", "market", "bank", "settings"]; }
 
     function showScreen(name) {
       const wasMarket = currentScreenName === "market";
@@ -651,6 +677,7 @@
       bottomBar.classList.toggle("active", activeMainScreens().includes(name));
       closeAdminMenu();
       if (name === "market") renderStocks();
+      if (name === "bank") renderGlobalBank();
       if (name === "game") { renderPortfolio(); renderBank(); }
     }
 
@@ -707,6 +734,7 @@
     function holdingRef(uid, stockId) { return doc(db, "users", uid, "holdings", stockId); }
     function tradesCol(uid) { return collection(db, "users", uid, "trades"); }
     function bankLogsCol(uid) { return collection(db, "users", uid, "bankLogs"); }
+    function bankGlobalRef() { return doc(db, "bank", "global"); }
 
     async function pruneOldTrades(uid) {
       try {
@@ -1038,6 +1066,14 @@
       });
     }
 
+    function listenBankGlobal() {
+      if (unsubscribeBankGlobal) unsubscribeBankGlobal();
+      unsubscribeBankGlobal = onSnapshot(bankGlobalRef(), (snap) => {
+        bankGlobalData = snap.exists() ? snap.data() : { totalDeposits: 0 };
+        renderGlobalBank();
+      });
+    }
+
     function syncPriceListeners() {
       const activeIds = new Set(stocks.map(s => s.id));
       for (const [id, unsub] of priceUnsubs.entries()) {
@@ -1146,6 +1182,12 @@
       return `${y}.${m}.${d}<br />${h}:${min}`;
     }
 
+    function renderGlobalBank() {
+      if (!bankTotalDepositsValue) return;
+      const total = Number(bankGlobalData?.totalDeposits || 0);
+      bankTotalDepositsValue.textContent = formatWon(total);
+    }
+
     function renderBank() {
       if (!bankOwnerName || !bankBalanceValue || !bankLogList) return;
       const nickname = currentUserData?.nickname || "-";
@@ -1236,21 +1278,28 @@
       try {
         await runTransaction(db, async (transaction) => {
           const uRef = userRef(currentUser.uid);
+          const bRef = bankGlobalRef();
           const logRef = doc(bankLogsCol(currentUser.uid));
           const snap = await transaction.get(uRef);
+          const bankSnap = await transaction.get(bRef);
           if (!snap.exists()) throw new Error("유저 데이터가 없습니다.");
           const data = snap.data();
           const cash = Number(data.cash || 0);
           const bankBalance = Number(data.bankBalance || 0);
+          const totalDeposits = Number(bankSnap.exists() ? (bankSnap.data().totalDeposits || 0) : 0);
           if (isDeposit) {
             if (cash < amount) throw new Error("보유현금이 부족합니다.");
             const nextBank = bankBalance + amount;
+            const nextTotalDeposits = totalDeposits + amount;
             transaction.update(uRef, { cash: cash - amount, bankBalance: nextBank, lastBankAt: serverTimestamp() });
+            transaction.set(bRef, { totalDeposits: nextTotalDeposits, updatedAt: serverTimestamp() }, { merge: true });
             transaction.set(logRef, { type: "deposit", label: "입금", amount, balanceAfter: nextBank, createdAt: serverTimestamp() });
           } else {
             if (bankBalance < amount) throw new Error("통장 잔액이 부족합니다.");
             const nextBank = bankBalance - amount;
+            const nextTotalDeposits = Math.max(0, totalDeposits - amount);
             transaction.update(uRef, { cash: cash + amount, bankBalance: nextBank, lastBankAt: serverTimestamp() });
+            transaction.set(bRef, { totalDeposits: nextTotalDeposits, updatedAt: serverTimestamp() }, { merge: true });
             transaction.set(logRef, { type: "withdraw", label: "출금", amount: -amount, balanceAfter: nextBank, createdAt: serverTimestamp() });
           }
         });
@@ -1276,8 +1325,10 @@
       try {
         await runTransaction(db, async (transaction) => {
           const uRef = userRef(currentUser.uid);
+          const bRef = bankGlobalRef();
           const logRef = doc(bankLogsCol(currentUser.uid));
           const snap = await transaction.get(uRef);
+          const bankSnap = await transaction.get(bRef);
           if (!snap.exists()) return;
           const data = snap.data();
           if (data.lastBankInterestKey === key) return;
@@ -1285,7 +1336,10 @@
           const liveInterest = Math.floor(currentBank * (hourlyRate / 100) / 6);
           if (currentBank <= 0 || liveInterest <= 0) return;
           const nextBank = currentBank + liveInterest;
+          const totalDeposits = Number(bankSnap.exists() ? (bankSnap.data().totalDeposits || 0) : 0);
+          const nextTotalDeposits = totalDeposits + liveInterest;
           transaction.update(uRef, { bankBalance: nextBank, lastBankInterestKey: key, lastBankAt: serverTimestamp() });
+          transaction.set(bRef, { totalDeposits: nextTotalDeposits, updatedAt: serverTimestamp() }, { merge: true });
           transaction.set(logRef, { type: "interest", label: "이자", amount: liveInterest, balanceAfter: nextBank, createdAt: serverTimestamp() });
         });
         await pruneOldBankLogs(currentUser.uid);
@@ -1747,6 +1801,7 @@
     adminMenuPanel.addEventListener("click", (event) => event.stopPropagation());
     document.addEventListener("click", () => closeAdminMenu());
     openMarketBtn.addEventListener("click", () => { closeAdminMenu(); showScreen("market"); });
+    openBankBtn.addEventListener("click", () => { closeAdminMenu(); showScreen("bank"); });
     openSettingsBtn.addEventListener("click", () => { closeAdminMenu(); fillSettingsInputs(); setSettingsTab("default"); showScreen("settings"); });
     settingsDefaultTab.addEventListener("click", () => setSettingsTab("default"));
     settingsStockTab.addEventListener("click", () => setSettingsTab("stock"));
@@ -1756,6 +1811,7 @@
     addStockBtn.addEventListener("click", addStock);
     backToGameBtn.addEventListener("click", () => showScreen("game"));
     backFromMarketBtn.addEventListener("click", () => showScreen("game"));
+    backFromBankBtn.addEventListener("click", () => showScreen("game"));
     infoStockTab.addEventListener("click", () => setInfoTab("stock"));
     infoBankTab.addEventListener("click", () => setInfoTab("bank"));
     openDepositBtn.addEventListener("click", () => openBankModal("deposit"));
@@ -1802,8 +1858,9 @@
         if (unsubscribeStocks) unsubscribeStocks();
         if (unsubscribeHoldings) unsubscribeHoldings();
         if (unsubscribeBankLogs) unsubscribeBankLogs();
+        if (unsubscribeBankGlobal) unsubscribeBankGlobal();
         for (const unsub of priceUnsubs.values()) unsub();
-        priceUnsubs.clear(); priceHistories.clear(); stocks = []; holdings = []; bankLogs = [];
+        priceUnsubs.clear(); priceHistories.clear(); stocks = []; holdings = []; bankLogs = []; bankGlobalData = { totalDeposits: 0 };
         stopMarketTimer();
         stopBankInterestTimer();
         showScreen("login");
@@ -1815,6 +1872,7 @@
         listenStocks();
         listenHoldings(user.uid);
         listenBankLogs(user.uid);
+        listenBankGlobal();
         startMarketTimer();
         await updateDoc(userRef(user.uid), { lastLoginAt: serverTimestamp() }).catch(() => {});
         const snap = await getDoc(userRef(user.uid));
