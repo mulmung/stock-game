@@ -126,6 +126,9 @@
 
     .market-top { margin-bottom: 8px; }
     .market-note { font-size: 12px; color: var(--muted); line-height: 1.45; margin-bottom: 10px; }
+    .market-countdown-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin: 12px 0 14px; padding: 11px 0; border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); }
+    .market-countdown-label { color: var(--muted); font-size: 12px; font-weight: 950; }
+    .market-countdown-value { color: var(--green); font-size: 18px; font-weight: 950; letter-spacing: -0.4px; text-align: right; font-variant-numeric: tabular-nums; }
     .stock-list { border-top: 1px solid var(--line-strong); }
     .stock-list-head { display: grid; grid-template-columns: minmax(72px, 0.82fr) minmax(84px, 1.05fr) minmax(74px, 0.78fr) minmax(66px, 0.72fr); gap: 8px; align-items: center; padding: 10px 0; border-bottom: 1px solid var(--line); color: var(--muted); font-size: 11px; font-weight: 950; letter-spacing: -0.2px; }
     .stock-list-head .head-price, .stock-list-head .head-change { text-align: right; }
@@ -183,7 +186,7 @@
     .bank-balance-value { font-size: 22px; font-weight: 950; letter-spacing: -0.8px; text-align: right; white-space: nowrap; }
     .bank-interest-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-top: 14px; padding-top: 12px; border-top: 1px solid var(--line); }
     .bank-interest-label { color: var(--muted); font-size: 12px; font-weight: 950; }
-    .bank-interest-value { font-size: 18px; font-weight: 950; color: var(--blue); letter-spacing: -0.4px; text-align: right; font-variant-numeric: tabular-nums; }
+    .bank-interest-value { font-size: 18px; font-weight: 950; color: var(--green); letter-spacing: -0.4px; text-align: right; font-variant-numeric: tabular-nums; }
     .bank-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin: 14px 0 0; }
     .deposit-btn, .withdraw-btn { height: 44px; color: #fff; font-weight: 950; border-radius: 0; }
     .deposit-btn { background: var(--green); }
@@ -346,6 +349,10 @@
           <button id="backFromMarketBtn" class="settings-back-btn">뒤로가기</button>
         </div>
         <p class="subtitle">종목별 현재가와 최근 30분 흐름입니다.</p>
+        <div class="market-countdown-row">
+          <div class="market-countdown-label">다음 변동까지</div>
+          <div id="marketCountdown" class="market-countdown-value">00초</div>
+        </div>
         <div class="market-note">종목을 누르면 최근 15개 캔들과 매수/매도 버튼이 열립니다.</div>
         <div id="stockList" class="stock-list"></div>
       </div>
@@ -648,6 +655,7 @@
     const saveBankSettingsBtn = document.getElementById("saveBankSettingsBtn");
     const bankSettingsStatus = document.getElementById("bankSettingsStatus");
     const stockList = document.getElementById("stockList");
+    const marketCountdown = document.getElementById("marketCountdown");
     const holdingList = document.getElementById("holdingList");
     const totalBuyAmountEl = document.getElementById("totalBuyAmount");
     const totalProfitRateEl = document.getElementById("totalProfitRate");
@@ -699,6 +707,7 @@
     let cooldownTimer = null;
     let earnPopupTimer = null;
     let marketTimer = null;
+    let marketCountdownTimer = null;
     let stocks = [];
     let priceHistories = new Map();
     let expandedStockId = null;
@@ -735,7 +744,7 @@
       bottomBar.classList.toggle("active", activeMainScreens().includes(name));
       closeAdminMenu();
       if (activeMainScreens().includes(name)) ensureAppBackHistory();
-      if (name === "market") { renderStocks(); listenStocks().catch(() => {}); }
+      if (name === "market") { renderStocks(); listenStocks().catch(() => {}); startMarketCountdownTimer(); } else { stopMarketCountdownTimer(); }
       if (name === "bank") { renderGlobalBank(); listenBankGlobal().catch(() => {}); }
       if (name === "ranking") { renderRankings(); loadRankings().catch(() => {}); }
       if (name === "game") {
@@ -2045,6 +2054,32 @@
       const batch = writeBatch(db);
       docs.slice(PRICE_HISTORY_LIMIT).forEach(d => batch.delete(d.ref));
       await batch.commit();
+    }
+
+
+    function formatMarketSeconds() {
+      const now = new Date();
+      const seconds = now.getSeconds();
+      const remain = seconds === 0 ? 60 : 60 - seconds;
+      return `${String(remain).padStart(2, "0")}초`;
+    }
+
+    function updateMarketCountdown() {
+      if (!marketCountdown) return;
+      marketCountdown.textContent = formatMarketSeconds();
+    }
+
+    function startMarketCountdownTimer() {
+      updateMarketCountdown();
+      if (marketCountdownTimer) clearInterval(marketCountdownTimer);
+      marketCountdownTimer = setInterval(updateMarketCountdown, 1000);
+    }
+
+    function stopMarketCountdownTimer() {
+      if (marketCountdownTimer) {
+        clearInterval(marketCountdownTimer);
+        marketCountdownTimer = null;
+      }
     }
 
     function startMarketTimer() {
