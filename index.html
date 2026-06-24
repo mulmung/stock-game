@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
-  <title>주식 게임 v2</title>
+  <title>주식 게임 v4</title>
   <style>
     * { box-sizing: border-box; }
     html, body {
@@ -148,8 +148,8 @@
       padding: 10px;
       padding-bottom: max(10px, env(safe-area-inset-bottom));
       display: grid;
-      grid-template-columns: 82px 1fr 92px;
-      gap: 8px;
+      grid-template-columns: 64px minmax(0, 1fr) 72px;
+      gap: 6px;
       border-top: 1px solid rgba(255,255,255,0.12);
       background: rgba(5, 9, 16, 0.96);
       backdrop-filter: blur(12px);
@@ -160,9 +160,14 @@
       background: #1976ff;
       color: #fff;
       font-weight: 900;
-      font-size: 14px;
+      font-size: 13px;
+      white-space: nowrap;
       cursor: pointer;
       min-width: 0;
+    }
+    .menu-icon {
+      font-size: 24px;
+      line-height: 1;
     }
     .bar-btn:disabled {
       opacity: 0.5;
@@ -278,7 +283,7 @@
         <div id="toast" class="toast"></div>
 
         <nav class="bottom-bar">
-          <button id="menuBtn" class="bar-btn">☰ 메뉴</button>
+          <button id="menuBtn" class="bar-btn menu-icon" aria-label="메뉴 열기">☰</button>
           <div class="bar-center">
             <div id="nicknameLabel" class="nickname">-</div>
             <div id="cashLabel" class="cash">0원</div>
