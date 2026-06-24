@@ -301,7 +301,10 @@
       getAuth,
       GoogleAuthProvider,
       signInWithRedirect,
+      signInWithPopup,
       getRedirectResult,
+      setPersistence,
+      browserLocalPersistence,
       onAuthStateChanged
     } from "https://www.gstatic.com/firebasejs/12.15.0/firebase-auth.js";
     import {
@@ -341,7 +344,9 @@
 
     const app = initializeApp(firebaseConfig);
     const auth = getAuth(app);
+    setPersistence(auth, browserLocalPersistence).catch(() => {});
     const provider = new GoogleAuthProvider();
+    provider.setCustomParameters({ prompt: "select_account" });
     const db = getFirestore(app);
 
     const screens = {
@@ -931,10 +936,34 @@
     }
     function stopMarketTimer() { if (marketTimer) { clearTimeout(marketTimer); marketTimer = null; } }
 
+    function isMobileDevice() {
+      return /Android|iPhone|iPad|iPod|Mobile|IEMobile|Opera Mini/i.test(navigator.userAgent);
+    }
+
     googleLoginBtn.addEventListener("click", async () => {
-      setStatus(loginStatus, "구글 로그인으로 이동합니다...");
-      try { await signInWithRedirect(auth, provider); }
-      catch (error) { setStatus(loginStatus, "로그인에 실패했습니다.", "error"); }
+      setStatus(loginStatus, isMobileDevice() ? "구글 로그인으로 이동합니다..." : "구글 로그인 팝업을 엽니다...");
+      try {
+        await setPersistence(auth, browserLocalPersistence);
+        if (isMobileDevice()) {
+          await signInWithRedirect(auth, provider);
+        } else {
+          await signInWithPopup(auth, provider);
+        }
+      } catch (error) {
+        const fallbackCodes = [
+          "auth/popup-blocked",
+          "auth/popup-closed-by-user",
+          "auth/cancelled-popup-request",
+          "auth/operation-not-supported-in-this-environment"
+        ];
+        if (!isMobileDevice() && fallbackCodes.includes(error.code)) {
+          setStatus(loginStatus, "팝업 로그인이 막혀서 이동 방식으로 다시 시도합니다...");
+          try { await signInWithRedirect(auth, provider); }
+          catch (redirectError) { setStatus(loginStatus, "로그인에 실패했습니다.", "error"); }
+        } else {
+          setStatus(loginStatus, "로그인에 실패했습니다.", "error");
+        }
+      }
     });
     nicknameInput.addEventListener("input", () => { startBtn.disabled = nicknameInput.value.trim().length === 0; });
     startBtn.addEventListener("click", createNewUser);
@@ -952,7 +981,9 @@
     backFromMarketBtn.addEventListener("click", () => showScreen("game"));
     window.addEventListener("resize", () => renderStocks());
 
-    getRedirectResult(auth).catch(() => {});
+    getRedirectResult(auth).catch(() => {
+      setStatus(loginStatus, "로그인 결과를 확인하지 못했습니다. 다시 시도해주세요.", "error");
+    });
 
     onAuthStateChanged(auth, async (user) => {
       currentUser = user;
