@@ -87,7 +87,7 @@
     .nickname { font-size: 13px; color: var(--text-soft); font-weight: 800; max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
     .cash { font-size: 15px; color: #fff; font-weight: 950; margin-top: 3px; max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 
-    .menu-panel { position: fixed; left: 8px; bottom: calc(80px + env(safe-area-inset-bottom)); width: 132px; background: var(--panel-bg); border: 1px solid var(--line); box-shadow: 0 18px 45px rgba(0,0,0,0.35); display: none; z-index: 80; }
+    .menu-panel { position: fixed; left: 8px; bottom: calc(80px + env(safe-area-inset-bottom)); width: 140px; background: var(--panel-bg); border: 1px solid var(--line); box-shadow: 0 18px 45px rgba(0,0,0,0.35); display: none; z-index: 80; }
     .menu-panel.active { display: block; }
     .menu-item { width: 100%; height: 48px; background: transparent; color: #fff; text-align: left; padding: 0 16px; font-weight: 900; border-radius: 0; border-bottom: 1px solid var(--line); }
     .menu-item:last-child { border-bottom: 0; }
@@ -205,6 +205,10 @@
     .global-bank-label { color: var(--muted); font-size: 13px; font-weight: 950; margin-bottom: 8px; }
     .global-bank-value { font-size: 26px; font-weight: 950; letter-spacing: -1px; text-align: right; white-space: nowrap; }
     .global-bank-desc { margin-top: 14px; padding-top: 12px; border-top: 1px solid var(--line); color: var(--text-soft); font-size: 12px; line-height: 1.55; }
+    .treasury-card { border-top: 1px solid var(--line-strong); border-bottom: 1px solid var(--line-strong); padding: 18px 0; margin-top: 18px; }
+    .treasury-label { color: var(--muted); font-size: 13px; font-weight: 950; margin-bottom: 8px; }
+    .treasury-value { font-size: 26px; font-weight: 950; letter-spacing: -1px; text-align: right; white-space: nowrap; }
+    .treasury-desc { margin-top: 14px; padding-top: 12px; border-top: 1px solid var(--line); color: var(--text-soft); font-size: 12px; line-height: 1.55; }
     .bank-deposit-section { border-top: 1px solid var(--line-strong); border-bottom: 1px solid var(--line-strong); padding: 18px 0 6px; margin-top: 18px; }
     .bank-deposit-title { font-size: 18px; font-weight: 950; margin-bottom: 14px; }
     .bank-deposit-list { display: flex; flex-direction: column; gap: 0; }
@@ -317,9 +321,13 @@
     .max-btn { height: 48px; background: var(--panel-bg); color: #fff; border: 1px solid var(--line); font-weight: 950; border-radius: 0; }
     .percent-row { display: grid; grid-template-columns: repeat(5, 1fr); gap: 6px; margin: 10px 0 16px; }
     .percent-btn { height: 38px; background: rgba(255,255,255,0.06); color: #fff; border: 1px solid var(--line); font-size: 12px; font-weight: 950; border-radius: 0; }
-    .expected-box { border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); padding: 14px 0; display: flex; justify-content: space-between; align-items: center; gap: 10px; margin-bottom: 14px; }
+    .expected-box { border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); padding: 0; display: block; margin-bottom: 14px; }
+    .expected-row { min-height: 48px; display: flex; justify-content: space-between; gap: 12px; align-items: center; border-top: 1px solid var(--line); }
+    .expected-row:first-child { border-top: 0; }
     .expected-label { color: var(--text-soft); font-size: 13px; font-weight: 900; }
-    .expected-value { font-size: 18px; font-weight: 950; white-space: nowrap; }
+    .expected-value { font-size: 18px; font-weight: 950; white-space: nowrap; text-align: right; }
+    .expected-value.main { font-size: 20px; color: #fff; }
+    .expected-value.tax { color: var(--green); }
     .modal-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
     .confirm-buy { height: 46px; background: var(--green); color: #fff; font-weight: 950; border-radius: 0; }
     .confirm-sell { height: 46px; background: var(--red); color: #fff; font-weight: 950; border-radius: 0; }
@@ -462,6 +470,21 @@
       </div>
     </section>
 
+    <section id="treasuryScreen" class="screen page-screen">
+      <div class="page">
+        <div class="settings-top market-top">
+          <h1 class="title">국고</h1>
+          <button id="backFromTreasuryBtn" class="settings-back-btn">뒤로가기</button>
+        </div>
+        <p class="subtitle">거래세로 누적된 금액을 확인할 수 있습니다.</p>
+        <div class="treasury-card">
+          <div class="treasury-label">현재 국고</div>
+          <div id="treasuryValue" class="treasury-value">0원</div>
+          <div class="treasury-desc">매수/매도 거래에서 징수된 세금의 합계입니다.</div>
+        </div>
+      </div>
+    </section>
+
 
 
     <section id="upgradeScreen" class="screen page-screen">
@@ -581,7 +604,23 @@
               </div>
             </div>
 
-            <div class="hint">기본값: 신규 가입 1,000,000원 / 돈벌기 10,000원~50,000원 / 최대 Lv.10</div>
+            <div class="field">
+              <label for="buyTaxRateInput">매수 거래세율</label>
+              <div class="settings-row">
+                <input id="buyTaxRateInput" type="number" inputmode="decimal" min="0" step="0.01" placeholder="예: 0.3" />
+                <div class="won">%</div>
+              </div>
+            </div>
+
+            <div class="field">
+              <label for="sellTaxRateInput">매도 거래세율</label>
+              <div class="settings-row">
+                <input id="sellTaxRateInput" type="number" inputmode="decimal" min="0" step="0.01" placeholder="예: 0.5" />
+                <div class="won">%</div>
+              </div>
+            </div>
+
+            <div class="hint">기본값: 신규 가입 1,000,000원 / 돈벌기 10,000원~50,000원 / 최대 Lv.10 / 매수세 0.3% / 매도세 0.5%</div>
             <button id="saveSettingsBtn" class="primary-btn">저장하기</button>
             <div id="settingsStatus" class="status"></div>
           </div>
@@ -648,6 +687,7 @@
     <div id="adminMenuPanel" class="menu-panel">
       <button id="openMarketBtn" class="menu-item">시세</button>
       <button id="openBankBtn" class="menu-item">은행</button>
+      <button id="openTreasuryBtn" class="menu-item">국고</button>
       <button id="openUpgradeBtn" class="menu-item">업그레이드</button>
       <button id="openRankingBtn" class="menu-item">순위</button>
       <button id="openSettingsBtn" class="menu-item admin-only">설정</button>
@@ -675,8 +715,18 @@
           <button class="percent-btn" type="button" data-percent="90">90%</button>
         </div>
         <div class="expected-box">
-          <div id="tradeExpectedLabel" class="expected-label">예상 결제금액</div>
-          <div id="tradeExpectedValue" class="expected-value">0원</div>
+          <div class="expected-row">
+            <div id="tradeBaseLabel" class="expected-label">주문 금액</div>
+            <div id="tradeBaseValue" class="expected-value">0원</div>
+          </div>
+          <div class="expected-row">
+            <div id="tradeTaxLabel" class="expected-label">거래세</div>
+            <div id="tradeTaxValue" class="expected-value tax">0원</div>
+          </div>
+          <div class="expected-row">
+            <div id="tradeExpectedLabel" class="expected-label">총 결제 금액</div>
+            <div id="tradeExpectedValue" class="expected-value main">0원</div>
+          </div>
         </div>
         <div class="modal-actions">
           <button id="tradeConfirmBtn" class="confirm-buy" type="button">매수하기</button>
@@ -787,7 +837,7 @@
     };
 
     const ADMIN_EMAIL = "khu9918@gmail.com";
-    const DEFAULT_SETTINGS = { signupBonus: 1000000, earnMin: 10000, earnMax: 50000, earnMaxLevel: 10, bankHourlyInterestRate: 1 };
+    const DEFAULT_SETTINGS = { signupBonus: 1000000, earnMin: 10000, earnMax: 50000, earnMaxLevel: 10, bankHourlyInterestRate: 1, buyTaxRate: 0.3, sellTaxRate: 0.5 };
     const DEFAULT_PROMOTIONS = [
       { level: 1, name: "스톤", cost: 500000, style: { type: "solid", color: "#8A8F98", gradientFrom: "", gradientTo: "" } },
       { level: 2, name: "브론즈", cost: 1500000, style: { type: "solid", color: "#B87333", gradientFrom: "", gradientTo: "" } },
@@ -842,6 +892,7 @@
       game: document.getElementById("gameScreen"),
       market: document.getElementById("marketScreen"),
       bank: document.getElementById("bankScreen"),
+      treasury: document.getElementById("treasuryScreen"),
       upgrade: document.getElementById("upgradeScreen"),
       ranking: document.getElementById("rankingScreen"),
       settings: document.getElementById("settingsScreen")
@@ -863,6 +914,7 @@
     const adminMenuPanel = document.getElementById("adminMenuPanel");
     const openMarketBtn = document.getElementById("openMarketBtn");
     const openBankBtn = document.getElementById("openBankBtn");
+    const openTreasuryBtn = document.getElementById("openTreasuryBtn");
     const openUpgradeBtn = document.getElementById("openUpgradeBtn");
     const openRankingBtn = document.getElementById("openRankingBtn");
     const openSettingsBtn = document.getElementById("openSettingsBtn");
@@ -870,10 +922,13 @@
     const earnMinInput = document.getElementById("earnMinInput");
     const earnMaxInput = document.getElementById("earnMaxInput");
     const earnMaxLevelInput = document.getElementById("earnMaxLevelInput");
+    const buyTaxRateInput = document.getElementById("buyTaxRateInput");
+    const sellTaxRateInput = document.getElementById("sellTaxRateInput");
     const saveSettingsBtn = document.getElementById("saveSettingsBtn");
     const backToGameBtn = document.getElementById("backToGameBtn");
     const backFromMarketBtn = document.getElementById("backFromMarketBtn");
     const backFromBankBtn = document.getElementById("backFromBankBtn");
+    const backFromTreasuryBtn = document.getElementById("backFromTreasuryBtn");
     const backFromUpgradeBtn = document.getElementById("backFromUpgradeBtn");
     const backFromRankingBtn = document.getElementById("backFromRankingBtn");
     const settingsDefaultTab = document.getElementById("settingsDefaultTab");
@@ -915,6 +970,7 @@
     const bankBalanceValue = document.getElementById("bankBalanceValue");
     const bankInterestCountdown = document.getElementById("bankInterestCountdown");
     const bankTotalDepositsValue = document.getElementById("bankTotalDepositsValue");
+    const treasuryValue = document.getElementById("treasuryValue");
     const openDepositBtn = document.getElementById("openDepositBtn");
     const openWithdrawBtn = document.getElementById("openWithdrawBtn");
     const bankLogList = document.getElementById("bankLogList");
@@ -944,6 +1000,10 @@
     const tradeModalSub = document.getElementById("tradeModalSub");
     const tradeQtyInput = document.getElementById("tradeQtyInput");
     const tradeMaxBtn = document.getElementById("tradeMaxBtn");
+    const tradeBaseLabel = document.getElementById("tradeBaseLabel");
+    const tradeBaseValue = document.getElementById("tradeBaseValue");
+    const tradeTaxLabel = document.getElementById("tradeTaxLabel");
+    const tradeTaxValue = document.getElementById("tradeTaxValue");
     const tradeExpectedLabel = document.getElementById("tradeExpectedLabel");
     const tradeExpectedValue = document.getElementById("tradeExpectedValue");
     const tradeConfirmBtn = document.getElementById("tradeConfirmBtn");
@@ -993,6 +1053,7 @@
     let unsubscribeBankGlobal = null;
     let bankLogs = [];
     let bankGlobalData = { totalDeposits: 0 };
+    let treasuryData = { totalTreasury: 0 };
     let bankDeposits = [];
     let expandedBankDepositId = null;
     let activeUpgradePanel = "";
@@ -1016,7 +1077,7 @@
     let authFlowStarted = false;
 
     function isAdmin() { return currentUser && currentUser.email === ADMIN_EMAIL; }
-    function activeMainScreens() { return ["game", "market", "bank", "upgrade", "ranking", "settings"]; }
+    function activeMainScreens() { return ["game", "market", "bank", "treasury", "upgrade", "ranking", "settings"]; }
 
     function showScreen(name) {
       const wasMarket = currentScreenName === "market";
@@ -1041,6 +1102,7 @@
       if (activeMainScreens().includes(name)) ensureAppBackHistory();
       if (name === "market") { renderStocks(); listenStocks().catch(() => {}); startMarketCountdownTimer(); } else { stopMarketCountdownTimer(); }
       if (name === "bank") { renderGlobalBank(); ensureMyBankDepositPublic().catch(() => {}).then(() => listenBankGlobal()).then(() => loadBankDeposits()).catch(() => {}); }
+      if (name === "treasury") { ensureTreasuryDoc().then(loadTreasury).catch(() => renderTreasury()); }
       if (name === "upgrade") { loadPromotions().then(renderUpgrade).catch(() => renderUpgrade()); }
       if (name === "ranking") { loadPromotions().then(() => { renderRankings(); loadRankings().catch(() => {}); }).catch(() => { renderRankings(); loadRankings().catch(() => {}); }); }
       if (name === "game") {
@@ -1077,7 +1139,7 @@
       if (userAdminModalOverlay.classList.contains("active")) { closeUserAdminModal(); return true; }
       if (adminMenuPanel.classList.contains("active")) { closeAdminMenu(); return true; }
       if (currentScreenName === "market") { expandedStockId = null; showScreen("game"); return true; }
-      if (currentScreenName === "bank" || currentScreenName === "upgrade" || currentScreenName === "ranking" || currentScreenName === "settings") { showScreen("game"); return true; }
+      if (currentScreenName === "bank" || currentScreenName === "treasury" || currentScreenName === "upgrade" || currentScreenName === "ranking" || currentScreenName === "settings") { showScreen("game"); return true; }
       return false;
     }
 
@@ -1167,6 +1229,7 @@
     function bankGlobalRef() { return doc(db, "bank", "global"); }
     function bankDepositsCol() { return collection(db, "bankDeposits"); }
     function bankDepositRef(uid) { return doc(db, "bankDeposits", uid); }
+    function treasuryRef() { return doc(db, "treasury", "global"); }
     function rankingsCol() { return collection(db, "rankings"); }
     function rankingRef(uid) { return doc(db, "rankings", uid); }
 
@@ -1323,7 +1386,9 @@
           earnMin: Number(data.earnMin ?? DEFAULT_SETTINGS.earnMin),
           earnMax: Number(data.earnMax ?? DEFAULT_SETTINGS.earnMax),
           earnMaxLevel: Number(data.earnMaxLevel ?? DEFAULT_SETTINGS.earnMaxLevel),
-          bankHourlyInterestRate: Number(data.bankHourlyInterestRate ?? DEFAULT_SETTINGS.bankHourlyInterestRate)
+          bankHourlyInterestRate: Number(data.bankHourlyInterestRate ?? DEFAULT_SETTINGS.bankHourlyInterestRate),
+          buyTaxRate: Number(data.buyTaxRate ?? DEFAULT_SETTINGS.buyTaxRate),
+          sellTaxRate: Number(data.sellTaxRate ?? DEFAULT_SETTINGS.sellTaxRate)
         };
       } else {
         currentSettings = { ...DEFAULT_SETTINGS };
@@ -1336,6 +1401,8 @@
       earnMinInput.value = currentSettings.earnMin;
       earnMaxInput.value = currentSettings.earnMax;
       earnMaxLevelInput.value = currentSettings.earnMaxLevel;
+      buyTaxRateInput.value = currentSettings.buyTaxRate;
+      sellTaxRateInput.value = currentSettings.sellTaxRate;
       bankInterestRateInput.value = currentSettings.bankHourlyInterestRate;
     }
 
@@ -2122,14 +2189,18 @@
       const earnMin = Number(earnMinInput.value);
       const earnMax = Number(earnMaxInput.value);
       const earnMaxLevel = Math.floor(Number(earnMaxLevelInput.value));
+      const buyTaxRate = Number(buyTaxRateInput.value);
+      const sellTaxRate = Number(sellTaxRateInput.value);
       if (!Number.isFinite(signupBonus) || signupBonus <= 0) { setStatus(settingsStatus, "신규 가입 지급 금액은 0보다 커야 합니다.", "error"); return; }
       if (!Number.isFinite(earnMin) || earnMin <= 0) { setStatus(settingsStatus, "돈벌기 최소 지급 금액은 0보다 커야 합니다.", "error"); return; }
       if (!Number.isFinite(earnMax) || earnMax < earnMin) { setStatus(settingsStatus, "돈벌기 최대 지급 금액은 최소 지급 금액보다 크거나 같아야 합니다.", "error"); return; }
       if (!Number.isFinite(earnMaxLevel) || earnMaxLevel < 1 || earnMaxLevel > 30) { setStatus(settingsStatus, "돈벌기 최대 레벨은 1~30 사이로 입력해주세요.", "error"); return; }
+      if (!Number.isFinite(buyTaxRate) || buyTaxRate < 0 || buyTaxRate > 100) { setStatus(settingsStatus, "매수 거래세율은 0~100 사이로 입력해주세요.", "error"); return; }
+      if (!Number.isFinite(sellTaxRate) || sellTaxRate < 0 || sellTaxRate > 100) { setStatus(settingsStatus, "매도 거래세율은 0~100 사이로 입력해주세요.", "error"); return; }
       saveSettingsBtn.disabled = true;
       setStatus(settingsStatus, "저장 중...");
       try {
-        await setDoc(settingsRef(), { signupBonus, earnMin, earnMax, earnMaxLevel, bankHourlyInterestRate: Number(currentSettings.bankHourlyInterestRate || DEFAULT_SETTINGS.bankHourlyInterestRate), updatedAt: serverTimestamp(), updatedBy: currentUser.uid }, { merge: true });
+        await setDoc(settingsRef(), { signupBonus, earnMin, earnMax, earnMaxLevel, buyTaxRate, sellTaxRate, bankHourlyInterestRate: Number(currentSettings.bankHourlyInterestRate || DEFAULT_SETTINGS.bankHourlyInterestRate), updatedAt: serverTimestamp(), updatedBy: currentUser.uid }, { merge: true });
         await listenSettings();
         setStatus(settingsStatus, "설정이 저장되었습니다.", "success");
       } catch (error) { setStatus(settingsStatus, "설정 저장에 실패했습니다. 관리자 권한을 확인해주세요.", "error"); }
@@ -2152,6 +2223,8 @@
           earnMin: Number(currentSettings.earnMin || DEFAULT_SETTINGS.earnMin),
           earnMax: Number(currentSettings.earnMax || DEFAULT_SETTINGS.earnMax),
           earnMaxLevel: Number(currentSettings.earnMaxLevel || DEFAULT_SETTINGS.earnMaxLevel),
+          buyTaxRate: Number(currentSettings.buyTaxRate ?? DEFAULT_SETTINGS.buyTaxRate),
+          sellTaxRate: Number(currentSettings.sellTaxRate ?? DEFAULT_SETTINGS.sellTaxRate),
           bankHourlyInterestRate,
           updatedAt: serverTimestamp(),
           updatedBy: currentUser.uid
@@ -2241,6 +2314,24 @@
       bankGlobalData = snap.exists() ? snap.data() : { totalDeposits: 0 };
       renderGlobalBank();
       if (currentScreenName === "bank") renderBankDeposits();
+    }
+
+    async function ensureTreasuryDoc() {
+      const snap = await getDoc(treasuryRef());
+      if (!snap.exists() && currentUser) {
+        await setDoc(treasuryRef(), { totalTreasury: 0, updatedAt: serverTimestamp() });
+      }
+    }
+
+    async function loadTreasury() {
+      const snap = await getDoc(treasuryRef());
+      treasuryData = snap.exists() ? snap.data() : { totalTreasury: 0 };
+      renderTreasury();
+    }
+
+    function renderTreasury() {
+      if (!treasuryValue) return;
+      treasuryValue.textContent = formatWon(Number(treasuryData?.totalTreasury || 0));
     }
 
     function buildBankDepositData(data = currentUserData) {
@@ -2884,18 +2975,35 @@
       }
     }
 
+    function getBuyTaxRate() { return Math.max(0, Number(currentSettings.buyTaxRate ?? DEFAULT_SETTINGS.buyTaxRate)); }
+    function getSellTaxRate() { return Math.max(0, Number(currentSettings.sellTaxRate ?? DEFAULT_SETTINGS.sellTaxRate)); }
+    function calcTax(amount, rate) { return Math.floor(Math.max(0, Number(amount || 0)) * Math.max(0, Number(rate || 0)) / 100); }
+    function calcTradeAmounts(type, amount) {
+      const rate = type === "buy" ? getBuyTaxRate() : getSellTaxRate();
+      const taxAmount = calcTax(amount, rate);
+      const finalAmount = type === "buy" ? amount + taxAmount : Math.max(0, amount - taxAmount);
+      return { totalAmount: amount, taxAmount, finalAmount, rate };
+    }
+    function getMaxBuyQty(cash, price) {
+      let qty = Math.floor(Number(cash || 0) / Math.max(1, Number(price || 1)));
+      while (qty > 0 && calcTradeAmounts("buy", qty * price).finalAmount > cash) qty--;
+      return Math.max(0, qty);
+    }
+
     function openTradeModal(type, stock) {
       if (!currentUser || !currentUserData || !stock) return;
       const currentPrice = Math.max(1, Number(stock.currentPrice || stock.startPrice || 1));
       const holding = getHoldingByStockId(stock.id);
       const cash = Number(currentUserData.cash || 0);
-      const maxQty = type === "buy" ? Math.floor(cash / currentPrice) : Math.floor(Number(holding?.quantity || 0));
+      const maxQty = type === "buy" ? getMaxBuyQty(cash, currentPrice) : Math.floor(Number(holding?.quantity || 0));
       if (type === "sell" && maxQty <= 0) { showEarnPopup("보유 수량이 없습니다.", "error"); return; }
       if (type === "buy" && maxQty <= 0) { showEarnPopup("보유현금이 부족합니다.", "error"); return; }
       tradeModalState = { type, stockId: stock.id, stockName: stock.name || "이름 없음", price: currentPrice, maxQty };
       tradeModalTitle.textContent = `${stock.name || "종목"} ${type === "buy" ? "매수" : "매도"}`;
       tradeModalSub.textContent = `현재가 ${formatWon(currentPrice)} · 최대 ${maxQty.toLocaleString("ko-KR")}주`;
-      tradeExpectedLabel.textContent = type === "buy" ? "예상 결제금액" : "예상 수령금액";
+      tradeBaseLabel.textContent = type === "buy" ? "주문 금액" : "매도 금액";
+      tradeTaxLabel.textContent = "거래세";
+      tradeExpectedLabel.textContent = type === "buy" ? "총 결제 금액" : "예상 수령 금액";
       tradeConfirmBtn.textContent = type === "buy" ? "매수하기" : "매도하기";
       tradeConfirmBtn.className = type === "buy" ? "confirm-buy" : "confirm-sell";
       tradeQtyInput.value = "";
@@ -2923,10 +3031,18 @@
     }
 
     function updateTradeExpected() {
-      if (!tradeModalState) { tradeExpectedValue.textContent = "0원"; return; }
+      if (!tradeModalState) {
+        tradeBaseValue.textContent = "0원";
+        tradeTaxValue.textContent = "0원";
+        tradeExpectedValue.textContent = "0원";
+        return;
+      }
       const qty = getTradeQty();
       const total = qty * tradeModalState.price;
-      tradeExpectedValue.textContent = formatWon(total);
+      const amounts = calcTradeAmounts(tradeModalState.type, total);
+      tradeBaseValue.textContent = formatWon(amounts.totalAmount);
+      tradeTaxValue.textContent = formatWon(amounts.taxAmount);
+      tradeExpectedValue.textContent = formatWon(amounts.finalAmount);
     }
 
     async function confirmTrade() {
@@ -2943,26 +3059,30 @@
           const uRef = userRef(currentUser.uid);
           const hRef = holdingRef(currentUser.uid, stockId);
           const sRef = stockRef(stockId);
+          const tRef = treasuryRef();
           const userSnap = await transaction.get(uRef);
           const holdingSnap = await transaction.get(hRef);
           const stockSnap = await transaction.get(sRef);
+          const treasurySnap = await transaction.get(tRef);
           if (!userSnap.exists()) throw new Error("유저 데이터가 없습니다.");
           if (!stockSnap.exists()) throw new Error("종목 데이터가 없습니다.");
           const userData = userSnap.data();
           const stockData = stockSnap.data();
           const livePrice = Math.max(1, Number(stockData.currentPrice || price));
           const liveTotal = qty * livePrice;
+          const amounts = calcTradeAmounts(type, liveTotal);
           const cash = Number(userData.cash || 0);
+          const oldTreasury = Number(treasurySnap.exists() ? (treasurySnap.data().totalTreasury || 0) : 0);
           const oldHolding = holdingSnap.exists() ? holdingSnap.data() : null;
           const oldQty = Math.max(0, Math.floor(Number(oldHolding?.quantity || 0)));
           const oldTotalBuy = Number(oldHolding?.totalBuyAmount || 0);
           const tradeRef = doc(tradesCol(currentUser.uid));
           if (type === "buy") {
-            if (cash < liveTotal) throw new Error("보유현금이 부족합니다.");
+            if (cash < amounts.finalAmount) throw new Error("보유현금이 부족합니다.");
             const newQty = oldQty + qty;
             const newTotalBuy = oldTotalBuy + liveTotal;
             const newAvg = Math.round(newTotalBuy / newQty);
-            transaction.update(uRef, { cash: cash - liveTotal, lastTradeAt: serverTimestamp() });
+            transaction.update(uRef, { cash: cash - amounts.finalAmount, lastTradeAt: serverTimestamp() });
             transaction.set(hRef, {
               stockId,
               name: stockData.name || stockName,
@@ -2978,6 +3098,8 @@
               quantity: qty,
               price: livePrice,
               totalAmount: liveTotal,
+              taxAmount: amounts.taxAmount,
+              finalAmount: amounts.finalAmount,
               createdAt: serverTimestamp()
             });
           } else {
@@ -2986,7 +3108,7 @@
             const reduceBuyAmount = Math.round(oldTotalBuy * sellRatio);
             const newQty = oldQty - qty;
             const newTotalBuy = Math.max(0, oldTotalBuy - reduceBuyAmount);
-            transaction.update(uRef, { cash: cash + liveTotal, lastTradeAt: serverTimestamp() });
+            transaction.update(uRef, { cash: cash + amounts.finalAmount, lastTradeAt: serverTimestamp() });
             if (newQty <= 0) transaction.delete(hRef);
             else transaction.set(hRef, {
               stockId,
@@ -3003,11 +3125,15 @@
               quantity: qty,
               price: livePrice,
               totalAmount: liveTotal,
+              taxAmount: amounts.taxAmount,
+              finalAmount: amounts.finalAmount,
               createdAt: serverTimestamp()
             });
           }
+          transaction.set(tRef, { totalTreasury: oldTreasury + amounts.taxAmount, updatedAt: serverTimestamp() }, { merge: true });
         });
         await pruneOldTrades(currentUser.uid);
+        await loadTreasury().catch(() => {});
         await listenHoldings(currentUser.uid).catch(() => {});
         await listenStocks().catch(() => {});
         closeTradeModal();
@@ -3268,6 +3394,7 @@
     document.addEventListener("click", () => closeAdminMenu());
     openMarketBtn.addEventListener("click", () => { closeAdminMenu(); showScreen("market"); });
     openBankBtn.addEventListener("click", () => { closeAdminMenu(); showScreen("bank"); });
+    openTreasuryBtn.addEventListener("click", () => { closeAdminMenu(); showScreen("treasury"); });
     openUpgradeBtn.addEventListener("click", () => {
       closeAdminMenu();
       activeUpgradePanel = "";
@@ -3287,6 +3414,7 @@
     backToGameBtn.addEventListener("click", () => showScreen("game"));
     backFromMarketBtn.addEventListener("click", () => showScreen("game"));
     backFromBankBtn.addEventListener("click", () => showScreen("game"));
+    backFromTreasuryBtn.addEventListener("click", () => showScreen("game"));
     backFromUpgradeBtn.addEventListener("click", () => showScreen("game"));
     backFromRankingBtn.addEventListener("click", () => showScreen("game"));
     infoStockTab.addEventListener("click", () => setInfoTab("stock"));
