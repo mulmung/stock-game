@@ -221,8 +221,14 @@
     .bank-deposit-empty { color: var(--muted); padding: 14px 0; font-size: 13px; line-height: 1.6; }
 
 
-    .upgrade-card { border-top: 1px solid var(--line-strong); border-bottom: 1px solid var(--line-strong); padding: 18px 0; }
-    .upgrade-level { font-size: 22px; font-weight: 950; letter-spacing: -0.7px; color: #fff; margin-bottom: 16px; }
+    .upgrade-card { border-top: 1px solid var(--line-strong); border-bottom: 1px solid var(--line-strong); padding: 0; }
+    .upgrade-accordion-list { border-top: 1px solid var(--line-strong); margin-top: 18px; }
+    .upgrade-accordion-card { border-top: 0 !important; border-bottom: 1px solid var(--line-strong) !important; padding: 0 !important; margin: 0 !important; }
+    .upgrade-accordion-head { width: 100%; min-height: 72px; padding: 18px 0; border: 0; background: transparent; color: #fff; border-radius: 0; display: flex; align-items: center; justify-content: space-between; gap: 14px; text-align: left; }
+    .upgrade-accordion-title, .upgrade-level { font-size: 22px; font-weight: 950; letter-spacing: -0.7px; color: #fff; }
+    .upgrade-accordion-summary { color: var(--text-soft); font-size: 14px; font-weight: 950; text-align: right; white-space: nowrap; }
+    .upgrade-detail { display: none; padding: 0 0 18px; }
+    .upgrade-detail.open { display: block; }
     .upgrade-row { padding: 13px 0; border-top: 1px solid var(--line); display: flex; justify-content: space-between; align-items: center; gap: 14px; }
     .upgrade-row:first-of-type { border-top: 0; }
     .upgrade-label { color: var(--muted); font-size: 12px; font-weight: 950; letter-spacing: -0.35px; }
@@ -460,37 +466,49 @@
           <button id="backFromUpgradeBtn" class="settings-back-btn">뒤로가기</button>
         </div>
         <p class="subtitle">성장 요소를 업그레이드할 수 있습니다.</p>
-        <div class="promotion-card">
-          <div class="promotion-title">승급</div>
-          <div class="upgrade-row">
-            <div class="upgrade-label">현재 승급</div>
-            <div id="promotionCurrentValue" class="upgrade-value">스톤</div>
+        <div class="upgrade-accordion-list">
+          <div class="promotion-card upgrade-accordion-card">
+            <button id="promotionAccordionHead" class="upgrade-accordion-head" type="button">
+              <span class="upgrade-accordion-title">승급</span>
+              <span id="promotionAccordionSummary" class="upgrade-accordion-summary">스톤</span>
+            </button>
+            <div id="promotionDetail" class="upgrade-detail">
+              <div class="upgrade-row">
+                <div class="upgrade-label">현재 승급</div>
+                <div id="promotionCurrentValue" class="upgrade-value">스톤</div>
+              </div>
+              <div class="upgrade-row">
+                <div class="upgrade-label">다음 승급</div>
+                <div id="promotionNextValue" class="upgrade-value">브론즈</div>
+              </div>
+              <div class="upgrade-row">
+                <div class="upgrade-label">다음 승급 비용</div>
+                <div id="promotionCostValue" class="upgrade-value upgrade-cost">0원</div>
+              </div>
+              <div id="promotionMaxMessage" class="upgrade-max"></div>
+              <button id="promotionUpgradeBtn" class="primary-btn" type="button">승급하기</button>
+              <div id="promotionStatus" class="upgrade-status"></div>
+            </div>
           </div>
-          <div class="upgrade-row">
-            <div class="upgrade-label">다음 승급</div>
-            <div id="promotionNextValue" class="upgrade-value">브론즈</div>
+          <div class="upgrade-card upgrade-accordion-card">
+            <button id="earnAccordionHead" class="upgrade-accordion-head" type="button">
+              <span id="upgradeLevelTitle" class="upgrade-accordion-title">돈벌기 Lv. 1</span>
+              <span id="earnAccordionSummary" class="upgrade-accordion-summary">업그레이드 가능</span>
+            </button>
+            <div id="earnDetail" class="upgrade-detail">
+              <div class="upgrade-row">
+                <div class="upgrade-label">범위</div>
+                <div id="upgradeRangeValue" class="upgrade-value">0원 - 0원</div>
+              </div>
+              <div class="upgrade-row">
+                <div class="upgrade-label">다음 업그레이드 비용</div>
+                <div id="upgradeCostValue" class="upgrade-value upgrade-cost">0원</div>
+              </div>
+              <div id="upgradeMaxMessage" class="upgrade-max"></div>
+              <button id="upgradeEarnBtn" class="primary-btn" type="button">업그레이드</button>
+              <div id="upgradeStatus" class="upgrade-status"></div>
+            </div>
           </div>
-          <div class="upgrade-row">
-            <div class="upgrade-label">다음 승급 비용</div>
-            <div id="promotionCostValue" class="upgrade-value upgrade-cost">0원</div>
-          </div>
-          <div id="promotionMaxMessage" class="upgrade-max"></div>
-          <button id="promotionUpgradeBtn" class="primary-btn" type="button">승급하기</button>
-          <div id="promotionStatus" class="upgrade-status"></div>
-        </div>
-        <div class="upgrade-card">
-          <div id="upgradeLevelTitle" class="upgrade-level">돈벌기 Lv. 1</div>
-          <div class="upgrade-row">
-            <div class="upgrade-label">범위</div>
-            <div id="upgradeRangeValue" class="upgrade-value">0원 - 0원</div>
-          </div>
-          <div class="upgrade-row">
-            <div class="upgrade-label">다음 업그레이드 비용</div>
-            <div id="upgradeCostValue" class="upgrade-value upgrade-cost">0원</div>
-          </div>
-          <div id="upgradeMaxMessage" class="upgrade-max"></div>
-          <button id="upgradeEarnBtn" class="primary-btn" type="button">업그레이드</button>
-          <div id="upgradeStatus" class="upgrade-status"></div>
         </div>
       </div>
     </section>
@@ -897,6 +915,12 @@
     const bankLogList = document.getElementById("bankLogList");
     const rankingList = document.getElementById("rankingList");
     const rankingStatus = document.getElementById("rankingStatus");
+    const promotionAccordionHead = document.getElementById("promotionAccordionHead");
+    const promotionAccordionSummary = document.getElementById("promotionAccordionSummary");
+    const promotionDetail = document.getElementById("promotionDetail");
+    const earnAccordionHead = document.getElementById("earnAccordionHead");
+    const earnAccordionSummary = document.getElementById("earnAccordionSummary");
+    const earnDetail = document.getElementById("earnDetail");
     const promotionCurrentValue = document.getElementById("promotionCurrentValue");
     const promotionNextValue = document.getElementById("promotionNextValue");
     const promotionCostValue = document.getElementById("promotionCostValue");
@@ -966,6 +990,7 @@
     let bankGlobalData = { totalDeposits: 0 };
     let bankDeposits = [];
     let expandedBankDepositId = null;
+    let activeUpgradePanel = "";
     let rankings = [];
     let adminUsers = [];
     let promotionLevels = [];
@@ -1418,6 +1443,16 @@
       return getEarnRange(level).max * 100;
     }
 
+    function setUpgradePanel(panel) {
+      activeUpgradePanel = activeUpgradePanel === panel ? "" : panel;
+      renderUpgradeAccordion();
+    }
+
+    function renderUpgradeAccordion() {
+      if (promotionDetail) promotionDetail.classList.toggle("open", activeUpgradePanel === "promotion");
+      if (earnDetail) earnDetail.classList.toggle("open", activeUpgradePanel === "earn");
+    }
+
     function renderUpgrade() {
       if (!upgradeLevelTitle || !currentUserData) return;
       renderPromotionUpgrade();
@@ -1426,12 +1461,14 @@
       const range = getEarnRange(level);
       const isMax = level >= maxLevel;
       upgradeLevelTitle.textContent = `돈벌기 Lv. ${level}`;
+      if (earnAccordionSummary) earnAccordionSummary.textContent = isMax ? "최대 레벨" : "업그레이드 가능";
       upgradeRangeValue.textContent = `${formatWon(range.min)} - ${formatWon(range.max)}`;
       upgradeCostValue.textContent = isMax ? "최대 레벨" : formatWon(getUpgradeCost(level));
       upgradeMaxMessage.textContent = isMax ? "최대 레벨에 도달했습니다." : `최대 Lv. ${maxLevel}까지 업그레이드할 수 있습니다.`;
       upgradeEarnBtn.disabled = isMax;
       upgradeEarnBtn.textContent = isMax ? "최대 레벨" : "업그레이드";
       if (upgradeStatus) upgradeStatus.textContent = "";
+      renderUpgradeAccordion();
     }
 
     function renderPromotionUpgrade() {
@@ -1442,6 +1479,7 @@
       const next = getPromotionByLevel(level + 1);
       const isMax = !next || level >= promotionLevels.length || current?.cost == null;
       promotionCurrentValue.textContent = current?.name || "스톤";
+      if (promotionAccordionSummary) promotionAccordionSummary.textContent = current?.name || "스톤";
       promotionNextValue.textContent = isMax ? "최고 등급" : (next?.name || "-");
       promotionCostValue.textContent = isMax ? "최고등급" : formatWon(current.cost || 0);
       promotionMaxMessage.textContent = isMax ? "최고 등급에 도달했습니다." : "승급 비용은 보유 현금에서 차감됩니다.";
@@ -2493,7 +2531,7 @@
       updateBankInterestCountdown();
       const nickname = currentUserData?.nickname || "-";
       const balance = Number(currentUserData?.bankBalance || 0);
-      bankOwnerName.textContent = `${nickname} 님`;
+      bankOwnerName.innerHTML = `${styledNicknameHtml(nickname, getPromotionLevel())} 님`;
       bankBalanceValue.textContent = formatWon(balance);
       if (!bankLogs.length) {
         bankLogList.innerHTML = `<div class="empty">통장 내역이 없습니다.<br />입금하거나 이자를 받으면 내역이 표시됩니다.</div>`;
@@ -3191,6 +3229,8 @@
     nicknameInput.addEventListener("input", () => { startBtn.disabled = nicknameInput.value.trim().length === 0; });
     startBtn.addEventListener("click", createNewUser);
     earnBtn.addEventListener("click", handleEarn);
+    promotionAccordionHead.addEventListener("click", () => setUpgradePanel("promotion"));
+    earnAccordionHead.addEventListener("click", () => setUpgradePanel("earn"));
     promotionUpgradeBtn.addEventListener("click", handlePromotionUpgrade);
     upgradeEarnBtn.addEventListener("click", handleEarnUpgrade);
     menuBtn.addEventListener("click", toggleAdminMenu);
