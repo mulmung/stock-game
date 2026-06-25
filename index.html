@@ -2096,27 +2096,43 @@
       return Math.floor(Number(userAdminAmountInput.value || 0));
     }
 
-    async function deleteCollectionDocs(colRef) {
+    function safeNumber(value, fallback = 0) {
+      const n = Number(value);
+      return Number.isFinite(n) ? n : fallback;
+    }
+
+    function resetStatus(message) {
+      if (userAdminModalStatus) userAdminModalStatus.textContent = message;
+    }
+
+    async function deleteCollectionDocs(colRef, label = "기록") {
       const snap = await getDocs(colRef);
-      if (snap.empty) return;
+      if (snap.empty) return 0;
       let batch = writeBatch(db);
       let count = 0;
+      let total = 0;
       for (const d of snap.docs) {
         batch.delete(d.ref);
         count += 1;
+        total += 1;
         if (count >= 450) {
+          resetStatus(`${label} 삭제 중... ${total}개`);
           await batch.commit();
           batch = writeBatch(db);
           count = 0;
         }
       }
       if (count > 0) await batch.commit();
+      return total;
     }
 
     async function deleteUserSubData(uid) {
-      await deleteCollectionDocs(holdingsCol(uid));
-      await deleteCollectionDocs(tradesCol(uid));
-      await deleteCollectionDocs(bankLogsCol(uid));
+      resetStatus("보유 주식 삭제 중...");
+      await deleteCollectionDocs(holdingsCol(uid), "보유 주식");
+      resetStatus("거래 내역 삭제 중...");
+      await deleteCollectionDocs(tradesCol(uid), "거래 내역");
+      resetStatus("통장 내역 삭제 중...");
+      await deleteCollectionDocs(bankLogsCol(uid), "통장 내역");
     }
 
     async function confirmUserAdminAction() {
@@ -2172,36 +2188,50 @@
           });
           showEarnPopup(`${nickname}님으로부터 ${formatWon(amount)} 회수`, "error");
         } else if (action === "reset") {
-          await runTransaction(db, async (transaction) => {
-            const uRef = userRef(uid);
-            const bRef = bankGlobalRef();
-            const dRef = bankDepositRef(uid);
-            const rRef = rankingRef(uid);
-            const snap = await transaction.get(uRef);
-            const bankSnap = await transaction.get(bRef);
-            if (!snap.exists()) throw new Error("유저 데이터가 없습니다.");
-            const data = snap.data();
-            const oldBank = Number(data.bankBalance || 0);
-            const totalDeposits = Number(bankSnap.exists() ? (bankSnap.data().totalDeposits || 0) : 0);
-            transaction.update(uRef, {
-              cash: Number(currentSettings.signupBonus || DEFAULT_SETTINGS.signupBonus),
-              bankBalance: 0,
-              moneyEarnLevel: 1,
-              promotionLevel: 1,
-              nextBankInterestAt: null,
-              lastEarnAt: null,
-              lastUpgradeAt: null,
-              lastPromotionAt: null,
-              lastDailySalaryDate: null,
-              lastDailySalaryAt: null,
-              lastBankAt: serverTimestamp(),
-              lastTradeAt: serverTimestamp(),
-              lastAdminAt: serverTimestamp()
-            });
-            transaction.set(bRef, { totalDeposits: Math.max(0, totalDeposits - oldBank), updatedAt: serverTimestamp() }, { merge: true });
-            transaction.set(dRef, { uid, nickname: data.nickname || nickname, bankBalance: 0, promotionLevel: 1, updatedAt: serverTimestamp() }, { merge: true });
-            transaction.delete(rRef);
+          const uRef = userRef(uid);
+          const bRef = bankGlobalRef();
+          const dRef = bankDepositRef(uid);
+          const rRef = rankingRef(uid);
+
+          resetStatus("유저 데이터 확인 중...");
+          const snap = await getDoc(uRef);
+          const bankSnap = await getDoc(bRef);
+          if (!snap.exists()) throw new Error("유저 데이터가 없습니다.");
+
+          const data = snap.data();
+          const oldBank = Math.max(0, safeNumber(data.bankBalance, 0));
+          const totalDeposits = Math.max(0, safeNumber(bankSnap.exists() ? bankSnap.data().totalDeposits : 0, 0));
+          const nextTotalDeposits = Math.max(0, totalDeposits - oldBank);
+
+          resetStatus("유저 기본값 초기화 중...");
+          await updateDoc(uRef, {
+            cash: Math.max(0, safeNumber(currentSettings.signupBonus || DEFAULT_SETTINGS.signupBonus, DEFAULT_SETTINGS.signupBonus)),
+            bankBalance: 0,
+            moneyEarnLevel: 1,
+            promotionLevel: 1,
+            nextBankInterestAt: null,
+            lastEarnAt: null,
+            lastUpgradeAt: null,
+            lastPromotionAt: null,
+            lastDailySalaryDate: null,
+            lastDailySalaryAt: null,
+            lastBankAt: serverTimestamp(),
+            lastTradeAt: serverTimestamp(),
+            lastAdminAt: serverTimestamp()
           });
+
+          resetStatus("은행 총 예치금 정리 중...");
+          await setDoc(bRef, {
+            totalDeposits: nextTotalDeposits,
+            updatedAt: serverTimestamp()
+          }, { merge: true });
+
+          resetStatus("유저 예치 정보 삭제 중...");
+          await deleteDoc(dRef);
+
+          resetStatus("랭킹 정보 삭제 중...");
+          await deleteDoc(rRef);
+
           await deleteUserSubData(uid);
           showEarnPopup(`${nickname}님 데이터 초기화 완료`);
         } else if (action === "delete") {
