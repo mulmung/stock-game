@@ -1020,6 +1020,13 @@
       if (name === "ranking" && currentScreenName !== "ranking") expandedRankingId = null;
       if (currentScreenName === "bank" && name !== "bank") expandedBankDepositId = null;
       if (name === "bank" && currentScreenName !== "bank") expandedBankDepositId = null;
+      if (currentScreenName === "upgrade" && name !== "upgrade") {
+        activeUpgradePanel = "";
+        renderUpgradeAccordion();
+      }
+      if (name === "upgrade" && currentScreenName !== "upgrade") {
+        activeUpgradePanel = "";
+      }
       currentScreenName = name;
       Object.values(screens).forEach(screen => screen.classList.remove("active"));
       screens[name].classList.add("active");
@@ -3238,7 +3245,11 @@
     document.addEventListener("click", () => closeAdminMenu());
     openMarketBtn.addEventListener("click", () => { closeAdminMenu(); showScreen("market"); });
     openBankBtn.addEventListener("click", () => { closeAdminMenu(); showScreen("bank"); });
-    openUpgradeBtn.addEventListener("click", () => { closeAdminMenu(); showScreen("upgrade"); });
+    openUpgradeBtn.addEventListener("click", () => {
+      closeAdminMenu();
+      activeUpgradePanel = "";
+      showScreen("upgrade");
+    });
     openRankingBtn.addEventListener("click", () => { closeAdminMenu(); showScreen("ranking"); });
     openSettingsBtn.addEventListener("click", () => { closeAdminMenu(); fillSettingsInputs(); setSettingsTab("default"); showScreen("settings"); });
     settingsDefaultTab.addEventListener("click", () => setSettingsTab("default"));
