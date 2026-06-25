@@ -290,7 +290,12 @@
 
     .user-manage-desc { font-size: 12px; color: var(--muted); line-height: 1.55; margin: 0 0 16px; }
     .user-manage-list { border-top: 1px solid var(--line-strong); }
-    .user-manage-card { padding: 16px 0; border-bottom: 1px solid var(--line-strong); }
+    .user-manage-card { padding: 0; border-bottom: 1px solid var(--line-strong); cursor: pointer; user-select: none; -webkit-tap-highlight-color: transparent; }
+    .user-manage-summary { padding: 18px 0; display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+    .user-manage-summary .user-manage-name { margin-bottom: 0; }
+    .user-manage-chevron { color: var(--muted); font-size: 16px; font-weight: 950; transition: transform .15s ease; }
+    .user-manage-card.expanded .user-manage-chevron { transform: rotate(180deg); }
+    .user-manage-details { padding: 0 0 16px; }
     .user-manage-name-label, .user-manage-money-label { color: var(--muted); font-size: 12px; font-weight: 950; margin-bottom: 7px; }
     .user-manage-name { font-size: 20px; font-weight: 950; letter-spacing: -0.6px; margin-bottom: 14px; }
     .user-manage-money-block { padding: 13px 0; border-top: 1px solid var(--line); }
@@ -993,6 +998,7 @@
     let activeUpgradePanel = "";
     let rankings = [];
     let adminUsers = [];
+    let expandedAdminUserId = null;
     let promotionLevels = [];
     let expandedPromotionManageLevel = null;
     let editingPromotionLevel = null;
@@ -1110,6 +1116,7 @@
       }, 1800);
     }
     function setSettingsTab(tab) {
+      expandedAdminUserId = null;
       const isDefault = tab === "default";
       const isStock = tab === "stock";
       const isBank = tab === "bank";
@@ -1694,29 +1701,45 @@
       userManageList.innerHTML = "";
       adminUsers.forEach((user) => {
         const card = document.createElement("div");
-        card.className = "user-manage-card";
+        const isExpanded = expandedAdminUserId === user.uid;
+        card.className = `user-manage-card${isExpanded ? " expanded" : ""}`;
         card.innerHTML = `
-          <div class="user-manage-name-label">닉네임</div>
-          <div class="user-manage-name">${styledNicknameHtml(user.nickname || "-", user.promotionLevel || 1)} ${promotionNameHtml(user.promotionLevel || 1)}</div>
-          <div class="user-manage-money-block">
-            <div class="user-manage-money-label">보유 현금</div>
-            <div class="user-manage-money-value">${formatWon(user.cash || 0)}</div>
+          <div class="user-manage-summary">
+            <div class="user-manage-name">${styledNicknameHtml(user.nickname || "-", user.promotionLevel || 1)} ${promotionNameHtml(user.promotionLevel || 1)}</div>
+            <div class="user-manage-chevron">⌄</div>
           </div>
-          <div class="user-manage-money-block">
-            <div class="user-manage-money-label">통장 잔액</div>
-            <div class="user-manage-money-value">${formatWon(user.bankBalance || 0)}</div>
-          </div>
-          <div class="user-manage-actions">
-            <button class="user-pay-btn" type="button">지급</button>
-            <button class="user-reclaim-btn" type="button">회수</button>
-            <button class="user-reset-btn" type="button">초기화</button>
-            <button class="user-delete-btn" type="button">탈퇴</button>
-          </div>
+          ${isExpanded ? `
+          <div class="user-manage-details">
+            <div class="user-manage-money-block">
+              <div class="user-manage-money-label">보유 현금</div>
+              <div class="user-manage-money-value">${formatWon(user.cash || 0)}</div>
+            </div>
+            <div class="user-manage-money-block">
+              <div class="user-manage-money-label">통장 잔액</div>
+              <div class="user-manage-money-value">${formatWon(user.bankBalance || 0)}</div>
+            </div>
+            <div class="user-manage-actions">
+              <button class="user-pay-btn" type="button">지급</button>
+              <button class="user-reclaim-btn" type="button">회수</button>
+              <button class="user-reset-btn" type="button">초기화</button>
+              <button class="user-delete-btn" type="button">탈퇴</button>
+            </div>
+          </div>` : ""}
         `;
-        card.querySelector(".user-pay-btn").addEventListener("click", () => openUserAdminModal("pay", user));
-        card.querySelector(".user-reclaim-btn").addEventListener("click", () => openUserAdminModal("reclaim", user));
-        card.querySelector(".user-reset-btn").addEventListener("click", () => openUserAdminModal("reset", user));
-        card.querySelector(".user-delete-btn").addEventListener("click", () => openUserAdminModal("delete", user));
+        card.addEventListener("click", () => {
+          expandedAdminUserId = expandedAdminUserId === user.uid ? null : user.uid;
+          renderAdminUsers();
+        });
+        const stop = (event) => event.stopPropagation();
+        card.querySelectorAll("button").forEach((btn) => btn.addEventListener("click", stop));
+        const payBtn = card.querySelector(".user-pay-btn");
+        const reclaimBtn = card.querySelector(".user-reclaim-btn");
+        const resetBtn = card.querySelector(".user-reset-btn");
+        const deleteBtn = card.querySelector(".user-delete-btn");
+        if (payBtn) payBtn.addEventListener("click", () => openUserAdminModal("pay", user));
+        if (reclaimBtn) reclaimBtn.addEventListener("click", () => openUserAdminModal("reclaim", user));
+        if (resetBtn) resetBtn.addEventListener("click", () => openUserAdminModal("reset", user));
+        if (deleteBtn) deleteBtn.addEventListener("click", () => openUserAdminModal("delete", user));
         userManageList.appendChild(card);
       });
     }
