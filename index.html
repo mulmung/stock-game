@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
-  <title>주식 게임 v50</title>
+  <title>주식 게임 v54</title>
   <style>
     * { box-sizing: border-box; }
     html, body { margin: 0; padding: 0; height: 100%; font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; background: #1f2937; color: #fff; }
@@ -1201,8 +1201,10 @@
     }
 
     function showScreen(name) {
+      const leavingPortfolioStockTab = currentScreenName === "game" && infoTab === "stock" && name !== "game";
       if (name !== currentScreenName) closeAllModals();
       const wasMarket = currentScreenName === "market";
+      if (leavingPortfolioStockTab) expandedHoldingStockId = null;
       if (wasMarket && name !== "market") expandedStockId = null;
       if (name === "market" && currentScreenName !== "market") expandedStockId = null;
       if (currentScreenName === "ranking" && name !== "ranking") expandedRankingId = null;
@@ -1338,7 +1340,9 @@
     }
 
     function setInfoTab(tab) {
-      infoTab = tab === "stock" || tab === "bank" ? tab : "daily";
+      const nextInfoTab = tab === "stock" || tab === "bank" ? tab : "daily";
+      if (infoTab === "stock" && nextInfoTab !== "stock") expandedHoldingStockId = null;
+      infoTab = nextInfoTab;
       const isDaily = infoTab === "daily";
       const isStock = infoTab === "stock";
       const isBank = infoTab === "bank";
@@ -4208,6 +4212,7 @@
       priceHistories.clear();
       stocks = [];
       holdings = [];
+      expandedHoldingStockId = null;
       bankLogs = [];
       bankGlobalData = { totalDeposits: 0 };
       bankDeposits = [];
