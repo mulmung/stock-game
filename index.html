@@ -205,6 +205,20 @@
     .global-bank-label { color: var(--muted); font-size: 13px; font-weight: 950; margin-bottom: 8px; }
     .global-bank-value { font-size: 26px; font-weight: 950; letter-spacing: -1px; text-align: right; white-space: nowrap; }
     .global-bank-desc { margin-top: 14px; padding-top: 12px; border-top: 1px solid var(--line); color: var(--text-soft); font-size: 12px; line-height: 1.55; }
+    .bank-deposit-section { border-top: 1px solid var(--line-strong); border-bottom: 1px solid var(--line-strong); padding: 18px 0 6px; margin-top: 18px; }
+    .bank-deposit-title { font-size: 18px; font-weight: 950; margin-bottom: 14px; }
+    .bank-deposit-list { display: flex; flex-direction: column; gap: 0; }
+    .bank-deposit-row { border-top: 1px solid var(--line); padding: 13px 0; cursor: pointer; }
+    .bank-deposit-row:first-child { border-top: 0; }
+    .bank-deposit-top { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 9px; }
+    .bank-deposit-name { font-size: 14px; font-weight: 950; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .bank-deposit-rate { font-size: 14px; font-weight: 950; color: var(--green); white-space: nowrap; }
+    .bank-deposit-bar { width: 100%; height: 10px; border: 1px solid var(--line-strong); background: rgba(255,255,255,0.04); overflow: hidden; }
+    .bank-deposit-fill { height: 100%; background: var(--blue); width: 0%; }
+    .bank-deposit-detail { margin-top: 12px; padding-top: 12px; border-top: 1px solid var(--line); }
+    .bank-deposit-detail-label { color: var(--muted); font-size: 12px; font-weight: 950; margin-bottom: 6px; }
+    .bank-deposit-detail-value { font-size: 18px; font-weight: 950; text-align: right; letter-spacing: -0.5px; }
+    .bank-deposit-empty { color: var(--muted); padding: 14px 0; font-size: 13px; line-height: 1.6; }
 
 
     .upgrade-card { border-top: 1px solid var(--line-strong); border-bottom: 1px solid var(--line-strong); padding: 18px 0; }
@@ -395,6 +409,12 @@
           <div class="global-bank-label">총 예치금</div>
           <div id="bankTotalDepositsValue" class="global-bank-value">0원</div>
           <div class="global-bank-desc">모든 유저가 통장에 예치한 금액의 합계입니다.</div>
+        </div>
+        <div class="bank-deposit-section">
+          <div class="bank-deposit-title">유저별 예치 비율</div>
+          <div id="bankDepositList" class="bank-deposit-list">
+            <div class="bank-deposit-empty">예치금 정보를 불러오는 중입니다.</div>
+          </div>
         </div>
       </div>
     </section>
@@ -831,6 +851,8 @@
     let unsubscribeBankGlobal = null;
     let bankLogs = [];
     let bankGlobalData = { totalDeposits: 0 };
+    let bankDeposits = [];
+    let expandedBankDepositId = null;
     let rankings = [];
     let adminUsers = [];
     let expandedRankingId = null;
@@ -855,6 +877,8 @@
       if (name === "market" && currentScreenName !== "market") expandedStockId = null;
       if (currentScreenName === "ranking" && name !== "ranking") expandedRankingId = null;
       if (name === "ranking" && currentScreenName !== "ranking") expandedRankingId = null;
+      if (currentScreenName === "bank" && name !== "bank") expandedBankDepositId = null;
+      if (name === "bank" && currentScreenName !== "bank") expandedBankDepositId = null;
       currentScreenName = name;
       Object.values(screens).forEach(screen => screen.classList.remove("active"));
       screens[name].classList.add("active");
@@ -862,7 +886,7 @@
       closeAdminMenu();
       if (activeMainScreens().includes(name)) ensureAppBackHistory();
       if (name === "market") { renderStocks(); listenStocks().catch(() => {}); startMarketCountdownTimer(); } else { stopMarketCountdownTimer(); }
-      if (name === "bank") { renderGlobalBank(); listenBankGlobal().catch(() => {}); }
+      if (name === "bank") { renderGlobalBank(); ensureMyBankDepositPublic().catch(() => {}).then(() => listenBankGlobal()).then(() => loadBankDeposits()).catch(() => {}); }
       if (name === "upgrade") { renderUpgrade(); }
       if (name === "ranking") { renderRankings(); loadRankings().catch(() => {}); }
       if (name === "game") {
@@ -980,6 +1004,8 @@
     function tradesCol(uid) { return collection(db, "users", uid, "trades"); }
     function bankLogsCol(uid) { return collection(db, "users", uid, "bankLogs"); }
     function bankGlobalRef() { return doc(db, "bank", "global"); }
+    function bankDepositsCol() { return collection(db, "bankDeposits"); }
+    function bankDepositRef(uid) { return doc(db, "bankDeposits", uid); }
     function rankingsCol() { return collection(db, "rankings"); }
     function rankingRef(uid) { return doc(db, "rankings", uid); }
 
@@ -1120,6 +1146,7 @@
         renderUserBar();
         renderPortfolio();
         renderBank();
+        if (currentScreenName === "bank") renderBankDeposits();
         if (currentScreenName === "upgrade") renderUpgrade();
         if (!activeMainScreens().includes(currentScreenName)) showScreen("game");
         updateEarnButton();
@@ -1293,7 +1320,8 @@
       startBtn.disabled = true;
       setStatus(nicknameStatus, "저장 중...");
       try {
-        await setDoc(userRef(currentUser.uid), {
+        const batch = writeBatch(db);
+        batch.set(userRef(currentUser.uid), {
           nickname,
           cash: Number(currentSettings.signupBonus || DEFAULT_SETTINGS.signupBonus),
           bankBalance: 0,
@@ -1303,6 +1331,13 @@
           createdAt: serverTimestamp(),
           lastLoginAt: serverTimestamp()
         });
+        batch.set(bankDepositRef(currentUser.uid), {
+          uid: currentUser.uid,
+          nickname,
+          bankBalance: 0,
+          updatedAt: serverTimestamp()
+        });
+        await batch.commit();
         setStatus(nicknameStatus, "시작합니다!", "success");
       } catch (error) {
         setStatus(nicknameStatus, "닉네임 저장에 실패했습니다. Firestore 규칙과 설정값을 확인해주세요.", "error");
@@ -1462,6 +1497,7 @@
           await runTransaction(db, async (transaction) => {
             const uRef = userRef(uid);
             const bRef = bankGlobalRef();
+            const dRef = bankDepositRef(uid);
             const snap = await transaction.get(uRef);
             const bankSnap = await transaction.get(bRef);
             if (!snap.exists()) throw new Error("유저 데이터가 없습니다.");
@@ -1479,6 +1515,7 @@
             if (bankTake > 0) {
               const totalDeposits = Number(bankSnap.exists() ? (bankSnap.data().totalDeposits || 0) : 0);
               transaction.set(bRef, { totalDeposits: Math.max(0, totalDeposits - bankTake), updatedAt: serverTimestamp() }, { merge: true });
+              transaction.set(dRef, { uid, nickname: data.nickname || nickname, bankBalance: Math.max(0, nextBank), updatedAt: serverTimestamp() }, { merge: true });
             }
           });
           showEarnPopup(`${nickname}님으로부터 ${formatWon(amount)} 회수`, "error");
@@ -1486,6 +1523,7 @@
           await runTransaction(db, async (transaction) => {
             const uRef = userRef(uid);
             const bRef = bankGlobalRef();
+            const dRef = bankDepositRef(uid);
             const rRef = rankingRef(uid);
             const snap = await transaction.get(uRef);
             const bankSnap = await transaction.get(bRef);
@@ -1505,6 +1543,7 @@
               lastAdminAt: serverTimestamp()
             });
             transaction.set(bRef, { totalDeposits: Math.max(0, totalDeposits - oldBank), updatedAt: serverTimestamp() }, { merge: true });
+            transaction.set(dRef, { uid, nickname: data.nickname || nickname, bankBalance: 0, updatedAt: serverTimestamp() }, { merge: true });
             transaction.delete(rRef);
           });
           await deleteUserSubData(uid);
@@ -1513,6 +1552,7 @@
           await runTransaction(db, async (transaction) => {
             const uRef = userRef(uid);
             const bRef = bankGlobalRef();
+            const dRef = bankDepositRef(uid);
             const rRef = rankingRef(uid);
             const snap = await transaction.get(uRef);
             const bankSnap = await transaction.get(bRef);
@@ -1520,6 +1560,7 @@
             const oldBank = Number(snap.data().bankBalance || 0);
             const totalDeposits = Number(bankSnap.exists() ? (bankSnap.data().totalDeposits || 0) : 0);
             transaction.set(bRef, { totalDeposits: Math.max(0, totalDeposits - oldBank), updatedAt: serverTimestamp() }, { merge: true });
+            transaction.delete(dRef);
             transaction.delete(rRef);
             transaction.delete(uRef);
           });
@@ -1663,6 +1704,33 @@
       const snap = await getDoc(bankGlobalRef());
       bankGlobalData = snap.exists() ? snap.data() : { totalDeposits: 0 };
       renderGlobalBank();
+      if (currentScreenName === "bank") renderBankDeposits();
+    }
+
+    function buildBankDepositData(data = currentUserData) {
+      return {
+        uid: currentUser.uid,
+        nickname: data?.nickname || "-",
+        bankBalance: Math.max(0, Math.floor(Number(data?.bankBalance || 0))),
+        updatedAt: serverTimestamp()
+      };
+    }
+
+    async function ensureMyBankDepositPublic(data = currentUserData) {
+      if (!currentUser || !data) return;
+      await setDoc(bankDepositRef(currentUser.uid), buildBankDepositData(data), { merge: true });
+    }
+
+    async function loadBankDeposits() {
+      if (!bankDepositList) return;
+      try {
+        const snap = await getDocs(query(bankDepositsCol(), orderBy("bankBalance", "desc"), limit(20)));
+        bankDeposits = snap.docs.map(d => ({ id: d.id, ...d.data() })).filter(item => Number(item.bankBalance || 0) > 0);
+        renderBankDeposits();
+      } catch (error) {
+        console.warn("유저별 예치 비율을 불러오지 못했습니다.", error);
+        if (bankDepositList) bankDepositList.innerHTML = `<div class="bank-deposit-empty">유저별 예치 비율을 불러오지 못했습니다.</div>`;
+      }
     }
 
     async function loadPriceHistoryForStock(stockId) {
@@ -1807,6 +1875,45 @@
       if (!bankTotalDepositsValue) return;
       const total = Number(bankGlobalData?.totalDeposits || 0);
       bankTotalDepositsValue.textContent = formatWon(total);
+    }
+
+    function renderBankDeposits() {
+      if (!bankDepositList) return;
+      const total = Number(bankGlobalData?.totalDeposits || 0);
+      if (!bankDeposits.length || total <= 0) {
+        bankDepositList.innerHTML = `<div class="bank-deposit-empty">예치금이 있는 유저가 없습니다.</div>`;
+        return;
+      }
+      bankDepositList.innerHTML = "";
+      for (const item of bankDeposits) {
+        const amount = Math.max(0, Math.floor(Number(item.bankBalance || 0)));
+        if (amount <= 0) continue;
+        const percent = total > 0 ? Math.min(100, (amount / total) * 100) : 0;
+        const row = document.createElement("div");
+        row.className = "bank-deposit-row";
+        row.dataset.depositId = item.id;
+        row.innerHTML = `
+          <div class="bank-deposit-top">
+            <div class="bank-deposit-name">${escapeHtml(item.nickname || "-")}</div>
+            <div class="bank-deposit-rate">${percent.toFixed(1)}%</div>
+          </div>
+          <div class="bank-deposit-bar"><div class="bank-deposit-fill" style="width:${percent.toFixed(2)}%"></div></div>
+          ${expandedBankDepositId === item.id ? `
+            <div class="bank-deposit-detail">
+              <div class="bank-deposit-detail-label">예치금</div>
+              <div class="bank-deposit-detail-value">${formatWon(amount)}</div>
+            </div>
+          ` : ""}
+        `;
+        row.addEventListener("click", () => {
+          expandedBankDepositId = expandedBankDepositId === item.id ? null : item.id;
+          renderBankDeposits();
+        });
+        bankDepositList.appendChild(row);
+      }
+      if (!bankDepositList.children.length) {
+        bankDepositList.innerHTML = `<div class="bank-deposit-empty">예치금이 있는 유저가 없습니다.</div>`;
+      }
     }
 
 
@@ -2002,6 +2109,7 @@
         await runTransaction(db, async (transaction) => {
           const uRef = userRef(currentUser.uid);
           const bRef = bankGlobalRef();
+          const dRef = bankDepositRef(currentUser.uid);
           const logRef = doc(bankLogsCol(currentUser.uid));
           const snap = await transaction.get(uRef);
           const bankSnap = await transaction.get(bRef);
@@ -2021,6 +2129,7 @@
             else if (nextBank > 0 && !existingNext) userUpdate.nextBankInterestAt = nextBankInterestTimestampFromNow();
             transaction.update(uRef, userUpdate);
             transaction.set(bRef, { totalDeposits: nextTotalDeposits, updatedAt: serverTimestamp() }, { merge: true });
+            transaction.set(dRef, { uid: currentUser.uid, nickname: data.nickname || currentUserData?.nickname || "-", bankBalance: nextBank, updatedAt: serverTimestamp() }, { merge: true });
             transaction.set(logRef, { type: "deposit", label: "입금", amount, balanceAfter: nextBank, createdAt: serverTimestamp() });
           } else {
             if (bankBalance < amount) throw new Error("통장 잔액이 부족합니다.");
@@ -2031,12 +2140,14 @@
             else if (!existingNext) userUpdate.nextBankInterestAt = nextBankInterestTimestampFromNow();
             transaction.update(uRef, userUpdate);
             transaction.set(bRef, { totalDeposits: nextTotalDeposits, updatedAt: serverTimestamp() }, { merge: true });
+            transaction.set(dRef, { uid: currentUser.uid, nickname: data.nickname || currentUserData?.nickname || "-", bankBalance: nextBank, updatedAt: serverTimestamp() }, { merge: true });
             transaction.set(logRef, { type: "withdraw", label: "출금", amount: -amount, balanceAfter: nextBank, createdAt: serverTimestamp() });
           }
         });
         await pruneOldBankLogs(currentUser.uid);
         await listenBankLogs(currentUser.uid).catch(() => {});
         await listenBankGlobal().catch(() => {});
+        if (currentScreenName === "bank") await loadBankDeposits().catch(() => {});
         closeBankModal();
         showEarnPopup(`${isDeposit ? "입금" : "출금"} 완료`);
       } catch (error) {
@@ -2078,6 +2189,7 @@
         await runTransaction(db, async (transaction) => {
           const uRef = userRef(currentUser.uid);
           const bRef = bankGlobalRef();
+          const dRef = bankDepositRef(currentUser.uid);
           const logRef = doc(bankLogsCol(currentUser.uid));
           const snap = await transaction.get(uRef);
           const bankSnap = await transaction.get(bRef);
@@ -2107,12 +2219,14 @@
             lastBankAt: serverTimestamp()
           });
           transaction.set(bRef, { totalDeposits: nextTotalDeposits, updatedAt: serverTimestamp() }, { merge: true });
+          transaction.set(dRef, { uid: currentUser.uid, nickname: data.nickname || currentUserData?.nickname || "-", bankBalance: nextBank, updatedAt: serverTimestamp() }, { merge: true });
           transaction.set(logRef, { type: "interest", label: "이자", amount: liveInterest, balanceAfter: nextBank, createdAt: serverTimestamp() });
         });
         if (paidInterest > 0) {
           await pruneOldBankLogs(currentUser.uid);
           await listenBankLogs(currentUser.uid).catch(() => {});
           await listenBankGlobal().catch(() => {});
+          if (currentScreenName === "bank") await loadBankDeposits().catch(() => {});
           showEarnPopup(`이자 +${formatWon(paidInterest)}`);
         }
       } catch (error) {
@@ -2686,6 +2800,8 @@
       holdings = [];
       bankLogs = [];
       bankGlobalData = { totalDeposits: 0 };
+      bankDeposits = [];
+      expandedBankDepositId = null;
       rankings = [];
       expandedRankingId = null;
       stopMarketTimer();
@@ -2702,6 +2818,7 @@
         const snap = await getDoc(userRef(user.uid));
         if (snap.exists()) {
           await ensureUserUpgradeSchema(user.uid, snap.data());
+          await ensureMyBankDepositPublic(snap.data()).catch(() => {});
           await listenHoldings(user.uid);
           startMarketTimer();
           await updateDoc(userRef(user.uid), { lastLoginAt: serverTimestamp() }).catch(() => {});
