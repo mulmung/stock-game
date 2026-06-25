@@ -1189,7 +1189,7 @@
       bottomBar.classList.toggle("active", activeMainScreens().includes(name));
       closeAdminMenu();
       if (activeMainScreens().includes(name)) ensureAppBackHistory();
-      if (name === "market") { renderStocks(); listenStocks().catch(() => {}); startMarketCountdownTimer(); } else { stopMarketCountdownTimer(); }
+      if (name === "market") { renderStocks(); listenStocks().catch(() => {}); startMarketCountdownTimer(); } else if (name === "game") { startMarketCountdownTimer(); } else { stopMarketCountdownTimer(); }
       if (name === "bank") { renderGlobalBank(); ensureMyBankDepositPublic().catch(() => {}).then(() => listenBankGlobal()).then(() => loadBankDeposits()).catch(() => {}); }
       if (name === "treasury") { ensureTreasuryDoc().then(loadTreasury).catch(() => renderTreasury()); }
       if (name === "upgrade") { loadPromotions().then(renderUpgrade).catch(() => renderUpgrade()); }
@@ -3600,24 +3600,22 @@
       const w = rect.width, h = rect.height;
       ctx.clearRect(0, 0, w, h);
       const candles = makeCandles(history);
-      const padX = 12;
-      const padY = 12;
-      const chartW = w - padX * 2;
-      const chartH = h - padY * 2;
 
-      ctx.strokeStyle = "rgba(255,255,255,0.075)"; ctx.lineWidth = 1;
-      for (let i = 1; i < 4; i++) {
-        const y = padY + (chartH / 4) * i;
-        ctx.beginPath(); ctx.moveTo(padX, y); ctx.lineTo(w - padX, y); ctx.stroke();
-      }
+      const showAvgLine = Boolean(options.showAvgLine);
+      const avgPrice = Number(options.avgPrice || 0);
+      const hasAvgPrice = showAvgLine && Number.isFinite(avgPrice) && avgPrice > 0;
+      const labelAreaW = hasAvgPrice ? 68 : 0;
+      const padLeft = 12 + labelAreaW;
+      const padRight = 12;
+      const padY = 12;
+      const chartW = Math.max(1, w - padLeft - padRight);
+      const chartH = Math.max(1, h - padY * 2);
+
       if (!candles.length) {
         ctx.fillStyle = getCss("--muted"); ctx.font = "12px system-ui"; ctx.textAlign = "center";
         ctx.fillText("가격 기록이 쌓이면 캔들이 표시됩니다.", w / 2, h / 2); return;
       }
 
-      const showAvgLine = Boolean(options.showAvgLine);
-      const avgPrice = Number(options.avgPrice || 0);
-      const hasAvgPrice = showAvgLine && Number.isFinite(avgPrice) && avgPrice > 0;
       const lows = candles.map(c => c.low), highs = candles.map(c => c.high);
       const candleMin = Math.min(...lows), candleMax = Math.max(...highs);
       const candleRange = Math.max(1, candleMax - candleMin);
@@ -3645,13 +3643,30 @@
       min = Math.max(1, min - padding);
       max = max + padding;
       range = Math.max(1, max - min);
+      const toY = (price) => padY + chartH - ((price - min) / range) * chartH;
+      const priceAtY = (y) => min + ((padY + chartH - y) / chartH) * range;
+
+      ctx.font = "10px system-ui";
+      ctx.textAlign = "right";
+      ctx.textBaseline = "middle";
+      ctx.lineWidth = 1;
+      for (let i = 1; i < 4; i++) {
+        const y = padY + (chartH / 4) * i;
+        ctx.strokeStyle = "rgba(255,255,255,0.075)";
+        ctx.setLineDash([]);
+        ctx.beginPath(); ctx.moveTo(padLeft, y); ctx.lineTo(w - padRight, y); ctx.stroke();
+        if (hasAvgPrice) {
+          ctx.fillStyle = "rgba(203,213,225,0.70)";
+          ctx.fillText(formatWon(Math.round(priceAtY(y))), padLeft - 7, y);
+        }
+      }
+
       const slot = chartW / CANDLE_COUNT;
       const bodyW = Math.max(4, Math.min(12, slot * 0.42));
-      const toY = (price) => padY + chartH - ((price - min) / range) * chartH;
       const offset = CANDLE_COUNT - candles.length;
 
       candles.forEach((c, idx) => {
-        const x = padX + (idx + offset + 0.5) * slot;
+        const x = padLeft + (idx + offset + 0.5) * slot;
         const openY = toY(c.open), closeY = toY(c.close), highY = toY(c.high), lowY = toY(c.low);
         const diff = c.close - c.open;
         const color = getDirectionColor(diff);
@@ -3663,82 +3678,28 @@
       });
 
       if (hasAvgPrice) {
-        const label = `평균 ${formatWon(avgPrice)}`;
+        const label = formatWon(avgPrice);
         ctx.font = "11px system-ui";
         ctx.textAlign = "right";
+        ctx.textBaseline = "middle";
         ctx.lineWidth = 1;
-        ctx.strokeStyle = "rgba(147,197,253,0.85)";
-        ctx.fillStyle = "rgba(147,197,253,0.95)";
-        ctx.setLineDash([5, 4]);
+        ctx.strokeStyle = "rgba(147,197,253,0.88)";
+        ctx.fillStyle = "rgba(147,197,253,0.98)";
 
         if (avgMode === "inside") {
-          const avgY = Math.max(padY + 8, Math.min(h - padY - 8, toY(avgPrice)));
-          ctx.beginPath(); ctx.moveTo(padX, avgY); ctx.lineTo(w - padX, avgY); ctx.stroke();
+          const avgY = Math.max(padY + 7, Math.min(h - padY - 7, toY(avgPrice)));
+          ctx.setLineDash([5, 4]);
+          ctx.beginPath(); ctx.moveTo(padLeft, avgY); ctx.lineTo(w - padRight, avgY); ctx.stroke();
           ctx.setLineDash([]);
-          const labelY = Math.max(padY + 12, avgY - 5);
-          const textW = ctx.measureText(label).width + 10;
-          ctx.fillStyle = "rgba(17,24,39,0.78)";
-          ctx.fillRect(w - padX - textW, labelY - 12, textW, 16);
-          ctx.fillStyle = "rgba(147,197,253,0.98)";
-          ctx.fillText(label, w - padX - 5, labelY);
+          ctx.fillText(label, padLeft - 7, avgY);
         } else {
           ctx.setLineDash([]);
           const isAbove = avgMode === "above";
           const guideY = isAbove ? padY + 7 : h - padY - 7;
-          const guideLabel = `${label} ${isAbove ? "↑" : "↓"}`;
-          const textW = ctx.measureText(guideLabel).width + 10;
-          ctx.fillStyle = "rgba(17,24,39,0.82)";
-          ctx.fillRect(w - padX - textW, guideY - 8, textW, 16);
-          ctx.fillStyle = "rgba(147,197,253,0.98)";
-          ctx.fillText(guideLabel, w - padX - 5, guideY + 4);
+          ctx.fillText(`${label} ${isAbove ? "↑" : "↓"}`, padLeft - 7, guideY);
         }
         ctx.setLineDash([]);
       }
-    }
-
-    async function updateMarketPrices() {
-      if (!currentUser || marketUpdating || !stocks.length) return;
-      marketUpdating = true;
-      const key = minuteKey();
-      try {
-        for (const stock of stocks) {
-          await runTransaction(db, async (transaction) => {
-            const ref = stockRef(stock.id);
-            const snap = await transaction.get(ref);
-            if (!snap.exists()) return;
-            const data = snap.data();
-            if (data.lastMinuteKey === key) return;
-            const current = Math.max(1, Number(data.currentPrice || data.startPrice || 1));
-            const randomRate = (Math.random() * PRICE_MOVE_RATE * 2) - PRICE_MOVE_RATE;
-            const next = Math.max(1, Math.round(current * (1 + randomRate)));
-            transaction.update(ref, {
-              previousPrice: current,
-              currentPrice: next,
-              lastMinuteKey: key,
-              updatedAt: serverTimestamp()
-            });
-            const bodyHigh = Math.max(current, next);
-            const bodyLow = Math.min(current, next);
-            const maxWick = Math.max(1, Math.round(current * 0.008));
-            const upperWick = Math.floor(Math.random() * (maxWick + 1));
-            const lowerWick = Math.floor(Math.random() * (maxWick + 1));
-            const high = bodyHigh + upperWick;
-            const low = Math.max(1, bodyLow - lowerWick);
-            transaction.set(priceRef(stock.id, key), {
-              price: next,
-              open: current,
-              high,
-              low,
-              close: next,
-              minuteKey: key,
-              createdAt: serverTimestamp()
-            });
-          }).catch(() => {});
-          const cleanupNow = new Date().getMinutes() === 0 && new Date().getHours() % 6 === 0;
-          if (cleanupNow) cleanupOldPrices(stock.id).catch(() => {});
-        }
-        await listenStocks().catch(() => {});
-      } finally { marketUpdating = false; }
     }
 
     async function cleanupOldPrices(stockId) {
