@@ -1138,6 +1138,7 @@
     let bankGlobalData = { totalDeposits: 0 };
     let treasuryData = { totalTreasury: 0, trackedContributions: 0 };
     let treasuryContributions = [];
+    let expandedTreasuryContributionId = null;
     let bankDeposits = [];
     let expandedBankDepositId = null;
     let activeUpgradePanel = "";
@@ -1185,6 +1186,8 @@
       if (name === "ranking" && currentScreenName !== "ranking") expandedRankingId = null;
       if (currentScreenName === "bank" && name !== "bank") expandedBankDepositId = null;
       if (name === "bank" && currentScreenName !== "bank") expandedBankDepositId = null;
+      if (currentScreenName === "treasury" && name !== "treasury") expandedTreasuryContributionId = null;
+      if (name === "treasury" && currentScreenName !== "treasury") expandedTreasuryContributionId = null;
       if (currentScreenName === "upgrade" && name !== "upgrade") {
         activeUpgradePanel = "";
         renderUpgradeAccordion();
@@ -2716,27 +2719,43 @@
       if (!treasuryContributionList) return;
       const trackedTotal = Math.max(0, Number(treasuryData?.trackedContributions || 0));
       if (!treasuryContributions.length || trackedTotal <= 0) {
+        expandedTreasuryContributionId = null;
         treasuryContributionList.innerHTML = `<div class="bank-deposit-empty">아직 기록된 국고 납입 정보가 없습니다.<br />기능 추가 이후 거래세부터 집계됩니다.</div>`;
         return;
       }
-      treasuryContributionList.innerHTML = treasuryContributions.map(item => {
+
+      treasuryContributionList.innerHTML = "";
+      for (const item of treasuryContributions) {
         const paid = Math.max(0, Number(item.totalTaxPaid || 0));
+        if (paid <= 0) continue;
         const percent = trackedTotal > 0 ? Math.min(100, (paid / trackedTotal) * 100) : 0;
-        const name = escapeHtml(item.nickname || "-");
-        return `
-          <div class="bank-deposit-row">
-            <div class="bank-deposit-top">
-              <div class="bank-deposit-name">${name}</div>
-              <div class="bank-deposit-rate">${percent.toFixed(1)}%</div>
-            </div>
-            <div class="bank-deposit-bar"><div class="bank-deposit-fill" style="width:${percent.toFixed(2)}%"></div></div>
+        const row = document.createElement("div");
+        row.className = "bank-deposit-row";
+        row.dataset.treasuryContributionId = item.id;
+        row.innerHTML = `
+          <div class="bank-deposit-top">
+            <div class="bank-deposit-name">${styledNicknameHtml(item.nickname || "-", item.promotionLevel || 1)}</div>
+            <div class="bank-deposit-rate">${percent.toFixed(1)}%</div>
+          </div>
+          <div class="bank-deposit-bar"><div class="bank-deposit-fill" style="width:${percent.toFixed(2)}%"></div></div>
+          ${expandedTreasuryContributionId === item.id ? `
             <div class="bank-deposit-detail">
               <div class="bank-deposit-detail-label">누적 납입액</div>
               <div class="bank-deposit-detail-value">${formatWon(paid)}</div>
             </div>
-          </div>
+          ` : ""}
         `;
-      }).join("");
+        row.addEventListener("click", () => {
+          expandedTreasuryContributionId = expandedTreasuryContributionId === item.id ? null : item.id;
+          renderTreasuryContributions();
+        });
+        treasuryContributionList.appendChild(row);
+      }
+
+      if (!treasuryContributionList.children.length) {
+        expandedTreasuryContributionId = null;
+        treasuryContributionList.innerHTML = `<div class="bank-deposit-empty">아직 기록된 국고 납입 정보가 없습니다.<br />기능 추가 이후 거래세부터 집계됩니다.</div>`;
+      }
     }
 
     function buildBankDepositData(data = currentUserData) {
