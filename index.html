@@ -3702,6 +3702,56 @@
       }
     }
 
+    async function updateMarketPrices() {
+      if (!currentUser || marketUpdating || !stocks.length) return;
+      marketUpdating = true;
+      const key = minuteKey();
+      try {
+        for (const stock of stocks) {
+          await runTransaction(db, async (transaction) => {
+            const ref = stockRef(stock.id);
+            const snap = await transaction.get(ref);
+            if (!snap.exists()) return;
+            const data = snap.data();
+            if (data.lastMinuteKey === key) return;
+            const current = Math.max(1, Number(data.currentPrice || data.startPrice || 1));
+            const randomRate = (Math.random() * PRICE_MOVE_RATE * 2) - PRICE_MOVE_RATE;
+            const next = Math.max(1, Math.round(current * (1 + randomRate)));
+            transaction.update(ref, {
+              previousPrice: current,
+              currentPrice: next,
+              lastMinuteKey: key,
+              updatedAt: serverTimestamp()
+            });
+            const bodyHigh = Math.max(current, next);
+            const bodyLow = Math.min(current, next);
+            const maxWick = Math.max(1, Math.round(current * 0.008));
+            const upperWick = Math.floor(Math.random() * (maxWick + 1));
+            const lowerWick = Math.floor(Math.random() * (maxWick + 1));
+            const high = bodyHigh + upperWick;
+            const low = Math.max(1, bodyLow - lowerWick);
+            transaction.set(priceRef(stock.id, key), {
+              price: next,
+              open: current,
+              high,
+              low,
+              close: next,
+              minuteKey: key,
+              createdAt: serverTimestamp()
+            });
+          }).catch((error) => {
+            console.warn(`시세 변동 실패: ${stock.name || stock.id}`, error);
+          });
+
+          const cleanupNow = new Date().getMinutes() === 0 && new Date().getHours() % 6 === 0;
+          if (cleanupNow) cleanupOldPrices(stock.id).catch((error) => console.warn("가격 기록 정리 실패:", error));
+        }
+        await listenStocks().catch((error) => console.warn("시세 갱신 후 종목 재수신 실패:", error));
+      } finally {
+        marketUpdating = false;
+      }
+    }
+
     async function cleanupOldPrices(stockId) {
       const all = await getDocs(query(pricesCol(stockId), orderBy("createdAt", "desc"), limit(PRICE_HISTORY_LIMIT + 1)));
       const docs = all.docs;
@@ -3741,10 +3791,15 @@
     function startMarketTimer() {
       if (marketTimer) clearTimeout(marketTimer);
       const run = async () => {
-        await updateMarketPrices();
-        marketTimer = setTimeout(run, msUntilNextMinute() || 60000);
+        try {
+          await updateMarketPrices();
+        } catch (error) {
+          console.warn("시세 변동 타이머 오류:", error);
+        } finally {
+          marketTimer = setTimeout(run, msUntilNextMinute() || 60000);
+        }
       };
-      marketTimer = setTimeout(run, msUntilNextMinute());
+      marketTimer = setTimeout(run, msUntilNextMinute() || 1000);
     }
     function stopMarketTimer() { if (marketTimer) { clearTimeout(marketTimer); marketTimer = null; } }
 
