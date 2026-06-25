@@ -3419,7 +3419,7 @@
         if (buyBtn && item.stock) buyBtn.addEventListener("click", (e) => { e.stopPropagation(); openTradeModal("buy", item.stock); });
         if (sellBtn && item.stock) sellBtn.addEventListener("click", (e) => { e.stopPropagation(); openTradeModal("sell", item.stock); });
         holdingList.appendChild(row);
-        if (expandedHoldingStockId === item.stockId) drawCandleChart(row.querySelector(".candle-chart"), history, { avgPrice: item.avgPrice, showAvgLine: true });
+        if (expandedHoldingStockId === item.stockId) drawCandleChart(row.querySelector(".candle-chart"), history, { avgPrice: item.avgPrice, currentPrice: item.currentPrice, showAvgLine: true, showCurrentLine: true });
       }
     }
 
@@ -3706,7 +3706,11 @@
       const showAvgLine = Boolean(options.showAvgLine);
       const avgPrice = Number(options.avgPrice || 0);
       const hasAvgPrice = showAvgLine && Number.isFinite(avgPrice) && avgPrice > 0;
-      const labelAreaW = hasAvgPrice ? 68 : 0;
+      const showCurrentLine = Boolean(options.showCurrentLine);
+      const currentPrice = Number(options.currentPrice || 0);
+      const hasCurrentPrice = showCurrentLine && Number.isFinite(currentPrice) && currentPrice > 0;
+      const hasGuideLabels = hasAvgPrice || hasCurrentPrice;
+      const labelAreaW = hasGuideLabels ? 78 : 0;
       const padLeft = 12 + labelAreaW;
       const padRight = 12;
       const padY = 12;
@@ -3723,20 +3727,31 @@
       const candleRange = Math.max(1, candleMax - candleMin);
       const farThreshold = 0.30;
       let avgMode = "none";
+      let currentMode = "none";
       let min = candleMin;
       let max = candleMax;
 
-      if (hasAvgPrice) {
+      const classifyGuide = (price) => {
         const highLimit = candleMax + candleRange * farThreshold;
         const lowLimit = candleMin - candleRange * farThreshold;
-        if (avgPrice > highLimit) {
-          avgMode = "above";
-        } else if (avgPrice < lowLimit) {
-          avgMode = "below";
-        } else {
-          avgMode = "inside";
-          min = Math.min(candleMin, avgPrice);
-          max = Math.max(candleMax, avgPrice);
+        if (price > highLimit) return "above";
+        if (price < lowLimit) return "below";
+        return "inside";
+      };
+
+      if (hasCurrentPrice) {
+        currentMode = classifyGuide(currentPrice);
+        if (currentMode === "inside") {
+          min = Math.min(min, currentPrice);
+          max = Math.max(max, currentPrice);
+        }
+      }
+
+      if (hasAvgPrice) {
+        avgMode = classifyGuide(avgPrice);
+        if (avgMode === "inside") {
+          min = Math.min(min, avgPrice);
+          max = Math.max(max, avgPrice);
         }
       }
 
@@ -3748,6 +3763,23 @@
       const toY = (price) => padY + chartH - ((price - min) / range) * chartH;
       const priceAtY = (y) => min + ((padY + chartH - y) / chartH) * range;
 
+      const drawLabelBg = (text, x, y, color) => {
+        ctx.save();
+        ctx.font = "10.5px system-ui";
+        const metrics = ctx.measureText(text);
+        const labelW = Math.ceil(metrics.width) + 8;
+        const labelH = 15;
+        const left = Math.max(2, x - labelW);
+        const top = Math.max(2, Math.min(h - labelH - 2, y - labelH / 2));
+        ctx.fillStyle = "rgba(0,0,0,0.58)";
+        ctx.fillRect(left, top, labelW, labelH);
+        ctx.fillStyle = color;
+        ctx.textAlign = "right";
+        ctx.textBaseline = "middle";
+        ctx.fillText(text, left + labelW - 4, top + labelH / 2);
+        ctx.restore();
+      };
+
       ctx.font = "10px system-ui";
       ctx.textAlign = "right";
       ctx.textBaseline = "middle";
@@ -3757,8 +3789,8 @@
         ctx.strokeStyle = "rgba(255,255,255,0.075)";
         ctx.setLineDash([]);
         ctx.beginPath(); ctx.moveTo(padLeft, y); ctx.lineTo(w - padRight, y); ctx.stroke();
-        if (hasAvgPrice) {
-          ctx.fillStyle = "rgba(203,213,225,0.70)";
+        if (hasGuideLabels) {
+          ctx.fillStyle = "rgba(203,213,225,0.62)";
           ctx.fillText(formatWon(Math.round(priceAtY(y))), padLeft - 7, y);
         }
       }
@@ -3779,29 +3811,41 @@
         ctx.fillRect(x - bodyW / 2, top, bodyW, bodyH);
       });
 
-      if (hasAvgPrice) {
-        const label = formatWon(avgPrice);
-        ctx.font = "11px system-ui";
+      const drawGuideLine = ({ price, mode, color, dash, labelSuffix = "" }) => {
+        const label = `${formatWon(price)}${labelSuffix}`;
+        ctx.save();
+        ctx.font = "10.5px system-ui";
         ctx.textAlign = "right";
         ctx.textBaseline = "middle";
-        ctx.lineWidth = 1;
-        ctx.strokeStyle = "rgba(147,197,253,0.88)";
-        ctx.fillStyle = "rgba(147,197,253,0.98)";
+        ctx.lineWidth = 1.15;
+        ctx.strokeStyle = color;
+        ctx.fillStyle = color;
 
-        if (avgMode === "inside") {
-          const avgY = Math.max(padY + 7, Math.min(h - padY - 7, toY(avgPrice)));
-          ctx.setLineDash([5, 4]);
-          ctx.beginPath(); ctx.moveTo(padLeft, avgY); ctx.lineTo(w - padRight, avgY); ctx.stroke();
+        if (mode === "inside") {
+          const guideY = Math.max(padY + 7, Math.min(h - padY - 7, toY(price)));
+          ctx.setLineDash(dash);
+          ctx.beginPath(); ctx.moveTo(padLeft, guideY); ctx.lineTo(w - padRight, guideY); ctx.stroke();
           ctx.setLineDash([]);
-          ctx.fillText(label, padLeft - 7, avgY);
-        } else {
+          drawLabelBg(label, padLeft - 7, guideY, color);
+        } else if (mode === "above" || mode === "below") {
           ctx.setLineDash([]);
-          const isAbove = avgMode === "above";
+          const isAbove = mode === "above";
           const guideY = isAbove ? padY + 7 : h - padY - 7;
-          ctx.fillText(`${label} ${isAbove ? "↑" : "↓"}`, padLeft - 7, guideY);
+          drawLabelBg(`${formatWon(price)} ${isAbove ? "↑" : "↓"}`, padLeft - 7, guideY, color);
         }
-        ctx.setLineDash([]);
+        ctx.restore();
+      };
+
+      if (hasCurrentPrice) {
+        const currentColor = hasAvgPrice && currentPrice < avgPrice ? "rgba(239,68,68,0.98)" : "rgba(34,197,94,0.98)";
+        drawGuideLine({ price: currentPrice, mode: currentMode, color: currentColor, dash: [3, 3] });
       }
+
+      if (hasAvgPrice) {
+        drawGuideLine({ price: avgPrice, mode: avgMode, color: "rgba(250,204,21,0.98)", dash: [5, 4] });
+      }
+
+      ctx.setLineDash([]);
     }
 
     async function updateMarketPrices() {
