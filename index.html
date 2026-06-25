@@ -310,6 +310,7 @@
     .user-reclaim-btn { background: var(--red); }
     .user-reset-btn { background: #64748b; }
     .user-delete-btn { background: #991b1b; }
+    .treasury-reset-btn { background: #991b1b; margin-top: 10px; }
     .user-manage-status { min-height: 20px; color: var(--muted); font-size: 12px; font-weight: 800; text-align: center; margin-top: 12px; }
     .danger-message { color: var(--text-soft); font-size: 12px; line-height: 1.6; margin: 4px 0 16px; }
     .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.55); display: none; align-items: center; justify-content: center; padding: 18px; z-index: 200; }
@@ -566,6 +567,7 @@
           <button id="settingsDefaultTab" class="settings-tab active" type="button">게임 기본값</button>
           <button id="settingsStockTab" class="settings-tab" type="button">종목 추가</button>
           <button id="settingsBankTab" class="settings-tab" type="button">은행 관리</button>
+          <button id="settingsTreasuryTab" class="settings-tab" type="button">국고 관리</button>
           <button id="settingsUserTab" class="settings-tab" type="button">유저 관리</button>
           <button id="settingsPromotionTab" class="settings-tab" type="button">승급 관리</button>
         </div>
@@ -604,23 +606,7 @@
               </div>
             </div>
 
-            <div class="field">
-              <label for="buyTaxRateInput">매수 거래세율</label>
-              <div class="settings-row">
-                <input id="buyTaxRateInput" type="number" inputmode="decimal" min="0" step="0.01" placeholder="예: 0.3" />
-                <div class="won">%</div>
-              </div>
-            </div>
-
-            <div class="field">
-              <label for="sellTaxRateInput">매도 거래세율</label>
-              <div class="settings-row">
-                <input id="sellTaxRateInput" type="number" inputmode="decimal" min="0" step="0.01" placeholder="예: 0.5" />
-                <div class="won">%</div>
-              </div>
-            </div>
-
-            <div class="hint">기본값: 신규 가입 1,000,000원 / 돈벌기 10,000원~50,000원 / 최대 Lv.10 / 매수세 0.3% / 매도세 0.5%</div>
+            <div class="hint">기본값: 신규 가입 1,000,000원 / 돈벌기 10,000원~50,000원 / 최대 Lv.10</div>
             <button id="saveSettingsBtn" class="primary-btn">저장하기</button>
             <div id="settingsStatus" class="status"></div>
           </div>
@@ -652,6 +638,36 @@
             <div class="hint">기본값: 시간당 1% / 통장 잔액이 1원 이상이면 10분마다 시간당 이자율의 1/6만큼 지급됩니다.</div>
             <button id="saveBankSettingsBtn" class="primary-btn">은행 설정 저장하기</button>
             <div id="bankSettingsStatus" class="status"></div>
+          </div>
+
+          <div id="settingsTreasuryPanel" class="settings-panel">
+            <div class="promotion-manage-desc">거래세율과 국고 금액을 관리할 수 있습니다.</div>
+            <div class="treasury-card">
+              <div class="treasury-label">현재 국고</div>
+              <div id="treasuryManageValue" class="treasury-value">0원</div>
+              <div class="treasury-desc">매수/매도 거래에서 징수된 세금의 합계입니다. 유저 초기화와는 별도로 유지됩니다.</div>
+            </div>
+
+            <div class="field">
+              <label for="buyTaxRateInput">매수 거래세율</label>
+              <div class="settings-row">
+                <input id="buyTaxRateInput" type="number" inputmode="decimal" min="0" step="0.01" placeholder="예: 0.3" />
+                <div class="won">%</div>
+              </div>
+            </div>
+
+            <div class="field">
+              <label for="sellTaxRateInput">매도 거래세율</label>
+              <div class="settings-row">
+                <input id="sellTaxRateInput" type="number" inputmode="decimal" min="0" step="0.01" placeholder="예: 0.5" />
+                <div class="won">%</div>
+              </div>
+            </div>
+
+            <div class="hint">기본값: 매수세 0.3% / 매도세 0.5% / 유저 초기화 시 국고는 유지됩니다.</div>
+            <button id="saveTreasurySettingsBtn" class="primary-btn">국고 설정 저장하기</button>
+            <button id="resetTreasuryBtn" class="primary-btn treasury-reset-btn" type="button">국고 초기화</button>
+            <div id="treasurySettingsStatus" class="status"></div>
           </div>
 
           <div id="settingsUserPanel" class="settings-panel">
@@ -934,11 +950,13 @@
     const settingsDefaultTab = document.getElementById("settingsDefaultTab");
     const settingsStockTab = document.getElementById("settingsStockTab");
     const settingsBankTab = document.getElementById("settingsBankTab");
+    const settingsTreasuryTab = document.getElementById("settingsTreasuryTab");
     const settingsUserTab = document.getElementById("settingsUserTab");
     const settingsPromotionTab = document.getElementById("settingsPromotionTab");
     const settingsDefaultPanel = document.getElementById("settingsDefaultPanel");
     const settingsStockPanel = document.getElementById("settingsStockPanel");
     const settingsBankPanel = document.getElementById("settingsBankPanel");
+    const settingsTreasuryPanel = document.getElementById("settingsTreasuryPanel");
     const settingsUserPanel = document.getElementById("settingsUserPanel");
     const settingsPromotionPanel = document.getElementById("settingsPromotionPanel");
     const userManageList = document.getElementById("userManageList");
@@ -956,6 +974,10 @@
     const bankInterestRateInput = document.getElementById("bankInterestRateInput");
     const saveBankSettingsBtn = document.getElementById("saveBankSettingsBtn");
     const bankSettingsStatus = document.getElementById("bankSettingsStatus");
+    const treasuryManageValue = document.getElementById("treasuryManageValue");
+    const saveTreasurySettingsBtn = document.getElementById("saveTreasurySettingsBtn");
+    const resetTreasuryBtn = document.getElementById("resetTreasuryBtn");
+    const treasurySettingsStatus = document.getElementById("treasurySettingsStatus");
     const stockList = document.getElementById("stockList");
     const marketCountdown = document.getElementById("marketCountdown");
     const holdingList = document.getElementById("holdingList");
@@ -1182,23 +1204,28 @@
       const isDefault = tab === "default";
       const isStock = tab === "stock";
       const isBank = tab === "bank";
+      const isTreasury = tab === "treasury";
       const isUser = tab === "user";
       const isPromotion = tab === "promotion";
       settingsDefaultTab.classList.toggle("active", isDefault);
       settingsStockTab.classList.toggle("active", isStock);
       settingsBankTab.classList.toggle("active", isBank);
+      settingsTreasuryTab.classList.toggle("active", isTreasury);
       settingsUserTab.classList.toggle("active", isUser);
       settingsPromotionTab.classList.toggle("active", isPromotion);
       settingsDefaultPanel.classList.toggle("active", isDefault);
       settingsStockPanel.classList.toggle("active", isStock);
       settingsBankPanel.classList.toggle("active", isBank);
+      settingsTreasuryPanel.classList.toggle("active", isTreasury);
       settingsUserPanel.classList.toggle("active", isUser);
       settingsPromotionPanel.classList.toggle("active", isPromotion);
       setStatus(settingsStatus, "");
       setStatus(stockAddStatus, "");
       setStatus(bankSettingsStatus, "");
+      setStatus(treasurySettingsStatus, "");
       if (userManageStatus) userManageStatus.textContent = "";
       if (promotionManageStatus) promotionManageStatus.textContent = "";
+      if (isTreasury) { ensureTreasuryDoc().then(loadTreasury).catch(() => renderTreasury()); }
       if (isUser) loadAdminUsers().catch(() => {});
       if (isPromotion) { loadPromotions().then(renderPromotionManageList).catch(() => { if (promotionManageStatus) promotionManageStatus.textContent = "승급 설정을 불러오지 못했습니다."; }); }
     }
@@ -2189,18 +2216,24 @@
       const earnMin = Number(earnMinInput.value);
       const earnMax = Number(earnMaxInput.value);
       const earnMaxLevel = Math.floor(Number(earnMaxLevelInput.value));
-      const buyTaxRate = Number(buyTaxRateInput.value);
-      const sellTaxRate = Number(sellTaxRateInput.value);
       if (!Number.isFinite(signupBonus) || signupBonus <= 0) { setStatus(settingsStatus, "신규 가입 지급 금액은 0보다 커야 합니다.", "error"); return; }
       if (!Number.isFinite(earnMin) || earnMin <= 0) { setStatus(settingsStatus, "돈벌기 최소 지급 금액은 0보다 커야 합니다.", "error"); return; }
       if (!Number.isFinite(earnMax) || earnMax < earnMin) { setStatus(settingsStatus, "돈벌기 최대 지급 금액은 최소 지급 금액보다 크거나 같아야 합니다.", "error"); return; }
       if (!Number.isFinite(earnMaxLevel) || earnMaxLevel < 1 || earnMaxLevel > 30) { setStatus(settingsStatus, "돈벌기 최대 레벨은 1~30 사이로 입력해주세요.", "error"); return; }
-      if (!Number.isFinite(buyTaxRate) || buyTaxRate < 0 || buyTaxRate > 100) { setStatus(settingsStatus, "매수 거래세율은 0~100 사이로 입력해주세요.", "error"); return; }
-      if (!Number.isFinite(sellTaxRate) || sellTaxRate < 0 || sellTaxRate > 100) { setStatus(settingsStatus, "매도 거래세율은 0~100 사이로 입력해주세요.", "error"); return; }
       saveSettingsBtn.disabled = true;
       setStatus(settingsStatus, "저장 중...");
       try {
-        await setDoc(settingsRef(), { signupBonus, earnMin, earnMax, earnMaxLevel, buyTaxRate, sellTaxRate, bankHourlyInterestRate: Number(currentSettings.bankHourlyInterestRate || DEFAULT_SETTINGS.bankHourlyInterestRate), updatedAt: serverTimestamp(), updatedBy: currentUser.uid }, { merge: true });
+        await setDoc(settingsRef(), {
+          signupBonus,
+          earnMin,
+          earnMax,
+          earnMaxLevel,
+          buyTaxRate: Number(currentSettings.buyTaxRate ?? DEFAULT_SETTINGS.buyTaxRate),
+          sellTaxRate: Number(currentSettings.sellTaxRate ?? DEFAULT_SETTINGS.sellTaxRate),
+          bankHourlyInterestRate: Number(currentSettings.bankHourlyInterestRate || DEFAULT_SETTINGS.bankHourlyInterestRate),
+          updatedAt: serverTimestamp(),
+          updatedBy: currentUser.uid
+        }, { merge: true });
         await listenSettings();
         setStatus(settingsStatus, "설정이 저장되었습니다.", "success");
       } catch (error) { setStatus(settingsStatus, "설정 저장에 실패했습니다. 관리자 권한을 확인해주세요.", "error"); }
@@ -2237,6 +2270,60 @@
         saveBankSettingsBtn.disabled = false;
       }
     }
+
+    async function saveTreasurySettings() {
+      if (!isAdmin()) return;
+      const buyTaxRate = Number(buyTaxRateInput.value);
+      const sellTaxRate = Number(sellTaxRateInput.value);
+      if (!Number.isFinite(buyTaxRate) || buyTaxRate < 0 || buyTaxRate > 100) {
+        setStatus(treasurySettingsStatus, "매수 거래세율은 0~100 사이로 입력해주세요.", "error");
+        return;
+      }
+      if (!Number.isFinite(sellTaxRate) || sellTaxRate < 0 || sellTaxRate > 100) {
+        setStatus(treasurySettingsStatus, "매도 거래세율은 0~100 사이로 입력해주세요.", "error");
+        return;
+      }
+      saveTreasurySettingsBtn.disabled = true;
+      setStatus(treasurySettingsStatus, "저장 중...");
+      try {
+        await setDoc(settingsRef(), {
+          signupBonus: Number(currentSettings.signupBonus || DEFAULT_SETTINGS.signupBonus),
+          earnMin: Number(currentSettings.earnMin || DEFAULT_SETTINGS.earnMin),
+          earnMax: Number(currentSettings.earnMax || DEFAULT_SETTINGS.earnMax),
+          earnMaxLevel: Number(currentSettings.earnMaxLevel || DEFAULT_SETTINGS.earnMaxLevel),
+          buyTaxRate,
+          sellTaxRate,
+          bankHourlyInterestRate: Number(currentSettings.bankHourlyInterestRate || DEFAULT_SETTINGS.bankHourlyInterestRate),
+          updatedAt: serverTimestamp(),
+          updatedBy: currentUser.uid
+        }, { merge: true });
+        await listenSettings();
+        setStatus(treasurySettingsStatus, "국고 설정이 저장되었습니다.", "success");
+      } catch (error) {
+        setStatus(treasurySettingsStatus, "국고 설정 저장에 실패했습니다.", "error");
+      } finally {
+        saveTreasurySettingsBtn.disabled = false;
+      }
+    }
+
+    async function resetTreasuryFromSettings() {
+      if (!isAdmin()) return;
+      const ok = window.confirm("현재 국고 금액을 0원으로 초기화하시겠습니까?
+이 작업은 되돌릴 수 없습니다.");
+      if (!ok) return;
+      resetTreasuryBtn.disabled = true;
+      setStatus(treasurySettingsStatus, "국고 초기화 중...");
+      try {
+        await setDoc(treasuryRef(), { totalTreasury: 0, updatedAt: serverTimestamp() }, { merge: true });
+        await loadTreasury();
+        setStatus(treasurySettingsStatus, "국고가 0원으로 초기화되었습니다.", "success");
+      } catch (error) {
+        setStatus(treasurySettingsStatus, "국고 초기화에 실패했습니다.", "error");
+      } finally {
+        resetTreasuryBtn.disabled = false;
+      }
+    }
+
 
     async function addStock() {
       if (!isAdmin()) return;
@@ -2330,8 +2417,9 @@
     }
 
     function renderTreasury() {
-      if (!treasuryValue) return;
-      treasuryValue.textContent = formatWon(Number(treasuryData?.totalTreasury || 0));
+      const valueText = formatWon(Number(treasuryData?.totalTreasury || 0));
+      if (treasuryValue) treasuryValue.textContent = valueText;
+      if (treasuryManageValue) treasuryManageValue.textContent = valueText;
     }
 
     function buildBankDepositData(data = currentUserData) {
@@ -3405,10 +3493,13 @@
     settingsDefaultTab.addEventListener("click", () => setSettingsTab("default"));
     settingsStockTab.addEventListener("click", () => setSettingsTab("stock"));
     settingsBankTab.addEventListener("click", () => setSettingsTab("bank"));
+    settingsTreasuryTab.addEventListener("click", () => setSettingsTab("treasury"));
     settingsUserTab.addEventListener("click", () => setSettingsTab("user"));
     settingsPromotionTab.addEventListener("click", () => setSettingsTab("promotion"));
     saveSettingsBtn.addEventListener("click", saveSettings);
     saveBankSettingsBtn.addEventListener("click", saveBankSettings);
+    saveTreasurySettingsBtn.addEventListener("click", saveTreasurySettings);
+    resetTreasuryBtn.addEventListener("click", resetTreasuryFromSettings);
     promotionAddBtn.addEventListener("click", addPromotionLevel);
     addStockBtn.addEventListener("click", addStock);
     backToGameBtn.addEventListener("click", () => showScreen("game"));
