@@ -2308,8 +2308,7 @@
 
     async function resetTreasuryFromSettings() {
       if (!isAdmin()) return;
-      const ok = window.confirm("현재 국고 금액을 0원으로 초기화하시겠습니까?
-이 작업은 되돌릴 수 없습니다.");
+      const ok = window.confirm("현재 국고 금액을 0원으로 초기화하시겠습니까?\n이 작업은 되돌릴 수 없습니다.");
       if (!ok) return;
       resetTreasuryBtn.disabled = true;
       setStatus(treasurySettingsStatus, "국고 초기화 중...");
