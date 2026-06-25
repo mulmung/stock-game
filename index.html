@@ -421,6 +421,14 @@
               <div id="dailySalaryValue" class="daily-value salary">0원</div>
             </div>
             <div class="daily-row">
+              <div class="daily-label">예상 일급세</div>
+              <div id="dailyTaxExpectedValue" class="daily-value">0원</div>
+            </div>
+            <div class="daily-row">
+              <div class="daily-label">예상 실수령</div>
+              <div id="dailyNetSalaryValue" class="daily-value salary">0원</div>
+            </div>
+            <div class="daily-row">
               <div class="daily-label">다음 일급까지</div>
               <div id="dailySalaryCountdown" class="daily-countdown">수령 가능</div>
             </div>
@@ -520,11 +528,11 @@
         <div class="treasury-card">
           <div class="treasury-label">현재 국고</div>
           <div id="treasuryValue" class="treasury-value">0원</div>
-          <div class="treasury-desc">매수/매도 거래에서 징수된 세금의 합계입니다.</div>
+          <div class="treasury-desc">매수/매도 거래세와 일급 수령 시 납부한 일급세의 합계입니다.</div>
         </div>
         <div class="bank-deposit-section treasury-contribution-section">
           <div class="bank-deposit-title">국고 납입 비율 TOP 10</div>
-          <div class="market-note">기능 추가 이후 기록된 매수/매도 거래세 기준입니다.</div>
+          <div class="market-note">기능 추가 이후 기록된 거래세와 일급세 기준입니다.</div>
           <div id="treasuryContributionList" class="bank-deposit-list">
             <div class="bank-deposit-empty">국고 납입 정보를 불러오는 중입니다.</div>
           </div>
@@ -691,7 +699,7 @@
             <div class="treasury-card">
               <div class="treasury-label">현재 국고</div>
               <div id="treasuryManageValue" class="treasury-value">0원</div>
-              <div class="treasury-desc">매수/매도 거래에서 징수된 세금의 합계입니다. 유저 초기화와는 별도로 유지됩니다.</div>
+              <div class="treasury-desc">매수/매도 거래세와 일급 수령 시 납부한 일급세의 합계입니다. 유저 초기화와는 별도로 유지됩니다.</div>
             </div>
 
             <div class="field">
@@ -710,7 +718,15 @@
               </div>
             </div>
 
-            <div class="hint">기본값: 매수세 0.3% / 매도세 0.5% / 유저 초기화 시 국고는 유지됩니다.</div>
+            <div class="field">
+              <label for="dailyTaxRateInput">일급세율</label>
+              <div class="settings-row">
+                <input id="dailyTaxRateInput" type="number" inputmode="decimal" min="0" step="0.01" placeholder="예: 3.3" />
+                <div class="won">%</div>
+              </div>
+            </div>
+
+            <div class="hint">기본값: 매수세 0.3% / 매도세 0.5% / 일급세 3.3% / 유저 초기화 시 국고는 유지됩니다.</div>
             <button id="saveTreasurySettingsBtn" class="primary-btn">국고 설정 저장하기</button>
             <button id="resetTreasuryBtn" class="primary-btn treasury-reset-btn" type="button">국고 초기화</button>
             <div id="treasurySettingsStatus" class="status"></div>
@@ -906,7 +922,7 @@
     };
 
     const ADMIN_EMAIL = "khu9918@gmail.com";
-    const DEFAULT_SETTINGS = { signupBonus: 1000000, earnMin: 10000, earnMax: 50000, earnMaxLevel: 10, bankHourlyInterestRate: 1, buyTaxRate: 0.3, sellTaxRate: 0.5 };
+    const DEFAULT_SETTINGS = { signupBonus: 1000000, earnMin: 10000, earnMax: 50000, earnMaxLevel: 10, bankHourlyInterestRate: 1, buyTaxRate: 0.3, sellTaxRate: 0.5, salaryTaxRate: 3.3 };
     const DEFAULT_PROMOTIONS = [
       { level: 1, name: "스톤", cost: 500000, dailySalary: 100000, style: { type: "solid", color: "#8A8F98", gradientFrom: "", gradientTo: "" } },
       { level: 2, name: "브론즈", cost: 1500000, dailySalary: 214000, style: { type: "solid", color: "#B87333", gradientFrom: "", gradientTo: "" } },
@@ -1047,6 +1063,8 @@
     const bankInfoPanel = document.getElementById("bankInfoPanel");
     const dailyPromotionValue = document.getElementById("dailyPromotionValue");
     const dailySalaryValue = document.getElementById("dailySalaryValue");
+    const dailyTaxExpectedValue = document.getElementById("dailyTaxExpectedValue");
+    const dailyNetSalaryValue = document.getElementById("dailyNetSalaryValue");
     const dailySalaryCountdown = document.getElementById("dailySalaryCountdown");
     const dailySalaryClaimBtn = document.getElementById("dailySalaryClaimBtn");
     const dailySalaryStatus = document.getElementById("dailySalaryStatus");
@@ -1156,6 +1174,7 @@
     let userAdminModalState = null;
     let infoTab = "daily";
     let dailySalaryTimer = null;
+    let dailyTaxAdjustmentInProgress = false;
     let bankModalState = null;
     let bankInterestTimer = null;
     let bankInterestProcessing = false;
@@ -1516,7 +1535,8 @@
           earnMaxLevel: Number(data.earnMaxLevel ?? DEFAULT_SETTINGS.earnMaxLevel),
           bankHourlyInterestRate: Number(data.bankHourlyInterestRate ?? DEFAULT_SETTINGS.bankHourlyInterestRate),
           buyTaxRate: Number(data.buyTaxRate ?? DEFAULT_SETTINGS.buyTaxRate),
-          sellTaxRate: Number(data.sellTaxRate ?? DEFAULT_SETTINGS.sellTaxRate)
+          sellTaxRate: Number(data.sellTaxRate ?? DEFAULT_SETTINGS.sellTaxRate),
+          salaryTaxRate: Number(data.salaryTaxRate ?? data.dailyTaxRate ?? DEFAULT_SETTINGS.salaryTaxRate)
         };
       } else {
         currentSettings = { ...DEFAULT_SETTINGS };
@@ -1531,6 +1551,7 @@
       earnMaxLevelInput.value = currentSettings.earnMaxLevel;
       buyTaxRateInput.value = currentSettings.buyTaxRate;
       sellTaxRateInput.value = currentSettings.sellTaxRate;
+      dailyTaxRateInput.value = currentSettings.salaryTaxRate;
       bankInterestRateInput.value = currentSettings.bankHourlyInterestRate;
     }
 
@@ -1575,6 +1596,7 @@
         updateEarnButton();
         startBankInterestTimer();
         startDailySalaryTimer();
+        scheduleLegacyDailyTaxAdjustment();
       });
     }
 
@@ -1685,16 +1707,45 @@
       }, 1000);
     }
 
+    function getSalaryTaxRate() {
+      return Math.max(0, Number(currentSettings.salaryTaxRate ?? DEFAULT_SETTINGS.salaryTaxRate));
+    }
+
+    function calculateSalaryTaxPreview(salary = 0) {
+      const grossSalary = Math.max(0, Math.floor(Number(salary || 0)));
+      const taxAmount = Math.max(0, Math.floor(grossSalary * getSalaryTaxRate() / 100));
+      const netSalary = Math.max(0, grossSalary - taxAmount);
+      return { grossSalary, taxAmount, netSalary };
+    }
+
+    function scheduleLegacyDailyTaxAdjustment() {
+      // v53부터는 기존에 오늘 일급만 받은 유저에게 세금을 소급 부과하지 않습니다.
+      // 오늘 이미 수령한 유저는 그대로 완료 처리하고, 다음 수령일부터 일급세를 적용합니다.
+      return;
+    }
+
     function renderDailySalary(clearStatus = true) {
       if (!currentUserData || !dailyPromotionValue || !dailySalaryValue) return;
       if (!promotionLevels.length) promotionLevels = normalizePromotions(DEFAULT_PROMOTIONS);
       const level = getPromotionLevel();
       const promotion = getPromotionByLevel(level);
       const salary = getDailySalary(level);
+      const claimed = hasClaimedDailySalaryToday();
+      const storedGross = Math.max(0, Math.floor(Number(currentUserData.lastDailySalaryGross || salary || 0)));
+      const storedTax = Math.max(0, Math.floor(Number(currentUserData.lastDailySalaryTax || 0)));
+      const storedNet = Math.max(0, Math.floor(Number(currentUserData.lastDailySalaryNet || 0)));
+      const preview = calculateSalaryTaxPreview(salary);
+      const taxAmount = claimed && storedTax > 0 ? storedTax : preview.taxAmount;
+      const netSalary = claimed && (storedTax > 0 || storedNet > 0) ? storedNet : preview.netSalary;
       dailyPromotionValue.innerHTML = `${styledNicknameHtml(currentUserData.nickname || "-", level)} ${promotionNameHtml(level)}`;
-      dailySalaryValue.textContent = formatWon(salary);
-      if (clearStatus && dailySalaryStatus) dailySalaryStatus.textContent = "";
+      dailySalaryValue.textContent = formatWon(claimed ? storedGross : salary);
+      if (dailyTaxExpectedValue) dailyTaxExpectedValue.textContent = formatWon(taxAmount);
+      if (dailyNetSalaryValue) dailyNetSalaryValue.textContent = formatWon(netSalary);
+      if (clearStatus && dailySalaryStatus) dailySalaryStatus.textContent = claimed && storedTax > 0
+        ? `오늘 납부 일급세 ${formatWon(storedTax)} / 실수령 ${formatWon(netSalary)}`
+        : "";
       updateDailySalaryCountdown();
+      scheduleLegacyDailyTaxAdjustment();
     }
 
     async function claimDailySalary() {
@@ -1714,24 +1765,51 @@
       dailySalaryClaimBtn.disabled = true;
       if (dailySalaryStatus) dailySalaryStatus.textContent = "일급 수령 중...";
       try {
+        const preview = calculateSalaryTaxPreview(salary);
         const today = koreaTodayKey();
         await runTransaction(db, async (transaction) => {
-          const ref = userRef(currentUser.uid);
-          const snap = await transaction.get(ref);
-          if (!snap.exists()) throw new Error("유저 데이터가 없습니다.");
-          const data = snap.data();
+          const uRef = userRef(currentUser.uid);
+          const tRef = treasuryRef();
+          const cRef = treasuryContributionRef(currentUser.uid);
+          const userSnap = await transaction.get(uRef);
+          const treasurySnap = await transaction.get(tRef);
+          const contributionSnap = await transaction.get(cRef);
+          if (!userSnap.exists()) throw new Error("유저 데이터가 없습니다.");
+          const data = userSnap.data();
           if (String(data.lastDailySalaryDate || "") === today) throw new Error("오늘 일급은 이미 수령했습니다.");
           const liveLevel = getPromotionLevel(data);
           const liveSalary = getDailySalary(liveLevel);
           if (liveSalary <= 0) throw new Error("현재 승급의 일급이 0원입니다.");
-          transaction.update(ref, {
-            cash: Number(data.cash || 0) + liveSalary,
+          const livePreview = calculateSalaryTaxPreview(liveSalary);
+          const oldTreasuryData = treasurySnap.exists() ? treasurySnap.data() : {};
+          const oldTreasury = Number(oldTreasuryData.totalTreasury || 0);
+          const oldTrackedContributions = Number(oldTreasuryData.trackedContributions || 0);
+          const oldContribution = contributionSnap.exists() ? Number(contributionSnap.data().totalTaxPaid || 0) : 0;
+          transaction.update(uRef, {
+            cash: Number(data.cash || 0) + livePreview.netSalary,
             lastDailySalaryDate: today,
-            lastDailySalaryAt: serverTimestamp()
+            lastDailySalaryAt: serverTimestamp(),
+            lastDailySalaryGross: livePreview.grossSalary,
+            lastDailySalaryTax: livePreview.taxAmount,
+            lastDailySalaryNet: livePreview.netSalary
           });
+          transaction.set(tRef, {
+            totalTreasury: oldTreasury + livePreview.taxAmount,
+            trackedContributions: oldTrackedContributions + livePreview.taxAmount,
+            updatedAt: serverTimestamp()
+          }, { merge: true });
+          transaction.set(cRef, {
+            uid: currentUser.uid,
+            nickname: data.nickname || currentUserData?.nickname || "-",
+            promotionLevel: getPromotionLevel(data),
+            totalTaxPaid: oldContribution + livePreview.taxAmount,
+            updatedAt: serverTimestamp()
+          }, { merge: true });
         });
-        if (dailySalaryStatus) dailySalaryStatus.textContent = `${formatWon(salary)} 수령 완료!`;
-        showEarnPopup(`일급 +${formatWon(salary)} 수령`);
+        if (dailySalaryStatus) dailySalaryStatus.textContent = `일급 ${formatWon(salary)} 수령 / 일급세 ${formatWon(preview.taxAmount)} 납부 / 실수령 ${formatWon(preview.netSalary)}`;
+        showEarnPopup(`일급 +${formatWon(preview.netSalary)} 수령`);
+        await loadTreasury().catch(() => {});
+        if (currentScreenName === "treasury") await loadTreasuryContributions().catch(() => {});
         setTimeout(() => updateMyRanking().catch(() => {}), 800);
       } catch (error) {
         if (dailySalaryStatus) dailySalaryStatus.textContent = error.message || "일급 수령에 실패했습니다.";
@@ -1995,6 +2073,9 @@
           lastEarnAt: null,
           lastDailySalaryDate: null,
           lastDailySalaryAt: null,
+          lastDailySalaryGross: 0,
+          lastDailySalaryTax: 0,
+          lastDailySalaryNet: 0,
           createdAt: serverTimestamp(),
           lastLoginAt: serverTimestamp()
         });
@@ -2281,6 +2362,9 @@
             lastPromotionAt: null,
             lastDailySalaryDate: null,
             lastDailySalaryAt: null,
+            lastDailySalaryGross: 0,
+            lastDailySalaryTax: 0,
+            lastDailySalaryNet: 0,
             lastBankAt: serverTimestamp(),
             lastTradeAt: serverTimestamp(),
             lastAdminAt: serverTimestamp()
@@ -2540,6 +2624,7 @@
           earnMaxLevel,
           buyTaxRate: Number(currentSettings.buyTaxRate ?? DEFAULT_SETTINGS.buyTaxRate),
           sellTaxRate: Number(currentSettings.sellTaxRate ?? DEFAULT_SETTINGS.sellTaxRate),
+          salaryTaxRate: Number(currentSettings.salaryTaxRate ?? DEFAULT_SETTINGS.salaryTaxRate),
           bankHourlyInterestRate: Number(currentSettings.bankHourlyInterestRate || DEFAULT_SETTINGS.bankHourlyInterestRate),
           updatedAt: serverTimestamp(),
           updatedBy: currentUser.uid
@@ -2569,6 +2654,7 @@
           buyTaxRate: Number(currentSettings.buyTaxRate ?? DEFAULT_SETTINGS.buyTaxRate),
           sellTaxRate: Number(currentSettings.sellTaxRate ?? DEFAULT_SETTINGS.sellTaxRate),
           bankHourlyInterestRate,
+          salaryTaxRate: Number(currentSettings.salaryTaxRate ?? DEFAULT_SETTINGS.salaryTaxRate),
           updatedAt: serverTimestamp(),
           updatedBy: currentUser.uid
         }, { merge: true });
@@ -2585,12 +2671,17 @@
       if (!isAdmin()) return;
       const buyTaxRate = Number(buyTaxRateInput.value);
       const sellTaxRate = Number(sellTaxRateInput.value);
+      const salaryTaxRate = Number(dailyTaxRateInput.value);
       if (!Number.isFinite(buyTaxRate) || buyTaxRate < 0 || buyTaxRate > 100) {
         setStatus(treasurySettingsStatus, "매수 거래세율은 0~100 사이로 입력해주세요.", "error");
         return;
       }
       if (!Number.isFinite(sellTaxRate) || sellTaxRate < 0 || sellTaxRate > 100) {
         setStatus(treasurySettingsStatus, "매도 거래세율은 0~100 사이로 입력해주세요.", "error");
+        return;
+      }
+      if (!Number.isFinite(salaryTaxRate) || salaryTaxRate < 0 || salaryTaxRate > 100) {
+        setStatus(treasurySettingsStatus, "일급세율은 0~100 사이로 입력해주세요.", "error");
         return;
       }
       saveTreasurySettingsBtn.disabled = true;
@@ -2603,6 +2694,7 @@
           earnMaxLevel: Number(currentSettings.earnMaxLevel || DEFAULT_SETTINGS.earnMaxLevel),
           buyTaxRate,
           sellTaxRate,
+          salaryTaxRate,
           bankHourlyInterestRate: Number(currentSettings.bankHourlyInterestRate || DEFAULT_SETTINGS.bankHourlyInterestRate),
           updatedAt: serverTimestamp(),
           updatedBy: currentUser.uid
@@ -2759,7 +2851,7 @@
       const trackedTotal = Math.max(0, Number(treasuryData?.trackedContributions || 0));
       if (!treasuryContributions.length || trackedTotal <= 0) {
         expandedTreasuryContributionId = null;
-        treasuryContributionList.innerHTML = `<div class="bank-deposit-empty">아직 기록된 국고 납입 정보가 없습니다.<br />기능 추가 이후 거래세부터 집계됩니다.</div>`;
+        treasuryContributionList.innerHTML = `<div class="bank-deposit-empty">아직 기록된 국고 납입 정보가 없습니다.<br />기능 추가 이후 거래세와 일급세부터 집계됩니다.</div>`;
         return;
       }
 
@@ -2793,7 +2885,7 @@
 
       if (!treasuryContributionList.children.length) {
         expandedTreasuryContributionId = null;
-        treasuryContributionList.innerHTML = `<div class="bank-deposit-empty">아직 기록된 국고 납입 정보가 없습니다.<br />기능 추가 이후 거래세부터 집계됩니다.</div>`;
+        treasuryContributionList.innerHTML = `<div class="bank-deposit-empty">아직 기록된 국고 납입 정보가 없습니다.<br />기능 추가 이후 거래세와 일급세부터 집계됩니다.</div>`;
       }
     }
 
@@ -3045,7 +3137,7 @@
     }
 
     function buildMyRankingData() {
-      const cash = Math.max(0, Math.floor(Number(currentUserData?.cash || 0)));
+      const cash = Math.floor(Number(currentUserData?.cash || 0));
       const bankBalance = Math.max(0, Math.floor(Number(currentUserData?.bankBalance || 0)));
       const stockValue = calculateStockValue();
       return {
