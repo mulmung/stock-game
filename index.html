@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
-  <title>주식 게임 v34</title>
+  <title>주식 게임 v39</title>
   <style>
     * { box-sizing: border-box; }
     html, body { margin: 0; padding: 0; height: 100%; font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; background: #1f2937; color: #fff; }
@@ -230,6 +230,29 @@
     .upgrade-cost { color: var(--green); }
     .upgrade-max { color: var(--muted); font-size: 13px; font-weight: 900; text-align: center; padding: 15px 0 3px; }
     .upgrade-status { min-height: 20px; margin-top: 12px; text-align: center; font-size: 12px; font-weight: 850; color: var(--muted); }
+    .promotion-badge { display: inline-block; margin-left: 5px; color: var(--muted); font-size: 11px; font-weight: 900; letter-spacing: -0.25px; vertical-align: baseline; }
+    .promotion-card { border-top: 1px solid var(--line-strong); border-bottom: 1px solid var(--line-strong); padding: 18px 0; margin-bottom: 18px; }
+    .promotion-title { font-size: 18px; font-weight: 950; color: #fff; margin-bottom: 12px; }
+    .promotion-manage-desc { color: var(--muted); font-size: 12px; line-height: 1.55; margin-bottom: 14px; }
+    .promotion-list { border-top: 1px solid var(--line-strong); margin-top: 16px; }
+    .promotion-row { border-bottom: 1px solid var(--line-strong); padding: 14px 0; cursor: pointer; user-select: none; -webkit-tap-highlight-color: transparent; }
+    .promotion-row-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+    .promotion-row-name { font-size: 16px; font-weight: 950; letter-spacing: -0.45px; color: #fff; }
+    .promotion-row-cost { font-size: 12px; font-weight: 900; color: var(--muted); text-align: right; white-space: nowrap; }
+    .promotion-row-detail { margin-top: 13px; padding-top: 12px; border-top: 1px solid var(--line); }
+    .promotion-detail-line { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 9px 0; border-bottom: 1px solid var(--line); }
+    .promotion-detail-line:last-child { border-bottom: 0; }
+    .promotion-detail-label { color: var(--muted); font-size: 12px; font-weight: 950; }
+    .promotion-detail-value { color: #fff; font-size: 14px; font-weight: 950; text-align: right; word-break: keep-all; }
+    .promotion-actions { display: grid; grid-template-columns: 1fr; gap: 8px; margin-top: 12px; }
+    .promotion-edit-btn, .promotion-save-btn, .promotion-cancel-btn, .promotion-add-btn { height: 42px; color: #fff; font-weight: 950; border-radius: 0; }
+    .promotion-edit-btn, .promotion-save-btn, .promotion-add-btn { background: var(--blue); }
+    .promotion-cancel-btn { background: var(--panel-bg); border: 1px solid var(--line); }
+    .promotion-edit-form { display: grid; gap: 10px; margin-top: 12px; }
+    .promotion-edit-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+    .promotion-add-box { border-top: 1px solid var(--line-strong); border-bottom: 1px solid var(--line-strong); padding: 16px 0; margin: 0 0 16px; }
+    .promotion-add-title { font-size: 16px; font-weight: 950; margin-bottom: 12px; }
+    .promotion-status { min-height: 22px; color: var(--muted); font-size: 12px; font-weight: 850; text-align: center; margin-top: 12px; line-height: 1.5; }
     .ranking-note { font-size: 12px; color: var(--muted); line-height: 1.55; margin: 0 0 16px; }
     .ranking-list { border-top: 1px solid var(--line-strong); }
     .ranking-row { display: grid; grid-template-columns: 54px 1fr; gap: 12px; padding: 14px 0; border-bottom: 1px solid var(--line-strong); align-items: start; cursor: pointer; user-select: none; -webkit-tap-highlight-color: transparent; }
@@ -427,7 +450,25 @@
           <h1 class="title">업그레이드</h1>
           <button id="backFromUpgradeBtn" class="settings-back-btn">뒤로가기</button>
         </div>
-        <p class="subtitle">돈벌기 수익 범위를 업그레이드할 수 있습니다.</p>
+        <p class="subtitle">성장 요소를 업그레이드할 수 있습니다.</p>
+        <div class="promotion-card">
+          <div class="promotion-title">승급</div>
+          <div class="upgrade-row">
+            <div class="upgrade-label">현재 승급</div>
+            <div id="promotionCurrentValue" class="upgrade-value">스톤</div>
+          </div>
+          <div class="upgrade-row">
+            <div class="upgrade-label">다음 승급</div>
+            <div id="promotionNextValue" class="upgrade-value">브론즈</div>
+          </div>
+          <div class="upgrade-row">
+            <div class="upgrade-label">다음 승급 비용</div>
+            <div id="promotionCostValue" class="upgrade-value upgrade-cost">0원</div>
+          </div>
+          <div id="promotionMaxMessage" class="upgrade-max"></div>
+          <button id="promotionUpgradeBtn" class="primary-btn" type="button">승급하기</button>
+          <div id="promotionStatus" class="upgrade-status"></div>
+        </div>
         <div class="upgrade-card">
           <div id="upgradeLevelTitle" class="upgrade-level">돈벌기 Lv. 1</div>
           <div class="upgrade-row">
@@ -471,6 +512,7 @@
           <button id="settingsStockTab" class="settings-tab" type="button">종목 추가</button>
           <button id="settingsBankTab" class="settings-tab" type="button">은행 관리</button>
           <button id="settingsUserTab" class="settings-tab" type="button">유저 관리</button>
+          <button id="settingsPromotionTab" class="settings-tab" type="button">승급 관리</button>
         </div>
 
         <div class="settings-section">
@@ -545,6 +587,27 @@
             <div class="user-manage-desc">가입한 유저를 닉네임 가나다 / abc 순서로 관리할 수 있습니다.</div>
             <div id="userManageList" class="user-manage-list"></div>
             <div id="userManageStatus" class="user-manage-status"></div>
+          </div>
+
+          <div id="settingsPromotionPanel" class="settings-panel">
+            <div class="promotion-manage-desc">승급 단계의 이름과 다음 승급 비용을 관리합니다. 삭제 없이 수정과 최고 등급 추가만 가능합니다.</div>
+            <div class="promotion-add-box">
+              <div class="promotion-add-title">새 최고 승급 추가</div>
+              <div class="field">
+                <label for="promotionAddNameInput">새 승급 이름</label>
+                <input id="promotionAddNameInput" type="text" maxlength="18" placeholder="예: 크로노스" autocomplete="off" />
+              </div>
+              <div class="field">
+                <label for="promotionAddCostInput">현재 최고 등급의 다음 승급 비용</label>
+                <div class="settings-row">
+                  <input id="promotionAddCostInput" type="number" inputmode="numeric" min="1" step="1" placeholder="예: 423000000000000000" />
+                  <div class="won">원</div>
+                </div>
+              </div>
+              <button id="promotionAddBtn" class="promotion-add-btn" type="button">승급 추가하기</button>
+            </div>
+            <div id="promotionManageList" class="promotion-list"></div>
+            <div id="promotionManageStatus" class="promotion-status"></div>
           </div>
         </div>
       </div>
@@ -693,6 +756,34 @@
 
     const ADMIN_EMAIL = "khu9918@gmail.com";
     const DEFAULT_SETTINGS = { signupBonus: 1000000, earnMin: 10000, earnMax: 50000, earnMaxLevel: 10, bankHourlyInterestRate: 1 };
+    const DEFAULT_PROMOTIONS = [
+      { level: 1, name: "스톤", cost: 500000 },
+      { level: 2, name: "브론즈", cost: 1500000 },
+      { level: 3, name: "아이언", cost: 4500000 },
+      { level: 4, name: "실버", cost: 13500000 },
+      { level: 5, name: "골드", cost: 40500000 },
+      { level: 6, name: "미스릴", cost: 121000000 },
+      { level: 7, name: "오리하르콘", cost: 364000000 },
+      { level: 8, name: "아케이나이트", cost: 1090000000 },
+      { level: 9, name: "아다만타이트", cost: 3280000000 },
+      { level: 10, name: "에테르", cost: 9840000000 },
+      { level: 11, name: "블랙미스릴", cost: 29500000000 },
+      { level: 12, name: "데몬메탈", cost: 88500000000 },
+      { level: 13, name: "드라고노스", cost: 265000000000 },
+      { level: 14, name: "라그나블러드", cost: 797000000000 },
+      { level: 15, name: "워프로스트", cost: 2390000000000 },
+      { level: 16, name: "다크녹스", cost: 7170000000000 },
+      { level: 17, name: "블루어비스", cost: 21500000000000 },
+      { level: 18, name: "인피넌트", cost: 64500000000000 },
+      { level: 19, name: "사이클로스", cost: 193000000000000 },
+      { level: 20, name: "에이션트케나인", cost: 581000000000000 },
+      { level: 21, name: "기가로크", cost: 1740000000000000 },
+      { level: 22, name: "아이젠하르트", cost: 5230000000000000 },
+      { level: 23, name: "다이아더스트", cost: 15600000000000000 },
+      { level: 24, name: "엘든우드", cost: 47000000000000000 },
+      { level: 25, name: "블리츠골드", cost: 141000000000000000 },
+      { level: 26, name: "오로라이트", cost: null }
+    ];
     const EARN_COOLDOWN_SECONDS = 60;
     const PRICE_HISTORY_LIMIT = 30;
     const CANDLE_COUNT = 15;
@@ -757,13 +848,20 @@
     const settingsStockTab = document.getElementById("settingsStockTab");
     const settingsBankTab = document.getElementById("settingsBankTab");
     const settingsUserTab = document.getElementById("settingsUserTab");
+    const settingsPromotionTab = document.getElementById("settingsPromotionTab");
     const settingsDefaultPanel = document.getElementById("settingsDefaultPanel");
     const settingsStockPanel = document.getElementById("settingsStockPanel");
     const settingsBankPanel = document.getElementById("settingsBankPanel");
     const settingsUserPanel = document.getElementById("settingsUserPanel");
+    const settingsPromotionPanel = document.getElementById("settingsPromotionPanel");
     const userManageList = document.getElementById("userManageList");
     const userManageStatus = document.getElementById("userManageStatus");
     const settingsStatus = document.getElementById("settingsStatus");
+    const promotionManageList = document.getElementById("promotionManageList");
+    const promotionManageStatus = document.getElementById("promotionManageStatus");
+    const promotionAddNameInput = document.getElementById("promotionAddNameInput");
+    const promotionAddCostInput = document.getElementById("promotionAddCostInput");
+    const promotionAddBtn = document.getElementById("promotionAddBtn");
     const stockNameInput = document.getElementById("stockNameInput");
     const stockStartPriceInput = document.getElementById("stockStartPriceInput");
     const addStockBtn = document.getElementById("addStockBtn");
@@ -790,6 +888,12 @@
     const bankLogList = document.getElementById("bankLogList");
     const rankingList = document.getElementById("rankingList");
     const rankingStatus = document.getElementById("rankingStatus");
+    const promotionCurrentValue = document.getElementById("promotionCurrentValue");
+    const promotionNextValue = document.getElementById("promotionNextValue");
+    const promotionCostValue = document.getElementById("promotionCostValue");
+    const promotionMaxMessage = document.getElementById("promotionMaxMessage");
+    const promotionUpgradeBtn = document.getElementById("promotionUpgradeBtn");
+    const promotionStatus = document.getElementById("promotionStatus");
     const upgradeLevelTitle = document.getElementById("upgradeLevelTitle");
     const upgradeRangeValue = document.getElementById("upgradeRangeValue");
     const upgradeCostValue = document.getElementById("upgradeCostValue");
@@ -855,6 +959,9 @@
     let expandedBankDepositId = null;
     let rankings = [];
     let adminUsers = [];
+    let promotionLevels = [];
+    let expandedPromotionManageLevel = null;
+    let editingPromotionLevel = null;
     let expandedRankingId = null;
     let userAdminModalState = null;
     let infoTab = "stock";
@@ -887,8 +994,8 @@
       if (activeMainScreens().includes(name)) ensureAppBackHistory();
       if (name === "market") { renderStocks(); listenStocks().catch(() => {}); startMarketCountdownTimer(); } else { stopMarketCountdownTimer(); }
       if (name === "bank") { renderGlobalBank(); ensureMyBankDepositPublic().catch(() => {}).then(() => listenBankGlobal()).then(() => loadBankDeposits()).catch(() => {}); }
-      if (name === "upgrade") { renderUpgrade(); }
-      if (name === "ranking") { renderRankings(); loadRankings().catch(() => {}); }
+      if (name === "upgrade") { loadPromotions().then(renderUpgrade).catch(() => renderUpgrade()); }
+      if (name === "ranking") { loadPromotions().then(() => { renderRankings(); loadRankings().catch(() => {}); }).catch(() => { renderRankings(); loadRankings().catch(() => {}); }); }
       if (name === "game") {
         renderPortfolio(); renderBank();
         if (currentUser) {
@@ -966,19 +1073,24 @@
       const isStock = tab === "stock";
       const isBank = tab === "bank";
       const isUser = tab === "user";
+      const isPromotion = tab === "promotion";
       settingsDefaultTab.classList.toggle("active", isDefault);
       settingsStockTab.classList.toggle("active", isStock);
       settingsBankTab.classList.toggle("active", isBank);
       settingsUserTab.classList.toggle("active", isUser);
+      settingsPromotionTab.classList.toggle("active", isPromotion);
       settingsDefaultPanel.classList.toggle("active", isDefault);
       settingsStockPanel.classList.toggle("active", isStock);
       settingsBankPanel.classList.toggle("active", isBank);
       settingsUserPanel.classList.toggle("active", isUser);
+      settingsPromotionPanel.classList.toggle("active", isPromotion);
       setStatus(settingsStatus, "");
       setStatus(stockAddStatus, "");
       setStatus(bankSettingsStatus, "");
       if (userManageStatus) userManageStatus.textContent = "";
+      if (promotionManageStatus) promotionManageStatus.textContent = "";
       if (isUser) loadAdminUsers().catch(() => {});
+      if (isPromotion) { loadPromotions().then(renderPromotionManageList).catch(() => { if (promotionManageStatus) promotionManageStatus.textContent = "승급 설정을 불러오지 못했습니다."; }); }
     }
 
     function setInfoTab(tab) {
@@ -993,6 +1105,7 @@
       if (isBank && currentUser) listenBankLogs(currentUser.uid).catch(() => {});
     }
     function settingsRef() { return doc(db, "settings", "game"); }
+    function promotionsRef() { return doc(db, "settings", "promotions"); }
     function userRef(uid) { return doc(db, "users", uid); }
     function usersCol() { return collection(db, "users"); }
     function stocksCol() { return collection(db, "stocks"); }
@@ -1091,6 +1204,30 @@
       }
     }
 
+    function normalizePromotions(levels) {
+      const source = Array.isArray(levels) && levels.length ? levels : DEFAULT_PROMOTIONS;
+      return source.map((item, index) => ({
+        level: index + 1,
+        name: String(item?.name || `승급${index + 1}`).slice(0, 18),
+        cost: index === source.length - 1 ? null : Math.max(1, Math.floor(Number(item?.cost || 1)))
+      }));
+    }
+
+    async function ensurePromotionsDocForAdmin() {
+      const snap = await getDoc(promotionsRef());
+      if (!snap.exists() && isAdmin()) {
+        await setDoc(promotionsRef(), { levels: DEFAULT_PROMOTIONS, updatedAt: serverTimestamp(), updatedBy: currentUser.uid });
+        promotionLevels = normalizePromotions(DEFAULT_PROMOTIONS);
+      }
+    }
+
+    async function loadPromotions() {
+      const snap = await getDoc(promotionsRef());
+      if (snap.exists()) promotionLevels = normalizePromotions(snap.data().levels);
+      else promotionLevels = normalizePromotions(DEFAULT_PROMOTIONS);
+      return promotionLevels;
+    }
+
     async function listenSettings() {
       // 읽기 최적화: 설정은 실시간 감시하지 않고 필요할 때 1회만 읽습니다.
       if (unsubscribeSettings) { unsubscribeSettings(); unsubscribeSettings = null; }
@@ -1129,6 +1266,12 @@
         updates.moneyEarnLevel = 1;
       }
 
+      const hasPromotionLevel = Object.prototype.hasOwnProperty.call(data || {}, "promotionLevel");
+      const promotionLevel = Number(data?.promotionLevel);
+      if (!hasPromotionLevel || !Number.isFinite(promotionLevel) || promotionLevel < 1) {
+        updates.promotionLevel = 1;
+      }
+
       if (Object.keys(updates).length > 0) {
         await updateDoc(userRef(uid), updates);
       }
@@ -1154,9 +1297,27 @@
       });
     }
 
+    function getPromotionLevel(data = currentUserData) {
+      const level = Math.floor(Number(data?.promotionLevel || 1));
+      return Math.max(1, level);
+    }
+
+    function getPromotionByLevel(level) {
+      const safeLevel = Math.max(1, Math.floor(Number(level || 1)));
+      return promotionLevels.find(item => Number(item.level) === safeLevel) || promotionLevels[safeLevel - 1] || DEFAULT_PROMOTIONS[Math.min(DEFAULT_PROMOTIONS.length - 1, safeLevel - 1)] || DEFAULT_PROMOTIONS[0];
+    }
+
+    function getPromotionName(level = getPromotionLevel()) {
+      return getPromotionByLevel(level)?.name || "스톤";
+    }
+
+    function promotionNameHtml(level) {
+      return `<span class="promotion-badge">· ${escapeHtml(getPromotionName(level))}</span>`;
+    }
+
     function renderUserBar() {
       if (!currentUserData) return;
-      barNickname.textContent = currentUserData.nickname || "-";
+      barNickname.innerHTML = `${escapeHtml(currentUserData.nickname || "-")} ${promotionNameHtml(getPromotionLevel())}`;
       barCash.textContent = formatWon(currentUserData.cash || 0);
     }
 
@@ -1190,6 +1351,7 @@
 
     function renderUpgrade() {
       if (!upgradeLevelTitle || !currentUserData) return;
+      renderPromotionUpgrade();
       const level = getMoneyEarnLevel();
       const maxLevel = getEarnMaxLevel();
       const range = getEarnRange(level);
@@ -1201,6 +1363,68 @@
       upgradeEarnBtn.disabled = isMax;
       upgradeEarnBtn.textContent = isMax ? "최대 레벨" : "업그레이드";
       if (upgradeStatus) upgradeStatus.textContent = "";
+    }
+
+    function renderPromotionUpgrade() {
+      if (!promotionCurrentValue || !currentUserData) return;
+      if (!promotionLevels.length) promotionLevels = normalizePromotions(DEFAULT_PROMOTIONS);
+      const level = getPromotionLevel();
+      const current = getPromotionByLevel(level);
+      const next = getPromotionByLevel(level + 1);
+      const isMax = !next || level >= promotionLevels.length || current?.cost == null;
+      promotionCurrentValue.textContent = current?.name || "스톤";
+      promotionNextValue.textContent = isMax ? "최고 등급" : (next?.name || "-");
+      promotionCostValue.textContent = isMax ? "최고등급" : formatWon(current.cost || 0);
+      promotionMaxMessage.textContent = isMax ? "최고 등급에 도달했습니다." : "승급 비용은 보유 현금에서 차감됩니다.";
+      promotionUpgradeBtn.disabled = isMax;
+      promotionUpgradeBtn.textContent = isMax ? "최고등급" : "승급하기";
+      if (promotionStatus) promotionStatus.textContent = "";
+    }
+
+    async function handlePromotionUpgrade() {
+      if (!currentUser || !currentUserData) return;
+      if (!promotionLevels.length) await loadPromotions().catch(() => {});
+      const level = getPromotionLevel();
+      const current = getPromotionByLevel(level);
+      const next = getPromotionByLevel(level + 1);
+      if (!next || current?.cost == null) { renderPromotionUpgrade(); return; }
+      const cost = Math.max(1, Math.floor(Number(current.cost || 0)));
+      if (Number(currentUserData.cash || 0) < cost) {
+        if (promotionStatus) promotionStatus.textContent = "보유 현금이 부족합니다.";
+        showEarnPopup("보유 현금이 부족합니다.", "error");
+        return;
+      }
+      promotionUpgradeBtn.disabled = true;
+      if (promotionStatus) promotionStatus.textContent = "승급 중...";
+      try {
+        await runTransaction(db, async (transaction) => {
+          const ref = userRef(currentUser.uid);
+          const snap = await transaction.get(ref);
+          if (!snap.exists()) throw new Error("유저 데이터가 없습니다.");
+          const data = snap.data();
+          const nowLevel = getPromotionLevel(data);
+          const nowCurrent = getPromotionByLevel(nowLevel);
+          const nowNext = getPromotionByLevel(nowLevel + 1);
+          if (!nowNext || nowCurrent?.cost == null) throw new Error("이미 최고 등급입니다.");
+          const nowCost = Math.max(1, Math.floor(Number(nowCurrent.cost || 0)));
+          const cash = Number(data.cash || 0);
+          if (cash < nowCost) throw new Error("보유 현금이 부족합니다.");
+          transaction.update(ref, {
+            cash: cash - nowCost,
+            promotionLevel: nowLevel + 1,
+            lastPromotionAt: serverTimestamp()
+          });
+        });
+        await updateMyRanking().catch(() => {});
+        showEarnPopup(`${getPromotionName(level + 1)} 승급 완료`);
+        if (promotionStatus) promotionStatus.textContent = "승급이 완료되었습니다.";
+      } catch (error) {
+        const message = error.message || "승급에 실패했습니다.";
+        if (promotionStatus) promotionStatus.textContent = message;
+        showEarnPopup(message, "error");
+      } finally {
+        renderUpgrade();
+      }
     }
 
     async function handleEarnUpgrade() {
@@ -1326,6 +1550,7 @@
           cash: Number(currentSettings.signupBonus || DEFAULT_SETTINGS.signupBonus),
           bankBalance: 0,
           moneyEarnLevel: 1,
+          promotionLevel: 1,
           nextBankInterestAt: null,
           lastEarnAt: null,
           createdAt: serverTimestamp(),
@@ -1357,7 +1582,7 @@
         card.className = "user-manage-card";
         card.innerHTML = `
           <div class="user-manage-name-label">닉네임</div>
-          <div class="user-manage-name">${escapeHtml(user.nickname || "-")}</div>
+          <div class="user-manage-name">${escapeHtml(user.nickname || "-")} ${promotionNameHtml(user.promotionLevel || 1)}</div>
           <div class="user-manage-money-block">
             <div class="user-manage-money-label">보유 현금</div>
             <div class="user-manage-money-value">${formatWon(user.cash || 0)}</div>
@@ -1535,9 +1760,11 @@
               cash: Number(currentSettings.signupBonus || DEFAULT_SETTINGS.signupBonus),
               bankBalance: 0,
               moneyEarnLevel: 1,
+              promotionLevel: 1,
               nextBankInterestAt: null,
               lastEarnAt: null,
               lastUpgradeAt: null,
+              lastPromotionAt: null,
               lastBankAt: serverTimestamp(),
               lastTradeAt: serverTimestamp(),
               lastAdminAt: serverTimestamp()
@@ -1577,6 +1804,132 @@
         userAdminModalStatus.textContent = error.message || "처리에 실패했습니다.";
       } finally {
         userAdminConfirmBtn.disabled = false;
+      }
+    }
+
+
+
+    function renderPromotionManageList() {
+      if (!promotionManageList) return;
+      const levels = normalizePromotions(promotionLevels);
+      promotionLevels = levels;
+      promotionManageList.innerHTML = "";
+      levels.forEach((item, index) => {
+        const isExpanded = expandedPromotionManageLevel === item.level;
+        const isEditing = editingPromotionLevel === item.level;
+        const isLast = index === levels.length - 1;
+        const row = document.createElement("div");
+        row.className = "promotion-row";
+        row.innerHTML = `
+          <div class="promotion-row-head">
+            <div class="promotion-row-name">${escapeHtml(item.name)}</div>
+            <div class="promotion-row-cost">${isLast ? "최고등급" : formatWon(item.cost)}</div>
+          </div>
+          ${isExpanded ? `
+            <div class="promotion-row-detail">
+              ${isEditing ? `
+                <div class="promotion-edit-form">
+                  <div class="field">
+                    <label>승급 이름</label>
+                    <input class="promotion-edit-name" type="text" maxlength="18" value="${escapeHtml(item.name)}" />
+                  </div>
+                  ${isLast ? `<div class="hint">현재 최고 등급은 비용이 없습니다. 새 승급 추가 시 비용을 입력합니다.</div>` : `
+                  <div class="field">
+                    <label>다음 승급 비용</label>
+                    <div class="settings-row">
+                      <input class="promotion-edit-cost" type="number" inputmode="numeric" min="1" step="1" value="${Math.floor(Number(item.cost || 0))}" />
+                      <div class="won">원</div>
+                    </div>
+                  </div>`}
+                  <div class="promotion-edit-actions">
+                    <button class="promotion-save-btn" type="button">저장</button>
+                    <button class="promotion-cancel-btn" type="button">취소</button>
+                  </div>
+                </div>
+              ` : `
+                <div class="promotion-detail-line">
+                  <div class="promotion-detail-label">승급 이름</div>
+                  <div class="promotion-detail-value">${escapeHtml(item.name)}</div>
+                </div>
+                <div class="promotion-detail-line">
+                  <div class="promotion-detail-label">다음 승급 비용</div>
+                  <div class="promotion-detail-value">${isLast ? "최고등급" : formatWon(item.cost)}</div>
+                </div>
+                <div class="promotion-actions">
+                  <button class="promotion-edit-btn" type="button">수정</button>
+                </div>
+              `}
+            </div>
+          ` : ""}
+        `;
+        row.querySelector(".promotion-row-head").addEventListener("click", () => {
+          expandedPromotionManageLevel = expandedPromotionManageLevel === item.level ? null : item.level;
+          editingPromotionLevel = null;
+          renderPromotionManageList();
+        });
+        const editBtn = row.querySelector(".promotion-edit-btn");
+        if (editBtn) editBtn.addEventListener("click", (e) => { e.stopPropagation(); editingPromotionLevel = item.level; renderPromotionManageList(); });
+        const cancelBtn = row.querySelector(".promotion-cancel-btn");
+        if (cancelBtn) cancelBtn.addEventListener("click", (e) => { e.stopPropagation(); editingPromotionLevel = null; renderPromotionManageList(); });
+        const saveBtn = row.querySelector(".promotion-save-btn");
+        if (saveBtn) saveBtn.addEventListener("click", async (e) => {
+          e.stopPropagation();
+          const name = row.querySelector(".promotion-edit-name")?.value.trim();
+          const costInput = row.querySelector(".promotion-edit-cost");
+          const cost = isLast ? null : Math.floor(Number(costInput?.value || 0));
+          await savePromotionEdit(item.level, name, cost, isLast);
+        });
+        promotionManageList.appendChild(row);
+      });
+    }
+
+    async function savePromotions(levels, successMessage) {
+      if (!isAdmin()) return;
+      const normalized = normalizePromotions(levels);
+      await setDoc(promotionsRef(), { levels: normalized, updatedAt: serverTimestamp(), updatedBy: currentUser.uid }, { merge: true });
+      promotionLevels = normalized;
+      renderPromotionManageList();
+      renderUserBar();
+      renderUpgrade();
+      if (promotionManageStatus) promotionManageStatus.textContent = successMessage || "승급 설정이 저장되었습니다.";
+    }
+
+    async function savePromotionEdit(level, name, cost, isLast) {
+      if (!name) { if (promotionManageStatus) promotionManageStatus.textContent = "승급 이름을 입력해주세요."; return; }
+      if (!isLast && (!Number.isFinite(cost) || cost <= 0)) { if (promotionManageStatus) promotionManageStatus.textContent = "승급 비용은 0보다 커야 합니다."; return; }
+      try {
+        const nextLevels = normalizePromotions(promotionLevels).map(item => {
+          if (item.level !== level) return item;
+          return { ...item, name, cost: isLast ? null : cost };
+        });
+        await savePromotions(nextLevels, "승급 정보가 수정되었습니다.");
+        editingPromotionLevel = null;
+      } catch (error) {
+        if (promotionManageStatus) promotionManageStatus.textContent = "승급 정보 수정에 실패했습니다.";
+      }
+    }
+
+    async function addPromotionLevel() {
+      if (!isAdmin()) return;
+      const name = promotionAddNameInput.value.trim();
+      const cost = Math.floor(Number(promotionAddCostInput.value || 0));
+      if (!name) { if (promotionManageStatus) promotionManageStatus.textContent = "새 승급 이름을 입력해주세요."; return; }
+      if (!Number.isFinite(cost) || cost <= 0) { if (promotionManageStatus) promotionManageStatus.textContent = "현재 최고 등급의 다음 승급 비용을 입력해주세요."; return; }
+      promotionAddBtn.disabled = true;
+      if (promotionManageStatus) promotionManageStatus.textContent = "승급 추가 중...";
+      try {
+        const levels = normalizePromotions(promotionLevels);
+        if (!levels.length) levels.push(...normalizePromotions(DEFAULT_PROMOTIONS));
+        const lastIndex = levels.length - 1;
+        levels[lastIndex] = { ...levels[lastIndex], cost };
+        levels.push({ level: levels.length + 1, name, cost: null });
+        await savePromotions(levels, "새 최고 승급이 추가되었습니다.");
+        promotionAddNameInput.value = "";
+        promotionAddCostInput.value = "";
+      } catch (error) {
+        if (promotionManageStatus) promotionManageStatus.textContent = "승급 추가에 실패했습니다.";
+      } finally {
+        promotionAddBtn.disabled = false;
       }
     }
 
@@ -1936,6 +2289,7 @@
       return {
         uid: currentUser.uid,
         nickname: currentUserData?.nickname || "-",
+        promotionLevel: getPromotionLevel(),
         totalAsset: cash + bankBalance + stockValue,
         cash,
         bankBalance,
@@ -1953,6 +2307,7 @@
       if (!rankingList || !currentUser || !currentUserData) return;
       rankingStatus.textContent = "순위를 갱신 중입니다...";
       try {
+        await loadPromotions().catch(() => {});
         await listenStocks().catch(() => {});
         await listenHoldings(currentUser.uid).catch(() => {});
         await updateMyRanking();
@@ -1989,7 +2344,7 @@
           <div class="ranking-rank ${getRankClass(rank)}">${rank}위</div>
           <div class="ranking-body">
             <div class="ranking-head">
-              <div class="ranking-name">${escapeHtml(item.nickname || "-")}</div>
+              <div class="ranking-name">${escapeHtml(item.nickname || "-")} ${promotionNameHtml(item.promotionLevel || 1)}</div>
               <div class="ranking-toggle">${isExpanded ? "접기" : "상세"}</div>
             </div>
             <div class="ranking-total">총자산 ${formatWon(item.totalAsset || 0)}</div>
@@ -2720,6 +3075,7 @@
     nicknameInput.addEventListener("input", () => { startBtn.disabled = nicknameInput.value.trim().length === 0; });
     startBtn.addEventListener("click", createNewUser);
     earnBtn.addEventListener("click", handleEarn);
+    promotionUpgradeBtn.addEventListener("click", handlePromotionUpgrade);
     upgradeEarnBtn.addEventListener("click", handleEarnUpgrade);
     menuBtn.addEventListener("click", toggleAdminMenu);
     adminMenuPanel.addEventListener("click", (event) => event.stopPropagation());
@@ -2733,8 +3089,10 @@
     settingsStockTab.addEventListener("click", () => setSettingsTab("stock"));
     settingsBankTab.addEventListener("click", () => setSettingsTab("bank"));
     settingsUserTab.addEventListener("click", () => setSettingsTab("user"));
+    settingsPromotionTab.addEventListener("click", () => setSettingsTab("promotion"));
     saveSettingsBtn.addEventListener("click", saveSettings);
     saveBankSettingsBtn.addEventListener("click", saveBankSettings);
+    promotionAddBtn.addEventListener("click", addPromotionLevel);
     addStockBtn.addEventListener("click", addStock);
     backToGameBtn.addEventListener("click", () => showScreen("game"));
     backFromMarketBtn.addEventListener("click", () => showScreen("game"));
@@ -2813,7 +3171,9 @@
       showScreen("loading");
       try {
         await ensureSettingsDocForAdmin();
+        await ensurePromotionsDocForAdmin();
         await listenSettings();
+        await loadPromotions().catch(() => {});
         await listenStocks();
         const snap = await getDoc(userRef(user.uid));
         if (snap.exists()) {
