@@ -1147,6 +1147,8 @@
     let rankings = [];
     let adminUsers = [];
     let expandedAdminUserId = null;
+    let adminUserStockValues = new Map();
+    let adminUserStockValueLoading = new Set();
     let promotionLevels = [];
     let expandedPromotionManageLevel = null;
     let editingPromotionLevel = null;
@@ -2011,6 +2013,31 @@
       }
     }
 
+    function calculateHoldingsValueForList(userHoldings) {
+      const stockPriceMap = new Map(stocks.map(stock => [stock.id, Number(stock.currentPrice || 0)]));
+      return userHoldings.reduce((sum, holding) => {
+        const price = stockPriceMap.get(holding.stockId) || stockPriceMap.get(holding.id) || Number(holding.avgPrice || 0);
+        const quantity = Math.max(0, Number(holding.quantity || 0));
+        return sum + quantity * Math.max(0, price);
+      }, 0);
+    }
+
+    async function loadAdminUserStockValue(uid) {
+      if (!uid || adminUserStockValueLoading.has(uid)) return;
+      adminUserStockValueLoading.add(uid);
+      try {
+        const snap = await getDocs(query(holdingsCol(uid), orderBy("updatedAt", "desc")));
+        const userHoldings = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+        adminUserStockValues.set(uid, calculateHoldingsValueForList(userHoldings));
+      } catch (error) {
+        console.warn("관리자 유저 보유 주식 계산 실패", error);
+        adminUserStockValues.set(uid, null);
+      } finally {
+        adminUserStockValueLoading.delete(uid);
+        if (expandedAdminUserId === uid) renderAdminUsers();
+      }
+    }
+
     function renderAdminUsers() {
       if (!userManageList) return;
       if (!adminUsers.length) {
@@ -2037,6 +2064,10 @@
               <div class="user-manage-money-label">통장 잔액</div>
               <div class="user-manage-money-value">${formatWon(user.bankBalance || 0)}</div>
             </div>
+            <div class="user-manage-money-block">
+              <div class="user-manage-money-label">보유 주식</div>
+              <div class="user-manage-money-value">${adminUserStockValues.has(user.uid) ? (adminUserStockValues.get(user.uid) == null ? "계산 실패" : formatWon(adminUserStockValues.get(user.uid))) : "계산 중..."}</div>
+            </div>
             <div class="user-manage-actions">
               <button class="user-pay-btn" type="button">지급</button>
               <button class="user-reclaim-btn" type="button">회수</button>
@@ -2060,6 +2091,9 @@
         if (resetBtn) resetBtn.addEventListener("click", () => openUserAdminModal("reset", user));
         if (deleteBtn) deleteBtn.addEventListener("click", () => openUserAdminModal("delete", user));
         userManageList.appendChild(card);
+        if (isExpanded && !adminUserStockValues.has(user.uid)) {
+          loadAdminUserStockValue(user.uid);
+        }
       });
     }
 
@@ -2068,6 +2102,8 @@
       userManageStatus.textContent = "유저 목록을 불러오는 중입니다...";
       try {
         const snap = await getDocs(query(usersCol(), orderBy("nickname", "asc")));
+        adminUserStockValues.clear();
+        adminUserStockValueLoading.clear();
         adminUsers = snap.docs.map(d => ({ id: d.id, uid: d.id, ...d.data() }));
         renderAdminUsers();
         userManageStatus.textContent = "";
