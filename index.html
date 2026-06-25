@@ -3109,8 +3109,16 @@
       return { totalAmount: amount, taxAmount, finalAmount, rate };
     }
     function getMaxBuyQty(cash, price) {
-      let qty = Math.floor(Number(cash || 0) / Math.max(1, Number(price || 1)));
-      while (qty > 0 && calcTradeAmounts("buy", qty * price).finalAmount > cash) qty--;
+      const safeCash = Math.max(0, Number(cash || 0));
+      const safePrice = Math.max(1, Number(price || 1));
+      const taxMultiplier = 1 + (getBuyTaxRate() / 100);
+
+      let qty = Math.floor(safeCash / (safePrice * taxMultiplier));
+
+      // 세금 포함 최대 수량을 먼저 계산한 뒤, 부동소수점/내림 오차만 짧게 보정합니다.
+      while (qty > 0 && calcTradeAmounts("buy", qty * safePrice).finalAmount > safeCash) qty--;
+      while (calcTradeAmounts("buy", (qty + 1) * safePrice).finalAmount <= safeCash) qty++;
+
       return Math.max(0, qty);
     }
 
