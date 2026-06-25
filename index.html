@@ -520,6 +520,13 @@
           <div id="treasuryValue" class="treasury-value">0원</div>
           <div class="treasury-desc">매수/매도 거래에서 징수된 세금의 합계입니다.</div>
         </div>
+        <div class="bank-deposit-section treasury-contribution-section">
+          <div class="bank-deposit-title">국고 납입 비율 TOP 10</div>
+          <div class="market-note">기능 추가 이후 기록된 매수/매도 거래세 기준입니다.</div>
+          <div id="treasuryContributionList" class="bank-deposit-list">
+            <div class="bank-deposit-empty">국고 납입 정보를 불러오는 중입니다.</div>
+          </div>
+        </div>
       </div>
     </section>
 
@@ -1046,6 +1053,7 @@
     const bankInterestCountdown = document.getElementById("bankInterestCountdown");
     const bankTotalDepositsValue = document.getElementById("bankTotalDepositsValue");
     const treasuryValue = document.getElementById("treasuryValue");
+    const treasuryContributionList = document.getElementById("treasuryContributionList");
     const openDepositBtn = document.getElementById("openDepositBtn");
     const openWithdrawBtn = document.getElementById("openWithdrawBtn");
     const bankLogList = document.getElementById("bankLogList");
@@ -1128,7 +1136,8 @@
     let unsubscribeBankGlobal = null;
     let bankLogs = [];
     let bankGlobalData = { totalDeposits: 0 };
-    let treasuryData = { totalTreasury: 0 };
+    let treasuryData = { totalTreasury: 0, trackedContributions: 0 };
+    let treasuryContributions = [];
     let bankDeposits = [];
     let expandedBankDepositId = null;
     let activeUpgradePanel = "";
@@ -1191,7 +1200,12 @@
       if (activeMainScreens().includes(name)) ensureAppBackHistory();
       if (name === "market") { renderStocks(); listenStocks().catch(() => {}); startMarketCountdownTimer(); } else if (name === "game") { startMarketCountdownTimer(); } else { stopMarketCountdownTimer(); }
       if (name === "bank") { renderGlobalBank(); ensureMyBankDepositPublic().catch(() => {}).then(() => listenBankGlobal()).then(() => loadBankDeposits()).catch(() => {}); }
-      if (name === "treasury") { ensureTreasuryDoc().then(loadTreasury).catch(() => renderTreasury()); }
+      if (name === "treasury") {
+        ensureTreasuryDoc().then(async () => {
+          await loadTreasury();
+          await loadTreasuryContributions();
+        }).catch(() => { renderTreasury(); renderTreasuryContributions(); });
+      }
       if (name === "upgrade") { loadPromotions().then(renderUpgrade).catch(() => renderUpgrade()); }
       if (name === "ranking") { loadPromotions().then(() => { renderRankings(); loadRankings().catch(() => {}); }).catch(() => { renderRankings(); loadRankings().catch(() => {}); }); }
       if (name === "game") {
@@ -1330,6 +1344,8 @@
     function bankDepositsCol() { return collection(db, "bankDeposits"); }
     function bankDepositRef(uid) { return doc(db, "bankDeposits", uid); }
     function treasuryRef() { return doc(db, "treasury", "global"); }
+    function treasuryContributionsCol() { return collection(db, "treasuryContributions"); }
+    function treasuryContributionRef(uid) { return doc(db, "treasuryContributions", uid); }
     function rankingsCol() { return collection(db, "rankings"); }
     function rankingRef(uid) { return doc(db, "rankings", uid); }
 
@@ -2565,9 +2581,11 @@
       resetTreasuryBtn.disabled = true;
       setStatus(treasurySettingsStatus, "국고 초기화 중...");
       try {
-        await setDoc(treasuryRef(), { totalTreasury: 0, updatedAt: serverTimestamp() }, { merge: true });
+        await setDoc(treasuryRef(), { totalTreasury: 0, trackedContributions: 0, updatedAt: serverTimestamp() }, { merge: true });
+        await clearTreasuryContributions();
+        treasuryContributions = [];
         await loadTreasury();
-        setStatus(treasurySettingsStatus, "국고가 0원으로 초기화되었습니다.", "success");
+        setStatus(treasurySettingsStatus, "국고와 납입 비율이 0원으로 초기화되었습니다.", "success");
       } catch (error) {
         setStatus(treasurySettingsStatus, "국고 초기화에 실패했습니다.", "error");
       } finally {
@@ -2657,13 +2675,21 @@
     async function ensureTreasuryDoc() {
       const snap = await getDoc(treasuryRef());
       if (!snap.exists() && currentUser) {
-        await setDoc(treasuryRef(), { totalTreasury: 0, updatedAt: serverTimestamp() });
+        await setDoc(treasuryRef(), { totalTreasury: 0, trackedContributions: 0, updatedAt: serverTimestamp() });
       }
+    }
+
+    async function clearTreasuryContributions() {
+      const snap = await getDocs(query(treasuryContributionsCol(), limit(500)));
+      if (snap.empty) return;
+      const batch = writeBatch(db);
+      snap.docs.forEach(d => batch.delete(d.ref));
+      await batch.commit();
     }
 
     async function loadTreasury() {
       const snap = await getDoc(treasuryRef());
-      treasuryData = snap.exists() ? snap.data() : { totalTreasury: 0 };
+      treasuryData = snap.exists() ? snap.data() : { totalTreasury: 0, trackedContributions: 0 };
       renderTreasury();
     }
 
@@ -2671,6 +2697,46 @@
       const valueText = formatWon(Number(treasuryData?.totalTreasury || 0));
       if (treasuryValue) treasuryValue.textContent = valueText;
       if (treasuryManageValue) treasuryManageValue.textContent = valueText;
+      renderTreasuryContributions();
+    }
+
+    async function loadTreasuryContributions() {
+      if (!treasuryContributionList) return;
+      try {
+        const snap = await getDocs(query(treasuryContributionsCol(), orderBy("totalTaxPaid", "desc"), limit(10)));
+        treasuryContributions = snap.docs.map(d => ({ id: d.id, ...d.data() })).filter(item => Number(item.totalTaxPaid || 0) > 0);
+        renderTreasuryContributions();
+      } catch (error) {
+        console.warn("국고 납입 비율을 불러오지 못했습니다.", error);
+        if (treasuryContributionList) treasuryContributionList.innerHTML = `<div class="bank-deposit-empty">국고 납입 비율을 불러오지 못했습니다.</div>`;
+      }
+    }
+
+    function renderTreasuryContributions() {
+      if (!treasuryContributionList) return;
+      const trackedTotal = Math.max(0, Number(treasuryData?.trackedContributions || 0));
+      if (!treasuryContributions.length || trackedTotal <= 0) {
+        treasuryContributionList.innerHTML = `<div class="bank-deposit-empty">아직 기록된 국고 납입 정보가 없습니다.<br />기능 추가 이후 거래세부터 집계됩니다.</div>`;
+        return;
+      }
+      treasuryContributionList.innerHTML = treasuryContributions.map(item => {
+        const paid = Math.max(0, Number(item.totalTaxPaid || 0));
+        const percent = trackedTotal > 0 ? Math.min(100, (paid / trackedTotal) * 100) : 0;
+        const name = escapeHtml(item.nickname || "-");
+        return `
+          <div class="bank-deposit-row">
+            <div class="bank-deposit-top">
+              <div class="bank-deposit-name">${name}</div>
+              <div class="bank-deposit-rate">${percent.toFixed(1)}%</div>
+            </div>
+            <div class="bank-deposit-bar"><div class="bank-deposit-fill" style="width:${percent.toFixed(2)}%"></div></div>
+            <div class="bank-deposit-detail">
+              <div class="bank-deposit-detail-label">누적 납입액</div>
+              <div class="bank-deposit-detail-value">${formatWon(paid)}</div>
+            </div>
+          </div>
+        `;
+      }).join("");
     }
 
     function buildBankDepositData(data = currentUserData) {
@@ -3431,10 +3497,12 @@
           const hRef = holdingRef(currentUser.uid, stockId);
           const sRef = stockRef(stockId);
           const tRef = treasuryRef();
+          const cRef = treasuryContributionRef(currentUser.uid);
           const userSnap = await transaction.get(uRef);
           const holdingSnap = await transaction.get(hRef);
           const stockSnap = await transaction.get(sRef);
           const treasurySnap = await transaction.get(tRef);
+          const contributionSnap = await transaction.get(cRef);
           if (!userSnap.exists()) throw new Error("유저 데이터가 없습니다.");
           if (!stockSnap.exists()) throw new Error("종목 데이터가 없습니다.");
           const userData = userSnap.data();
@@ -3443,7 +3511,10 @@
           const liveTotal = qty * livePrice;
           const amounts = calcTradeAmounts(type, liveTotal);
           const cash = Number(userData.cash || 0);
-          const oldTreasury = Number(treasurySnap.exists() ? (treasurySnap.data().totalTreasury || 0) : 0);
+          const oldTreasuryData = treasurySnap.exists() ? treasurySnap.data() : {};
+          const oldTreasury = Number(oldTreasuryData.totalTreasury || 0);
+          const oldTrackedContributions = Number(oldTreasuryData.trackedContributions || 0);
+          const oldContribution = contributionSnap.exists() ? Number(contributionSnap.data().totalTaxPaid || 0) : 0;
           const oldHolding = holdingSnap.exists() ? holdingSnap.data() : null;
           const oldQty = Math.max(0, Math.floor(Number(oldHolding?.quantity || 0)));
           const oldTotalBuy = Number(oldHolding?.totalBuyAmount || 0);
@@ -3501,10 +3572,22 @@
               createdAt: serverTimestamp()
             });
           }
-          transaction.set(tRef, { totalTreasury: oldTreasury + amounts.taxAmount, updatedAt: serverTimestamp() }, { merge: true });
+          transaction.set(tRef, {
+            totalTreasury: oldTreasury + amounts.taxAmount,
+            trackedContributions: oldTrackedContributions + amounts.taxAmount,
+            updatedAt: serverTimestamp()
+          }, { merge: true });
+          transaction.set(cRef, {
+            uid: currentUser.uid,
+            nickname: userData.nickname || currentUserData?.nickname || "-",
+            promotionLevel: getPromotionLevel(userData),
+            totalTaxPaid: oldContribution + amounts.taxAmount,
+            updatedAt: serverTimestamp()
+          }, { merge: true });
         });
         await pruneOldTrades(currentUser.uid);
         await loadTreasury().catch(() => {});
+        if (currentScreenName === "treasury") await loadTreasuryContributions().catch(() => {});
         await listenHoldings(currentUser.uid).catch(() => {});
         await listenStocks().catch(() => {});
         closeTradeModal();
