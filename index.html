@@ -129,6 +129,9 @@
     .market-countdown-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin: 12px 0 14px; padding: 11px 0; border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); }
     .market-countdown-label { color: var(--muted); font-size: 12px; font-weight: 950; }
     .market-countdown-value { color: var(--green); font-size: 18px; font-weight: 950; letter-spacing: -0.4px; text-align: right; font-variant-numeric: tabular-nums; }
+    .portfolio-countdown-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin: 0 0 22px; padding: 11px 0; border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); }
+    .portfolio-countdown-label { color: var(--muted); font-size: 12px; font-weight: 950; }
+    .portfolio-countdown-value { color: var(--green); font-size: 18px; font-weight: 950; letter-spacing: -0.4px; text-align: right; font-variant-numeric: tabular-nums; }
     .stock-list { border-top: 1px solid var(--line-strong); }
     .stock-list-head { display: grid; grid-template-columns: minmax(72px, 0.82fr) minmax(84px, 1.05fr) minmax(74px, 0.78fr) minmax(66px, 0.72fr); gap: 8px; align-items: center; padding: 10px 0; border-bottom: 1px solid var(--line); color: var(--muted); font-size: 11px; font-weight: 950; letter-spacing: -0.2px; }
     .stock-list-head .head-price, .stock-list-head .head-change { text-align: right; }
@@ -438,6 +441,10 @@
               <div class="portfolio-stat-title">총 평가손익</div>
               <div id="totalProfitAmount" class="portfolio-stat-value flat">0원</div>
             </div>
+          </div>
+          <div class="portfolio-countdown-row">
+            <div class="portfolio-countdown-label">다음 변동까지</div>
+            <div id="portfolioMarketCountdown" class="portfolio-countdown-value">00초</div>
           </div>
           <div id="holdingList" class="holding-list"></div>
         </div>
@@ -1018,6 +1025,7 @@
     const treasurySettingsStatus = document.getElementById("treasurySettingsStatus");
     const stockList = document.getElementById("stockList");
     const marketCountdown = document.getElementById("marketCountdown");
+    const portfolioMarketCountdown = document.getElementById("portfolioMarketCountdown");
     const holdingList = document.getElementById("holdingList");
     const totalBuyAmountEl = document.getElementById("totalBuyAmount");
     const totalProfitRateEl = document.getElementById("totalProfitRate");
@@ -3326,7 +3334,7 @@
         if (buyBtn && item.stock) buyBtn.addEventListener("click", (e) => { e.stopPropagation(); openTradeModal("buy", item.stock); });
         if (sellBtn && item.stock) sellBtn.addEventListener("click", (e) => { e.stopPropagation(); openTradeModal("sell", item.stock); });
         holdingList.appendChild(row);
-        if (expandedHoldingStockId === item.stockId) drawCandleChart(row.querySelector(".candle-chart"), history);
+        if (expandedHoldingStockId === item.stockId) drawCandleChart(row.querySelector(".candle-chart"), history, { avgPrice: item.avgPrice, showAvgLine: true });
       }
     }
 
@@ -3581,7 +3589,7 @@
       return candles.slice(-CANDLE_COUNT);
     }
 
-    function drawCandleChart(canvas, history) {
+    function drawCandleChart(canvas, history, options = {}) {
       if (!canvas) return;
       const rect = canvas.getBoundingClientRect();
       const scale = window.devicePixelRatio || 1;
@@ -3594,23 +3602,54 @@
       const candles = makeCandles(history);
       const padX = 12;
       const padY = 12;
+      const chartW = w - padX * 2;
+      const chartH = h - padY * 2;
+
       ctx.strokeStyle = "rgba(255,255,255,0.075)"; ctx.lineWidth = 1;
       for (let i = 1; i < 4; i++) {
-        const y = padY + ((h - padY * 2) / 4) * i;
+        const y = padY + (chartH / 4) * i;
         ctx.beginPath(); ctx.moveTo(padX, y); ctx.lineTo(w - padX, y); ctx.stroke();
       }
       if (!candles.length) {
         ctx.fillStyle = getCss("--muted"); ctx.font = "12px system-ui"; ctx.textAlign = "center";
         ctx.fillText("가격 기록이 쌓이면 캔들이 표시됩니다.", w / 2, h / 2); return;
       }
+
+      const showAvgLine = Boolean(options.showAvgLine);
+      const avgPrice = Number(options.avgPrice || 0);
+      const hasAvgPrice = showAvgLine && Number.isFinite(avgPrice) && avgPrice > 0;
       const lows = candles.map(c => c.low), highs = candles.map(c => c.high);
-      const min = Math.min(...lows), max = Math.max(...highs), range = Math.max(1, max - min);
-      const chartW = w - padX * 2;
-      const chartH = h - padY * 2;
+      const candleMin = Math.min(...lows), candleMax = Math.max(...highs);
+      const candleRange = Math.max(1, candleMax - candleMin);
+      const farThreshold = 0.30;
+      let avgMode = "none";
+      let min = candleMin;
+      let max = candleMax;
+
+      if (hasAvgPrice) {
+        const highLimit = candleMax + candleRange * farThreshold;
+        const lowLimit = candleMin - candleRange * farThreshold;
+        if (avgPrice > highLimit) {
+          avgMode = "above";
+        } else if (avgPrice < lowLimit) {
+          avgMode = "below";
+        } else {
+          avgMode = "inside";
+          min = Math.min(candleMin, avgPrice);
+          max = Math.max(candleMax, avgPrice);
+        }
+      }
+
+      let range = Math.max(1, max - min);
+      const padding = Math.max(1, range * 0.08);
+      min = Math.max(1, min - padding);
+      max = max + padding;
+      range = Math.max(1, max - min);
       const slot = chartW / CANDLE_COUNT;
       const bodyW = Math.max(4, Math.min(12, slot * 0.42));
       const toY = (price) => padY + chartH - ((price - min) / range) * chartH;
       const offset = CANDLE_COUNT - candles.length;
+
       candles.forEach((c, idx) => {
         const x = padX + (idx + offset + 0.5) * slot;
         const openY = toY(c.open), closeY = toY(c.close), highY = toY(c.high), lowY = toY(c.low);
@@ -3622,6 +3661,39 @@
         const bodyH = Math.max(2.5, Math.abs(closeY - openY));
         ctx.fillRect(x - bodyW / 2, top, bodyW, bodyH);
       });
+
+      if (hasAvgPrice) {
+        const label = `평균 ${formatWon(avgPrice)}`;
+        ctx.font = "11px system-ui";
+        ctx.textAlign = "right";
+        ctx.lineWidth = 1;
+        ctx.strokeStyle = "rgba(147,197,253,0.85)";
+        ctx.fillStyle = "rgba(147,197,253,0.95)";
+        ctx.setLineDash([5, 4]);
+
+        if (avgMode === "inside") {
+          const avgY = Math.max(padY + 8, Math.min(h - padY - 8, toY(avgPrice)));
+          ctx.beginPath(); ctx.moveTo(padX, avgY); ctx.lineTo(w - padX, avgY); ctx.stroke();
+          ctx.setLineDash([]);
+          const labelY = Math.max(padY + 12, avgY - 5);
+          const textW = ctx.measureText(label).width + 10;
+          ctx.fillStyle = "rgba(17,24,39,0.78)";
+          ctx.fillRect(w - padX - textW, labelY - 12, textW, 16);
+          ctx.fillStyle = "rgba(147,197,253,0.98)";
+          ctx.fillText(label, w - padX - 5, labelY);
+        } else {
+          ctx.setLineDash([]);
+          const isAbove = avgMode === "above";
+          const guideY = isAbove ? padY + 7 : h - padY - 7;
+          const guideLabel = `${label} ${isAbove ? "↑" : "↓"}`;
+          const textW = ctx.measureText(guideLabel).width + 10;
+          ctx.fillStyle = "rgba(17,24,39,0.82)";
+          ctx.fillRect(w - padX - textW, guideY - 8, textW, 16);
+          ctx.fillStyle = "rgba(147,197,253,0.98)";
+          ctx.fillText(guideLabel, w - padX - 5, guideY + 4);
+        }
+        ctx.setLineDash([]);
+      }
     }
 
     async function updateMarketPrices() {
@@ -3687,8 +3759,9 @@
     }
 
     function updateMarketCountdown() {
-      if (!marketCountdown) return;
-      marketCountdown.textContent = formatMarketSeconds();
+      const text = formatMarketSeconds();
+      if (marketCountdown) marketCountdown.textContent = text;
+      if (portfolioMarketCountdown) portfolioMarketCountdown.textContent = text;
     }
 
     function startMarketCountdownTimer() {
