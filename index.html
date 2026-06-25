@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
-  <title>주식 게임 v39</title>
+  <title>주식 게임 v40</title>
   <style>
     * { box-sizing: border-box; }
     html, body { margin: 0; padding: 0; height: 100%; font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; background: #1f2937; color: #fff; }
@@ -1101,7 +1101,20 @@
     function isAdmin() { return currentUser && currentUser.email === ADMIN_EMAIL; }
     function activeMainScreens() { return ["game", "market", "bank", "treasury", "upgrade", "ranking", "settings"]; }
 
+    function closeAllModals() {
+      if (tradeModalOverlay) tradeModalOverlay.classList.remove("active");
+      if (bankModalOverlay) bankModalOverlay.classList.remove("active");
+      if (userAdminModalOverlay) userAdminModalOverlay.classList.remove("active");
+      tradeModalState = null;
+      bankModalState = null;
+      userAdminModalState = null;
+      if (tradeModalStatus) tradeModalStatus.textContent = "";
+      if (bankModalStatus) bankModalStatus.textContent = "";
+      if (userAdminModalStatus) userAdminModalStatus.textContent = "";
+    }
+
     function showScreen(name) {
+      if (name !== currentScreenName) closeAllModals();
       const wasMarket = currentScreenName === "market";
       if (wasMarket && name !== "market") expandedStockId = null;
       if (name === "market" && currentScreenName !== "market") expandedStockId = null;
@@ -2513,17 +2526,41 @@
             </div>
           ` : ""}
         `;
-        row.addEventListener("click", async () => {
-          expandedStockId = expandedStockId === stock.id ? null : stock.id;
-          if (expandedStockId) await loadPriceHistoryForStock(expandedStockId).catch(() => []);
-          renderStocks();
-          renderPortfolio();
-        });
-        row.querySelectorAll("button").forEach(btn => btn.addEventListener("click", (e) => e.stopPropagation()));
+        const summary = row.querySelector(".stock-summary");
+        if (summary) {
+          summary.addEventListener("click", () => {
+            const nextExpandedId = expandedStockId === stock.id ? null : stock.id;
+            expandedStockId = nextExpandedId;
+
+            // 먼저 화면을 즉시 갱신하고, 캔들 기록은 뒤에서 불러옵니다.
+            renderStocks();
+            renderPortfolio();
+
+            if (nextExpandedId) {
+              loadPriceHistoryForStock(nextExpandedId)
+                .then(() => {
+                  if (expandedStockId === nextExpandedId && currentScreenName === "market") {
+                    renderStocks();
+                  }
+                })
+                .catch((error) => {
+                  console.warn("가격 기록 로딩 실패:", error);
+                });
+            }
+          });
+        }
+
+        const detail = row.querySelector(".stock-detail");
+        if (detail) {
+          detail.addEventListener("click", (e) => {
+            e.stopPropagation();
+          });
+        }
+
         const buyBtn = row.querySelector(".buy-btn");
         const sellBtn = row.querySelector(".sell-btn");
-        if (buyBtn) buyBtn.addEventListener("click", (e) => { e.stopPropagation(); openTradeModal("buy", stock); });
-        if (sellBtn) sellBtn.addEventListener("click", (e) => { e.stopPropagation(); openTradeModal("sell", stock); });
+        if (buyBtn) buyBtn.addEventListener("click", (e) => { e.preventDefault(); e.stopPropagation(); openTradeModal("buy", stock); });
+        if (sellBtn) sellBtn.addEventListener("click", (e) => { e.preventDefault(); e.stopPropagation(); openTradeModal("sell", stock); });
         stockList.appendChild(row);
         drawMiniChart(row.querySelector(".mini-chart"), history, current, change);
         if (expandedStockId === stock.id) drawCandleChart(row.querySelector(".candle-chart"), history);
@@ -3520,7 +3557,7 @@
 
     tradeQtyInput.addEventListener("input", updateTradeExpected);
     tradeMaxBtn.addEventListener("click", () => { if (tradeModalState) setTradeQty(tradeModalState.maxQty); });
-    document.querySelectorAll(".percent-btn").forEach(btn => btn.addEventListener("click", () => {
+    tradeModal.querySelectorAll(".percent-btn").forEach(btn => btn.addEventListener("click", () => {
       if (!tradeModalState) return;
       const percent = Number(btn.dataset.percent || 0);
       const qty = Math.floor(tradeModalState.maxQty * percent / 100);
@@ -3533,7 +3570,7 @@
 
     bankAmountInput.addEventListener("input", updateBankExpected);
     bankMaxBtn.addEventListener("click", () => { if (bankModalState) setBankAmount(bankModalState.maxAmount); });
-    document.querySelectorAll(".bank-percent-btn").forEach(btn => btn.addEventListener("click", () => {
+    bankModal.querySelectorAll(".bank-percent-btn").forEach(btn => btn.addEventListener("click", () => {
       if (!bankModalState) return;
       const percent = Number(btn.dataset.percent || 0);
       const amount = Math.floor(bankModalState.maxAmount * percent / 100);
