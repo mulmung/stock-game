@@ -3152,6 +3152,8 @@
           startPrice,
           currentPrice: startPrice,
           previousPrice: startPrice,
+          allTimeHigh: startPrice,
+          allTimeLow: startPrice,
           lastMinuteKey: key,
           isActive: true,
           createdAt: serverTimestamp(),
@@ -3555,7 +3557,14 @@
         if (sellBtn) sellBtn.addEventListener("click", (e) => { e.preventDefault(); e.stopPropagation(); openTradeModal("sell", stock); });
         stockList.appendChild(row);
         drawMiniChart(row.querySelector(".mini-chart"), history, current, change);
-        if (expandedStockId === stock.id) drawCandleChart(row.querySelector(".candle-chart"), history);
+        if (expandedStockId === stock.id) {
+          const fallbackPrice = Number(stock.currentPrice || stock.startPrice || 1);
+          drawCandleChart(row.querySelector(".candle-chart"), history, {
+            showAllTimeLines: true,
+            allTimeHigh: Number(stock.allTimeHigh || stock.startPrice || fallbackPrice),
+            allTimeLow: Number(stock.allTimeLow || stock.startPrice || fallbackPrice)
+          });
+        }
       }
     }
 
@@ -4391,8 +4400,13 @@
       const showCurrentLine = Boolean(options.showCurrentLine);
       const currentPrice = Number(options.currentPrice || 0);
       const hasCurrentPrice = showCurrentLine && Number.isFinite(currentPrice) && currentPrice > 0;
-      const hasGuideLabels = hasAvgPrice || hasCurrentPrice;
-      const labelAreaW = hasGuideLabels ? 78 : 0;
+      const showAllTimeLines = Boolean(options.showAllTimeLines);
+      const allTimeHigh = Number(options.allTimeHigh || 0);
+      const allTimeLow = Number(options.allTimeLow || 0);
+      const hasAllTimeHigh = showAllTimeLines && Number.isFinite(allTimeHigh) && allTimeHigh > 0;
+      const hasAllTimeLow = showAllTimeLines && Number.isFinite(allTimeLow) && allTimeLow > 0;
+      const hasGuideLabels = hasAvgPrice || hasCurrentPrice || hasAllTimeHigh || hasAllTimeLow;
+      const labelAreaW = hasGuideLabels ? 82 : 0;
       const padLeft = 12 + labelAreaW;
       const padRight = 12;
       const padY = 12;
@@ -4410,6 +4424,8 @@
       const farThreshold = 0.30;
       let avgMode = "none";
       let currentMode = "none";
+      let allTimeHighMode = hasAllTimeHigh ? "inside" : "none";
+      let allTimeLowMode = hasAllTimeLow ? "inside" : "none";
       let min = candleMin;
       let max = candleMax;
 
@@ -4420,6 +4436,9 @@
         if (price < lowLimit) return "below";
         return "inside";
       };
+
+      if (hasAllTimeHigh) max = Math.max(max, allTimeHigh);
+      if (hasAllTimeLow) min = Math.min(min, allTimeLow);
 
       if (hasCurrentPrice) {
         currentMode = classifyGuide(currentPrice);
@@ -4518,6 +4537,14 @@
         ctx.restore();
       };
 
+      if (hasAllTimeHigh) {
+        drawGuideLine({ price: allTimeHigh, mode: allTimeHighMode, color: "rgba(34,197,94,0.98)", dash: [4, 4] });
+      }
+
+      if (hasAllTimeLow) {
+        drawGuideLine({ price: allTimeLow, mode: allTimeLowMode, color: "rgba(239,68,68,0.98)", dash: [4, 4] });
+      }
+
       if (hasCurrentPrice) {
         const currentColor = hasAvgPrice && currentPrice < avgPrice ? "rgba(239,68,68,0.98)" : "rgba(34,197,94,0.98)";
         drawGuideLine({ price: currentPrice, mode: currentMode, color: currentColor, dash: [3, 3] });
@@ -4577,9 +4604,20 @@
 
             moveRate = Math.max(-0.1, Math.min(0.1, moveRate));
             const next = Math.max(1, Math.round(current * (1 + moveRate)));
+            const bodyHigh = Math.max(current, next);
+            const bodyLow = Math.min(current, next);
+            const maxWick = Math.max(1, Math.round(current * 0.008));
+            const upperWick = Math.floor(Math.random() * (maxWick + 1));
+            const lowerWick = Math.floor(Math.random() * (maxWick + 1));
+            const high = bodyHigh + upperWick;
+            const low = Math.max(1, bodyLow - lowerWick);
+            const prevAllTimeHigh = Number(data.allTimeHigh || data.startPrice || current);
+            const prevAllTimeLow = Number(data.allTimeLow || data.startPrice || current);
             const updateData = {
               previousPrice: current,
               currentPrice: next,
+              allTimeHigh: Math.max(prevAllTimeHigh, high),
+              allTimeLow: Math.min(prevAllTimeLow, low),
               lastMinuteKey: key,
               newsEffectDirection: nextRemaining > 0 ? nextDirection : null,
               newsEffectRemaining: nextRemaining,
@@ -4588,13 +4626,6 @@
               updatedAt: serverTimestamp()
             };
             transaction.update(ref, updateData);
-            const bodyHigh = Math.max(current, next);
-            const bodyLow = Math.min(current, next);
-            const maxWick = Math.max(1, Math.round(current * 0.008));
-            const upperWick = Math.floor(Math.random() * (maxWick + 1));
-            const lowerWick = Math.floor(Math.random() * (maxWick + 1));
-            const high = bodyHigh + upperWick;
-            const low = Math.max(1, bodyLow - lowerWick);
             transaction.set(priceRef(stock.id, key), {
               price: next,
               open: current,
