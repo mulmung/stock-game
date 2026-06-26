@@ -375,7 +375,8 @@
     .news-probability-value { color: #facc15; font-weight: 1000; font-size: 24px; letter-spacing: -0.5px; }
     .news-list { display: flex; flex-direction: column; gap: 0; border-top: 1px solid var(--line); }
     .news-item { padding: 15px 0; border-bottom: 1px solid var(--line); }
-    .news-stock-name { color: #fff; font-size: 18px; font-weight: 1000; margin-bottom: 10px; }
+    .news-date { color: var(--muted); font-size: 13px; font-weight: 850; margin-bottom: 8px; letter-spacing: -0.2px; }
+    .news-stock-name { color: #fff; font-size: 18px; font-weight: 1000; margin-bottom: 8px; }
     .news-divider { height: 1px; background: var(--line); margin: 0 0 10px; }
     .news-content { color: var(--muted); font-size: 14px; line-height: 1.55; font-weight: 750; white-space: pre-wrap; }
     .news-empty { padding: 20px 0; color: var(--muted); font-size: 14px; font-weight: 800; text-align: center; border-bottom: 1px solid var(--line); }
@@ -385,11 +386,14 @@
     .news-template-item { padding: 12px 0; border-bottom: 1px solid var(--line); }
     .news-template-actions { display:flex; gap: 8px; margin-top: 10px; }
     .news-template-actions button { height: 34px; font-size: 12px; }
-    .news-toast-wrap { position: fixed; left: 16px; right: 16px; top: 78px; z-index: 9999; pointer-events: none; display:flex; justify-content:center; }
-    .news-toast { width: min(360px, 100%); background: rgba(15, 23, 42, 0.96); border: 1px solid rgba(255,255,255,0.14); box-shadow: 0 12px 36px rgba(0,0,0,0.45); padding: 16px; opacity: 0; transform: translateY(-10px); transition: opacity .2s ease, transform .2s ease; }
+    .news-toast-wrap { position: fixed; left: 16px; right: 16px; top: 78px; z-index: 99999; pointer-events: none; display:flex; justify-content:center; }
+    .news-toast { width: min(380px, 100%); background: rgba(15, 23, 42, 0.98); border: 1px solid rgba(255,255,255,0.18); box-shadow: 0 14px 42px rgba(0,0,0,0.55); padding: 16px; opacity: 0; transform: translateY(-10px); transition: opacity .2s ease, transform .2s ease; }
     .news-toast.show { opacity: 1; transform: translateY(0); }
     .news-toast-title { color: #fff; font-size: 18px; font-weight: 1000; }
     .news-toast-line { height: 1px; background: var(--line); margin: 10px 0; }
+    .news-toast-date { color: var(--muted); font-size: 13px; font-weight: 850; margin-bottom: 7px; letter-spacing: -0.2px; }
+    .news-toast-stock { color: #fff; font-size: 16px; font-weight: 1000; margin-bottom: 7px; }
+    .news-toast-content { color: #e5e7eb; font-size: 14px; line-height: 1.55; font-weight: 800; white-space: pre-wrap; }
     .news-toast-body { color: #e5e7eb; font-size: 14px; line-height: 1.55; font-weight: 800; }
 
   </style>
@@ -2925,8 +2929,8 @@
       }
       newsLogList.innerHTML = newsLogs.slice(0, NEWS_LOG_LIMIT).map(item => `
         <div class="news-item">
+          <div class="news-date">${escapeHtml(formatNewsDateTime(item.createdAt))}</div>
           <div class="news-stock-name">${escapeHtml(item.stockName || item.stockId || "종목")}</div>
-          <div class="news-divider"></div>
           <div class="news-content">${escapeHtml(item.content || "")}</div>
         </div>
       `).join("");
@@ -2945,24 +2949,43 @@
         if (newsToast) newsToast.classList.remove("show");
         return;
       }
-      if (newsToastTitle) newsToastTitle.textContent = item.stockName || "종목";
-      if (newsToastBody) newsToastBody.textContent = item.content || "";
+      if (newsToastTitle) newsToastTitle.textContent = "뉴스";
+      if (newsToastBody) {
+        newsToastBody.innerHTML = `
+          <div class="news-toast-date">${escapeHtml(formatNewsDateTime(item.createdAt))}</div>
+          <div class="news-toast-stock">${escapeHtml(item.stockName || item.stockId || "종목")}</div>
+          <div class="news-toast-content">${escapeHtml(item.content || "")}</div>
+        `;
+      }
       if (newsToast) newsToast.classList.add("show");
       newsToastTimer = setTimeout(() => {
         if (newsToast) newsToast.classList.remove("show");
         newsToastTimer = setTimeout(showNextNewsToast, 350);
-      }, 3200);
+      }, 3600);
     }
 
     function subscribeNewsLogs() {
       if (unsubscribeNewsLogs) { unsubscribeNewsLogs(); unsubscribeNewsLogs = null; }
       newsLogsInitialLoaded = false;
+      const seenNewsIds = new Set();
       unsubscribeNewsLogs = onSnapshot(query(newsLogsCol(), orderBy("createdAt", "desc"), limit(NEWS_LOG_LIMIT)), (snap) => {
         const changes = snap.docChanges();
         newsLogs = snap.docs.map(d => ({ id: d.id, ...d.data() }));
         renderNewsScreen();
-        if (!newsLogsInitialLoaded) { newsLogsInitialLoaded = true; return; }
-        changes.filter(c => c.type === "added").reverse().forEach(c => enqueueNewsToast({ id: c.doc.id, ...c.doc.data() }));
+
+        if (!newsLogsInitialLoaded) {
+          snap.docs.forEach(d => seenNewsIds.add(d.id));
+          newsLogsInitialLoaded = true;
+          return;
+        }
+
+        changes
+          .filter(c => c.type === "added" && !seenNewsIds.has(c.doc.id))
+          .reverse()
+          .forEach(c => {
+            seenNewsIds.add(c.doc.id);
+            enqueueNewsToast({ id: c.doc.id, ...c.doc.data() });
+          });
       }, (error) => console.warn("뉴스 수신 실패:", error));
     }
 
@@ -3403,6 +3426,20 @@
       const h = String(date.getHours()).padStart(2, "0");
       const min = String(date.getMinutes()).padStart(2, "0");
       return `${y}.${m}.${d}<br />${h}:${min}`;
+    }
+
+    function formatNewsDateTime(value) {
+      let date = null;
+      if (value instanceof Timestamp) date = value.toDate();
+      else if (value?.toDate) date = value.toDate();
+      else if (value instanceof Date) date = value;
+      if (!date) return "-";
+      const y = date.getFullYear();
+      const m = String(date.getMonth() + 1).padStart(2, "0");
+      const d = String(date.getDate()).padStart(2, "0");
+      const h = String(date.getHours()).padStart(2, "0");
+      const min = String(date.getMinutes()).padStart(2, "0");
+      return `${y}.${m}.${d} ${h}:${min}`;
     }
 
     function getNextBankInterestDate(data = currentUserData) {
