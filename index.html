@@ -4437,9 +4437,6 @@
         return "inside";
       };
 
-      if (hasAllTimeHigh) max = Math.max(max, allTimeHigh);
-      if (hasAllTimeLow) min = Math.min(min, allTimeLow);
-
       if (hasCurrentPrice) {
         currentMode = classifyGuide(currentPrice);
         if (currentMode === "inside") {
@@ -4461,6 +4458,16 @@
       min = Math.max(1, min - padding);
       max = max + padding;
       range = Math.max(1, max - min);
+
+      const classifyByChartRange = (price) => {
+        if (price > max) return "above";
+        if (price < min) return "below";
+        return "inside";
+      };
+
+      if (hasAllTimeHigh) allTimeHighMode = classifyByChartRange(allTimeHigh);
+      if (hasAllTimeLow) allTimeLowMode = classifyByChartRange(allTimeLow);
+
       const toY = (price) => padY + chartH - ((price - min) / range) * chartH;
       const priceAtY = (y) => min + ((padY + chartH - y) / chartH) * range;
 
@@ -4529,9 +4536,11 @@
           ctx.setLineDash([]);
           drawLabelBg(label, padLeft - 7, guideY, color);
         } else if (mode === "above" || mode === "below") {
-          ctx.setLineDash([]);
           const isAbove = mode === "above";
           const guideY = isAbove ? padY + 7 : h - padY - 7;
+          ctx.setLineDash(dash);
+          ctx.beginPath(); ctx.moveTo(padLeft, guideY); ctx.lineTo(w - padRight, guideY); ctx.stroke();
+          ctx.setLineDash([]);
           drawLabelBg(`${formatWon(price)} ${isAbove ? "↑" : "↓"}`, padLeft - 7, guideY, color);
         }
         ctx.restore();
