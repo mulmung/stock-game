@@ -367,6 +367,31 @@
       .holding-qty-main { font-size: 13.5px; }
       .holding-value { font-size: 11.5px; }
     }
+
+
+    .news-card, .news-manage-card { border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); padding: 14px 0; margin: 0 0 14px; }
+    .news-probability-card { border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); padding: 18px 0; margin: 18px 0; display:flex; align-items:center; justify-content:space-between; gap:16px; }
+    .news-probability-label { color: var(--muted); font-weight: 900; font-size: 14px; }
+    .news-probability-value { color: #facc15; font-weight: 1000; font-size: 24px; letter-spacing: -0.5px; }
+    .news-list { display: flex; flex-direction: column; gap: 0; border-top: 1px solid var(--line); }
+    .news-item { padding: 15px 0; border-bottom: 1px solid var(--line); }
+    .news-stock-name { color: #fff; font-size: 18px; font-weight: 1000; margin-bottom: 10px; }
+    .news-divider { height: 1px; background: var(--line); margin: 0 0 10px; }
+    .news-content { color: var(--muted); font-size: 14px; line-height: 1.55; font-weight: 750; white-space: pre-wrap; }
+    .news-empty { padding: 20px 0; color: var(--muted); font-size: 14px; font-weight: 800; text-align: center; border-bottom: 1px solid var(--line); }
+    .news-template-header { display:flex; align-items:center; justify-content:space-between; gap:12px; padding: 12px 0; border-bottom: 1px solid var(--line); }
+    .news-template-title { font-size: 15px; font-weight: 1000; color: #fff; }
+    .news-template-list { border-top: 1px solid var(--line); margin-top: 10px; }
+    .news-template-item { padding: 12px 0; border-bottom: 1px solid var(--line); }
+    .news-template-actions { display:flex; gap: 8px; margin-top: 10px; }
+    .news-template-actions button { height: 34px; font-size: 12px; }
+    .news-toast-wrap { position: fixed; left: 16px; right: 16px; top: 78px; z-index: 9999; pointer-events: none; display:flex; justify-content:center; }
+    .news-toast { width: min(360px, 100%); background: rgba(15, 23, 42, 0.96); border: 1px solid rgba(255,255,255,0.14); box-shadow: 0 12px 36px rgba(0,0,0,0.45); padding: 16px; opacity: 0; transform: translateY(-10px); transition: opacity .2s ease, transform .2s ease; }
+    .news-toast.show { opacity: 1; transform: translateY(0); }
+    .news-toast-title { color: #fff; font-size: 18px; font-weight: 1000; }
+    .news-toast-line { height: 1px; background: var(--line); margin: 10px 0; }
+    .news-toast-body { color: #e5e7eb; font-size: 14px; line-height: 1.55; font-weight: 800; }
+
   </style>
 </head>
 <body>
@@ -497,6 +522,24 @@
       </div>
     </section>
 
+    <section id="newsScreen" class="screen page-screen">
+      <div class="page">
+        <div class="settings-top market-top">
+          <h1 class="title">뉴스</h1>
+          <button id="backFromNewsBtn" class="settings-back-btn">뒤로가기</button>
+        </div>
+        <p class="subtitle">종목별 뉴스 발생 확률과 최근 뉴스를 확인할 수 있습니다.</p>
+        <div class="news-probability-card">
+          <div class="news-probability-label">뉴스 발생 확률</div>
+          <div id="newsChanceDisplay" class="news-probability-value">0%</div>
+        </div>
+        <div class="bank-deposit-title">최근 뉴스</div>
+        <div id="newsLogList" class="news-list">
+          <div class="news-empty">최근 뉴스가 없습니다.</div>
+        </div>
+      </div>
+    </section>
+
     <section id="bankScreen" class="screen page-screen">
       <div class="page">
         <div class="settings-top market-top">
@@ -620,6 +663,7 @@
         <div class="settings-tabs">
           <button id="settingsDefaultTab" class="settings-tab active" type="button">게임 기본값</button>
           <button id="settingsStockTab" class="settings-tab" type="button">종목 추가</button>
+          <button id="settingsNewsTab" class="settings-tab" type="button">뉴스 관리</button>
           <button id="settingsBankTab" class="settings-tab" type="button">은행 관리</button>
           <button id="settingsTreasuryTab" class="settings-tab" type="button">국고 관리</button>
           <button id="settingsUserTab" class="settings-tab" type="button">유저 관리</button>
@@ -679,6 +723,44 @@
             </div>
             <button id="addStockBtn" class="primary-btn">종목 추가하기</button>
             <div id="stockAddStatus" class="status"></div>
+          </div>
+
+          <div id="settingsNewsPanel" class="settings-panel">
+            <div class="promotion-manage-desc">뉴스 발생 확률과 호재/악재 문구를 관리할 수 있습니다.</div>
+            <div class="field">
+              <label for="newsChanceInput">뉴스 발생 확률</label>
+              <div class="settings-row">
+                <input id="newsChanceInput" type="number" inputmode="decimal" min="0" max="100" step="0.01" placeholder="예: 7" />
+                <div class="won">%</div>
+              </div>
+            </div>
+            <div class="hint">각 종목마다 적용됩니다. 예: 7%면 시세 변동 때 종목별로 7% 확률로 뉴스가 발생합니다.</div>
+            <button id="saveNewsSettingsBtn" class="primary-btn" type="button">뉴스 확률 저장하기</button>
+            <div id="newsSettingsStatus" class="status"></div>
+
+            <div class="news-manage-card">
+              <div class="news-template-header">
+                <div class="news-template-title">호재 뉴스 추가</div>
+              </div>
+              <div class="field">
+                <label for="goodNewsInput">뉴스 내용</label>
+                <input id="goodNewsInput" type="text" maxlength="80" placeholder="예: 대규모 수주 기대감이 커지고 있습니다." autocomplete="off" />
+              </div>
+              <button id="addGoodNewsBtn" class="primary-btn" type="button">호재 추가</button>
+              <div id="goodNewsList" class="news-template-list"></div>
+            </div>
+
+            <div class="news-manage-card">
+              <div class="news-template-header">
+                <div class="news-template-title">악재 뉴스 추가</div>
+              </div>
+              <div class="field">
+                <label for="badNewsInput">뉴스 내용</label>
+                <input id="badNewsInput" type="text" maxlength="80" placeholder="예: 실적 부진 우려가 커지고 있습니다." autocomplete="off" />
+              </div>
+              <button id="addBadNewsBtn" class="primary-btn" type="button">악재 추가</button>
+              <div id="badNewsList" class="news-template-list"></div>
+            </div>
           </div>
 
           <div id="settingsBankPanel" class="settings-panel">
@@ -771,6 +853,7 @@
 
     <div id="adminMenuPanel" class="menu-panel">
       <button id="openMarketBtn" class="menu-item">시세</button>
+      <button id="openNewsBtn" class="menu-item">뉴스</button>
       <button id="openBankBtn" class="menu-item">은행</button>
       <button id="openTreasuryBtn" class="menu-item">국고</button>
       <button id="openUpgradeBtn" class="menu-item">업그레이드</button>
@@ -779,6 +862,13 @@
     </div>
 
     <div id="floatingEarnPopup" class="floating-earn-popup"></div>
+    <div id="newsToastWrap" class="news-toast-wrap">
+      <div id="newsToast" class="news-toast">
+        <div id="newsToastTitle" class="news-toast-title"></div>
+        <div class="news-toast-line"></div>
+        <div id="newsToastBody" class="news-toast-body"></div>
+      </div>
+    </div>
 
 
     <div id="tradeModalOverlay" class="modal-overlay">
@@ -959,6 +1049,10 @@
     const BANK_LOG_LIMIT = 10;
     const RANKING_LIMIT = 10;
     const BANK_INTEREST_INTERVAL_MS = 10 * 60 * 1000;
+    const NEWS_LOG_LIMIT = 10;
+    const DEFAULT_NEWS_SETTINGS = { chancePerStock: 7, goodInitialMin: 0.03, goodInitialMax: 0.07, goodFollowMin: 0.005, goodFollowMax: 0.015, badInitialMin: 0.03, badInitialMax: 0.07, badFollowMin: 0.005, badFollowMax: 0.015, followCountMin: 3, followCountMax: 5 };
+    const DEFAULT_GOOD_NEWS = ["대규모 수주 기대감이 커지고 있습니다.", "신제품 흥행 기대감이 반영되고 있습니다.", "실적 개선 전망이 나오고 있습니다."];
+    const DEFAULT_BAD_NEWS = ["실적 부진 우려가 커지고 있습니다.", "품질 논란으로 투자 심리가 약화되고 있습니다.", "업황 둔화 우려가 반영되고 있습니다."];
 
     const app = initializeApp(firebaseConfig);
     const auth = getAuth(app);
@@ -976,6 +1070,7 @@
       nickname: document.getElementById("nicknameScreen"),
       game: document.getElementById("gameScreen"),
       market: document.getElementById("marketScreen"),
+      news: document.getElementById("newsScreen"),
       bank: document.getElementById("bankScreen"),
       treasury: document.getElementById("treasuryScreen"),
       upgrade: document.getElementById("upgradeScreen"),
@@ -998,6 +1093,7 @@
     const menuBtn = document.getElementById("menuBtn");
     const adminMenuPanel = document.getElementById("adminMenuPanel");
     const openMarketBtn = document.getElementById("openMarketBtn");
+    const openNewsBtn = document.getElementById("openNewsBtn");
     const openBankBtn = document.getElementById("openBankBtn");
     const openTreasuryBtn = document.getElementById("openTreasuryBtn");
     const openUpgradeBtn = document.getElementById("openUpgradeBtn");
@@ -1012,18 +1108,21 @@
     const saveSettingsBtn = document.getElementById("saveSettingsBtn");
     const backToGameBtn = document.getElementById("backToGameBtn");
     const backFromMarketBtn = document.getElementById("backFromMarketBtn");
+    const backFromNewsBtn = document.getElementById("backFromNewsBtn");
     const backFromBankBtn = document.getElementById("backFromBankBtn");
     const backFromTreasuryBtn = document.getElementById("backFromTreasuryBtn");
     const backFromUpgradeBtn = document.getElementById("backFromUpgradeBtn");
     const backFromRankingBtn = document.getElementById("backFromRankingBtn");
     const settingsDefaultTab = document.getElementById("settingsDefaultTab");
     const settingsStockTab = document.getElementById("settingsStockTab");
+    const settingsNewsTab = document.getElementById("settingsNewsTab");
     const settingsBankTab = document.getElementById("settingsBankTab");
     const settingsTreasuryTab = document.getElementById("settingsTreasuryTab");
     const settingsUserTab = document.getElementById("settingsUserTab");
     const settingsPromotionTab = document.getElementById("settingsPromotionTab");
     const settingsDefaultPanel = document.getElementById("settingsDefaultPanel");
     const settingsStockPanel = document.getElementById("settingsStockPanel");
+    const settingsNewsPanel = document.getElementById("settingsNewsPanel");
     const settingsBankPanel = document.getElementById("settingsBankPanel");
     const settingsTreasuryPanel = document.getElementById("settingsTreasuryPanel");
     const settingsUserPanel = document.getElementById("settingsUserPanel");
@@ -1041,6 +1140,20 @@
     const stockStartPriceInput = document.getElementById("stockStartPriceInput");
     const addStockBtn = document.getElementById("addStockBtn");
     const stockAddStatus = document.getElementById("stockAddStatus");
+    const newsChanceInput = document.getElementById("newsChanceInput");
+    const saveNewsSettingsBtn = document.getElementById("saveNewsSettingsBtn");
+    const newsSettingsStatus = document.getElementById("newsSettingsStatus");
+    const goodNewsInput = document.getElementById("goodNewsInput");
+    const badNewsInput = document.getElementById("badNewsInput");
+    const addGoodNewsBtn = document.getElementById("addGoodNewsBtn");
+    const addBadNewsBtn = document.getElementById("addBadNewsBtn");
+    const goodNewsList = document.getElementById("goodNewsList");
+    const badNewsList = document.getElementById("badNewsList");
+    const newsChanceDisplay = document.getElementById("newsChanceDisplay");
+    const newsLogList = document.getElementById("newsLogList");
+    const newsToast = document.getElementById("newsToast");
+    const newsToastTitle = document.getElementById("newsToastTitle");
+    const newsToastBody = document.getElementById("newsToastBody");
     const bankInterestRateInput = document.getElementById("bankInterestRateInput");
     const saveBankSettingsBtn = document.getElementById("saveBankSettingsBtn");
     const bankSettingsStatus = document.getElementById("bankSettingsStatus");
@@ -1154,11 +1267,18 @@
     let unsubscribeHoldings = null;
     let unsubscribeBankLogs = null;
     let unsubscribeBankGlobal = null;
+    let unsubscribeNewsLogs = null;
     let bankLogs = [];
     let bankGlobalData = { totalDeposits: 0 };
     let treasuryData = { totalTreasury: 0, trackedContributions: 0 };
     let treasuryContributions = [];
     let expandedTreasuryContributionId = null;
+    let newsSettings = { ...DEFAULT_NEWS_SETTINGS };
+    let newsTemplates = [];
+    let newsLogs = [];
+    let newsToastQueue = [];
+    let newsToastTimer = null;
+    let newsLogsInitialLoaded = false;
     let bankDeposits = [];
     let expandedBankDepositId = null;
     let activeUpgradePanel = "";
@@ -1186,7 +1306,7 @@
     let authFlowStarted = false;
 
     function isAdmin() { return currentUser && currentUser.email === ADMIN_EMAIL; }
-    function activeMainScreens() { return ["game", "market", "bank", "treasury", "upgrade", "ranking", "settings"]; }
+    function activeMainScreens() { return ["game", "market", "news", "bank", "treasury", "upgrade", "ranking", "settings"]; }
 
     function closeAllModals() {
       if (tradeModalOverlay) tradeModalOverlay.classList.remove("active");
@@ -1227,6 +1347,7 @@
       closeAdminMenu();
       if (activeMainScreens().includes(name)) ensureAppBackHistory();
       if (name === "market") { renderStocks(); listenStocks().catch(() => {}); startMarketCountdownTimer(); } else if (name === "game") { startMarketCountdownTimer(); } else { stopMarketCountdownTimer(); }
+      if (name === "news") { loadNewsSettings().then(() => loadNewsLogs()).catch(() => { renderNewsScreen(); }); }
       if (name === "bank") { renderGlobalBank(); ensureMyBankDepositPublic().catch(() => {}).then(() => listenBankGlobal()).then(() => loadBankDeposits()).catch(() => {}); }
       if (name === "treasury") {
         ensureTreasuryDoc().then(async () => {
@@ -1270,7 +1391,7 @@
       if (userAdminModalOverlay.classList.contains("active")) { closeUserAdminModal(); return true; }
       if (adminMenuPanel.classList.contains("active")) { closeAdminMenu(); return true; }
       if (currentScreenName === "market") { expandedStockId = null; showScreen("game"); return true; }
-      if (currentScreenName === "bank" || currentScreenName === "treasury" || currentScreenName === "upgrade" || currentScreenName === "ranking" || currentScreenName === "settings") { showScreen("game"); return true; }
+      if (currentScreenName === "news" || currentScreenName === "bank" || currentScreenName === "treasury" || currentScreenName === "upgrade" || currentScreenName === "ranking" || currentScreenName === "settings") { showScreen("game"); return true; }
       return false;
     }
 
@@ -1312,28 +1433,33 @@
       expandedAdminUserId = null;
       const isDefault = tab === "default";
       const isStock = tab === "stock";
+      const isNews = tab === "news";
       const isBank = tab === "bank";
       const isTreasury = tab === "treasury";
       const isUser = tab === "user";
       const isPromotion = tab === "promotion";
       settingsDefaultTab.classList.toggle("active", isDefault);
       settingsStockTab.classList.toggle("active", isStock);
+      settingsNewsTab.classList.toggle("active", isNews);
       settingsBankTab.classList.toggle("active", isBank);
       settingsTreasuryTab.classList.toggle("active", isTreasury);
       settingsUserTab.classList.toggle("active", isUser);
       settingsPromotionTab.classList.toggle("active", isPromotion);
       settingsDefaultPanel.classList.toggle("active", isDefault);
       settingsStockPanel.classList.toggle("active", isStock);
+      settingsNewsPanel.classList.toggle("active", isNews);
       settingsBankPanel.classList.toggle("active", isBank);
       settingsTreasuryPanel.classList.toggle("active", isTreasury);
       settingsUserPanel.classList.toggle("active", isUser);
       settingsPromotionPanel.classList.toggle("active", isPromotion);
       setStatus(settingsStatus, "");
       setStatus(stockAddStatus, "");
+      setStatus(newsSettingsStatus, "");
       setStatus(bankSettingsStatus, "");
       setStatus(treasurySettingsStatus, "");
       if (userManageStatus) userManageStatus.textContent = "";
       if (promotionManageStatus) promotionManageStatus.textContent = "";
+      if (isNews) { loadNewsSettings().then(() => loadNewsTemplates()).catch(() => renderNewsManage()); }
       if (isTreasury) { ensureTreasuryDoc().then(loadTreasury).catch(() => renderTreasury()); }
       if (isUser) loadAdminUsers().catch(() => {});
       if (isPromotion) { loadPromotions().then(renderPromotionManageList).catch(() => { if (promotionManageStatus) promotionManageStatus.textContent = "승급 설정을 불러오지 못했습니다."; }); }
@@ -1359,6 +1485,11 @@
       if (isBank && currentUser) listenBankLogs(currentUser.uid).catch(() => {});
     }
     function settingsRef() { return doc(db, "settings", "game"); }
+    function newsSettingsRef() { return doc(db, "settings", "news"); }
+    function newsTemplatesCol() { return collection(db, "newsTemplates"); }
+    function newsTemplateRef(id) { return doc(db, "newsTemplates", id); }
+    function newsLogsCol() { return collection(db, "newsLogs"); }
+    function newsLogRef(id) { return doc(db, "newsLogs", id); }
     function promotionsRef() { return doc(db, "settings", "promotions"); }
     function userRef(uid) { return doc(db, "users", uid); }
     function usersCol() { return collection(db, "users"); }
@@ -1557,6 +1688,7 @@
       sellTaxRateInput.value = currentSettings.sellTaxRate;
       dailyTaxRateInput.value = currentSettings.salaryTaxRate;
       bankInterestRateInput.value = currentSettings.bankHourlyInterestRate;
+      if (newsChanceInput) newsChanceInput.value = Number(newsSettings.chancePerStock ?? DEFAULT_NEWS_SETTINGS.chancePerStock);
     }
 
     async function ensureUserUpgradeSchema(uid, data) {
@@ -2640,6 +2772,227 @@
     }
 
 
+    function normalizeNewsSettings(data = {}) {
+      return {
+        chancePerStock: Math.min(100, Math.max(0, Number(data.chancePerStock ?? DEFAULT_NEWS_SETTINGS.chancePerStock))),
+        goodInitialMin: Number(data.goodInitialMin ?? DEFAULT_NEWS_SETTINGS.goodInitialMin),
+        goodInitialMax: Number(data.goodInitialMax ?? DEFAULT_NEWS_SETTINGS.goodInitialMax),
+        goodFollowMin: Number(data.goodFollowMin ?? DEFAULT_NEWS_SETTINGS.goodFollowMin),
+        goodFollowMax: Number(data.goodFollowMax ?? DEFAULT_NEWS_SETTINGS.goodFollowMax),
+        badInitialMin: Number(data.badInitialMin ?? DEFAULT_NEWS_SETTINGS.badInitialMin),
+        badInitialMax: Number(data.badInitialMax ?? DEFAULT_NEWS_SETTINGS.badInitialMax),
+        badFollowMin: Number(data.badFollowMin ?? DEFAULT_NEWS_SETTINGS.badFollowMin),
+        badFollowMax: Number(data.badFollowMax ?? DEFAULT_NEWS_SETTINGS.badFollowMax),
+        followCountMin: Math.max(1, Math.floor(Number(data.followCountMin ?? DEFAULT_NEWS_SETTINGS.followCountMin))),
+        followCountMax: Math.max(1, Math.floor(Number(data.followCountMax ?? DEFAULT_NEWS_SETTINGS.followCountMax)))
+      };
+    }
+
+    async function ensureNewsSettingsDocForAdmin() {
+      const snap = await getDoc(newsSettingsRef());
+      if (!snap.exists() && isAdmin()) {
+        await setDoc(newsSettingsRef(), { ...DEFAULT_NEWS_SETTINGS, updatedAt: serverTimestamp(), updatedBy: currentUser.uid });
+      }
+    }
+
+    async function loadNewsSettings() {
+      const snap = await getDoc(newsSettingsRef());
+      newsSettings = snap.exists() ? normalizeNewsSettings(snap.data()) : { ...DEFAULT_NEWS_SETTINGS };
+      if (newsChanceInput) newsChanceInput.value = newsSettings.chancePerStock;
+      if (newsChanceDisplay) newsChanceDisplay.textContent = `${newsSettings.chancePerStock}%`;
+      return newsSettings;
+    }
+
+    async function saveNewsSettings() {
+      if (!isAdmin()) return;
+      const chancePerStock = Number(newsChanceInput.value);
+      if (!Number.isFinite(chancePerStock) || chancePerStock < 0 || chancePerStock > 100) {
+        setStatus(newsSettingsStatus, "뉴스 발생 확률은 0~100 사이로 입력해주세요.", "error");
+        return;
+      }
+      saveNewsSettingsBtn.disabled = true;
+      setStatus(newsSettingsStatus, "저장 중...");
+      try {
+        const payload = { ...normalizeNewsSettings(newsSettings), chancePerStock, updatedAt: serverTimestamp(), updatedBy: currentUser.uid };
+        await setDoc(newsSettingsRef(), payload, { merge: true });
+        newsSettings = normalizeNewsSettings(payload);
+        renderNewsScreen();
+        setStatus(newsSettingsStatus, "뉴스 확률이 저장되었습니다.", "success");
+      } catch (error) {
+        setStatus(newsSettingsStatus, "뉴스 확률 저장에 실패했습니다.", "error");
+      } finally {
+        saveNewsSettingsBtn.disabled = false;
+      }
+    }
+
+    async function loadNewsTemplates() {
+      const snap = await getDocs(query(newsTemplatesCol(), orderBy("createdAt", "asc")));
+      newsTemplates = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+      renderNewsManage();
+      return newsTemplates;
+    }
+
+    function getTemplatesByType(type) {
+      const list = newsTemplates.filter(t => t.type === type && String(t.content || "").trim());
+      if (list.length) return list;
+      const fallback = (type === "good" ? DEFAULT_GOOD_NEWS : DEFAULT_BAD_NEWS).map((content, index) => ({ id: `default-${type}-${index}`, type, content }));
+      return fallback;
+    }
+
+    function renderNewsManage() {
+      if (newsChanceInput) newsChanceInput.value = Number(newsSettings.chancePerStock ?? DEFAULT_NEWS_SETTINGS.chancePerStock);
+      const renderList = (el, type) => {
+        if (!el) return;
+        const list = newsTemplates.filter(t => t.type === type);
+        if (!list.length) {
+          el.innerHTML = `<div class="news-empty">등록된 ${type === "good" ? "호재" : "악재"} 뉴스가 없습니다.</div>`;
+          return;
+        }
+        el.innerHTML = list.map(item => `
+          <div class="news-template-item" data-id="${item.id}" data-type="${item.type}">
+            <div class="news-content">${escapeHtml(item.content || "")}</div>
+            <div class="news-template-actions">
+              <button class="primary-btn edit-news-template-btn" type="button">수정</button>
+              <button class="cancel-btn delete-news-template-btn" type="button">삭제</button>
+            </div>
+          </div>
+        `).join("");
+        el.querySelectorAll(".edit-news-template-btn").forEach(btn => btn.addEventListener("click", () => editNewsTemplate(btn.closest(".news-template-item")?.dataset.id)));
+        el.querySelectorAll(".delete-news-template-btn").forEach(btn => btn.addEventListener("click", () => deleteNewsTemplate(btn.closest(".news-template-item")?.dataset.id)));
+      };
+      renderList(goodNewsList, "good");
+      renderList(badNewsList, "bad");
+    }
+
+    async function addNewsTemplate(type) {
+      if (!isAdmin()) return;
+      const input = type === "good" ? goodNewsInput : badNewsInput;
+      const content = String(input.value || "").trim();
+      if (!content) { setStatus(newsSettingsStatus, "뉴스 내용을 입력해주세요.", "error"); return; }
+      const ref = doc(newsTemplatesCol());
+      try {
+        await setDoc(ref, { type, content, createdAt: serverTimestamp(), updatedAt: serverTimestamp(), createdBy: currentUser.uid });
+        input.value = "";
+        await loadNewsTemplates();
+        setStatus(newsSettingsStatus, `${type === "good" ? "호재" : "악재"} 뉴스가 추가되었습니다.`, "success");
+      } catch (error) {
+        setStatus(newsSettingsStatus, "뉴스 추가에 실패했습니다.", "error");
+      }
+    }
+
+    async function editNewsTemplate(id) {
+      if (!isAdmin() || !id) return;
+      const item = newsTemplates.find(t => t.id === id);
+      if (!item) return;
+      const content = window.prompt("뉴스 내용을 수정해주세요.", item.content || "");
+      if (content == null) return;
+      const next = content.trim();
+      if (!next) { setStatus(newsSettingsStatus, "뉴스 내용은 비울 수 없습니다.", "error"); return; }
+      try {
+        await updateDoc(newsTemplateRef(id), { content: next, updatedAt: serverTimestamp() });
+        await loadNewsTemplates();
+        setStatus(newsSettingsStatus, "뉴스가 수정되었습니다.", "success");
+      } catch (error) {
+        setStatus(newsSettingsStatus, "뉴스 수정에 실패했습니다.", "error");
+      }
+    }
+
+    async function deleteNewsTemplate(id) {
+      if (!isAdmin() || !id) return;
+      if (!window.confirm("이 뉴스를 삭제하시겠습니까?")) return;
+      try {
+        await deleteDoc(newsTemplateRef(id));
+        await loadNewsTemplates();
+        setStatus(newsSettingsStatus, "뉴스가 삭제되었습니다.", "success");
+      } catch (error) {
+        setStatus(newsSettingsStatus, "뉴스 삭제에 실패했습니다.", "error");
+      }
+    }
+
+    async function loadNewsLogs() {
+      const snap = await getDocs(query(newsLogsCol(), orderBy("createdAt", "desc"), limit(NEWS_LOG_LIMIT)));
+      newsLogs = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+      renderNewsScreen();
+      return newsLogs;
+    }
+
+    function renderNewsScreen() {
+      if (newsChanceDisplay) newsChanceDisplay.textContent = `${Number(newsSettings.chancePerStock ?? DEFAULT_NEWS_SETTINGS.chancePerStock)}%`;
+      if (!newsLogList) return;
+      if (!newsLogs.length) {
+        newsLogList.innerHTML = `<div class="news-empty">최근 뉴스가 없습니다.</div>`;
+        return;
+      }
+      newsLogList.innerHTML = newsLogs.slice(0, NEWS_LOG_LIMIT).map(item => `
+        <div class="news-item">
+          <div class="news-stock-name">${escapeHtml(item.stockName || item.stockId || "종목")}</div>
+          <div class="news-divider"></div>
+          <div class="news-content">${escapeHtml(item.content || "")}</div>
+        </div>
+      `).join("");
+    }
+
+    function enqueueNewsToast(item) {
+      if (!item || !item.content) return;
+      newsToastQueue.push(item);
+      if (!newsToastTimer) showNextNewsToast();
+    }
+
+    function showNextNewsToast() {
+      const item = newsToastQueue.shift();
+      if (!item) {
+        newsToastTimer = null;
+        if (newsToast) newsToast.classList.remove("show");
+        return;
+      }
+      if (newsToastTitle) newsToastTitle.textContent = item.stockName || "종목";
+      if (newsToastBody) newsToastBody.textContent = item.content || "";
+      if (newsToast) newsToast.classList.add("show");
+      newsToastTimer = setTimeout(() => {
+        if (newsToast) newsToast.classList.remove("show");
+        newsToastTimer = setTimeout(showNextNewsToast, 350);
+      }, 3200);
+    }
+
+    function subscribeNewsLogs() {
+      if (unsubscribeNewsLogs) { unsubscribeNewsLogs(); unsubscribeNewsLogs = null; }
+      newsLogsInitialLoaded = false;
+      unsubscribeNewsLogs = onSnapshot(query(newsLogsCol(), orderBy("createdAt", "desc"), limit(NEWS_LOG_LIMIT)), (snap) => {
+        const changes = snap.docChanges();
+        newsLogs = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+        renderNewsScreen();
+        if (!newsLogsInitialLoaded) { newsLogsInitialLoaded = true; return; }
+        changes.filter(c => c.type === "added").reverse().forEach(c => enqueueNewsToast({ id: c.doc.id, ...c.doc.data() }));
+      }, (error) => console.warn("뉴스 수신 실패:", error));
+    }
+
+    async function cleanupOldNewsLogs() {
+      const snap = await getDocs(query(newsLogsCol(), orderBy("createdAt", "desc"), limit(NEWS_LOG_LIMIT + 10)));
+      if (snap.docs.length <= NEWS_LOG_LIMIT) return;
+      const batch = writeBatch(db);
+      snap.docs.slice(NEWS_LOG_LIMIT).forEach(d => batch.delete(d.ref));
+      await batch.commit();
+    }
+
+    function randomBetween(min, max) {
+      const a = Number(min); const b = Number(max);
+      const lo = Math.min(a, b); const hi = Math.max(a, b);
+      return lo + Math.random() * (hi - lo);
+    }
+
+    function randomIntBetween(min, max) {
+      const lo = Math.min(Math.floor(Number(min)), Math.floor(Number(max)));
+      const hi = Math.max(Math.floor(Number(min)), Math.floor(Number(max)));
+      return lo + Math.floor(Math.random() * (hi - lo + 1));
+    }
+
+    async function createNewsLog(stockId, stockName, type, content) {
+      const ref = doc(newsLogsCol());
+      await setDoc(ref, { stockId, stockName, type, content, createdAt: serverTimestamp() });
+      cleanupOldNewsLogs().catch(() => {});
+    }
+
+
     async function saveBankSettings() {
       if (!isAdmin()) return;
       const bankHourlyInterestRate = Number(bankInterestRateInput.value);
@@ -2804,6 +3157,7 @@
     async function listenBankGlobal() {
       // 읽기 최적화: 은행 총 예치금은 은행 화면/입출금/이자 후에만 1회 읽습니다.
       if (unsubscribeBankGlobal) { unsubscribeBankGlobal(); unsubscribeBankGlobal = null; }
+      if (unsubscribeNewsLogs) { unsubscribeNewsLogs(); unsubscribeNewsLogs = null; }
       const snap = await getDoc(bankGlobalRef());
       bankGlobalData = snap.exists() ? snap.data() : { totalDeposits: 0 };
       renderGlobalBank();
@@ -3988,6 +4342,8 @@
       marketUpdating = true;
       const key = minuteKey();
       try {
+        await loadNewsSettings().catch(() => {});
+        if (!newsTemplates.length) await loadNewsTemplates().catch(() => {});
         for (const stock of stocks) {
           await runTransaction(db, async (transaction) => {
             const ref = stockRef(stock.id);
@@ -3996,14 +4352,49 @@
             const data = snap.data();
             if (data.lastMinuteKey === key) return;
             const current = Math.max(1, Number(data.currentPrice || data.startPrice || 1));
-            const randomRate = (Math.random() * PRICE_MOVE_RATE * 2) - PRICE_MOVE_RATE;
-            const next = Math.max(1, Math.round(current * (1 + randomRate)));
-            transaction.update(ref, {
+            let moveRate = (Math.random() * PRICE_MOVE_RATE * 2) - PRICE_MOVE_RATE;
+            let remaining = Math.max(0, Math.floor(Number(data.newsEffectRemaining || 0)));
+            let nextDirection = data.newsEffectDirection || null;
+            let nextRemaining = remaining;
+            let effectMin = Number(data.newsEffectMin || 0);
+            let effectMax = Number(data.newsEffectMax || 0);
+
+            if (remaining > 0 && (nextDirection === "good" || nextDirection === "bad")) {
+              const followRate = randomBetween(effectMin || DEFAULT_NEWS_SETTINGS.goodFollowMin, effectMax || DEFAULT_NEWS_SETTINGS.goodFollowMax);
+              moveRate += nextDirection === "good" ? followRate : -followRate;
+              nextRemaining = Math.max(0, remaining - 1);
+            }
+
+            let generatedNews = null;
+            const chance = Number(newsSettings.chancePerStock ?? DEFAULT_NEWS_SETTINGS.chancePerStock);
+            if (chance > 0 && Math.random() * 100 < chance) {
+              const type = Math.random() < 0.5 ? "good" : "bad";
+              const templates = getTemplatesByType(type);
+              const picked = templates[Math.floor(Math.random() * templates.length)];
+              const initialRate = type === "good"
+                ? randomBetween(newsSettings.goodInitialMin, newsSettings.goodInitialMax)
+                : randomBetween(newsSettings.badInitialMin, newsSettings.badInitialMax);
+              moveRate += type === "good" ? initialRate : -initialRate;
+              nextDirection = type;
+              nextRemaining = randomIntBetween(newsSettings.followCountMin, newsSettings.followCountMax);
+              effectMin = type === "good" ? newsSettings.goodFollowMin : newsSettings.badFollowMin;
+              effectMax = type === "good" ? newsSettings.goodFollowMax : newsSettings.badFollowMax;
+              generatedNews = { stockId: stock.id, stockName: data.name || stock.name || stock.id, type, content: picked.content };
+            }
+
+            moveRate = Math.max(-0.1, Math.min(0.1, moveRate));
+            const next = Math.max(1, Math.round(current * (1 + moveRate)));
+            const updateData = {
               previousPrice: current,
               currentPrice: next,
               lastMinuteKey: key,
+              newsEffectDirection: nextRemaining > 0 ? nextDirection : null,
+              newsEffectRemaining: nextRemaining,
+              newsEffectMin: nextRemaining > 0 ? effectMin : 0,
+              newsEffectMax: nextRemaining > 0 ? effectMax : 0,
               updatedAt: serverTimestamp()
-            });
+            };
+            transaction.update(ref, updateData);
             const bodyHigh = Math.max(current, next);
             const bodyLow = Math.min(current, next);
             const maxWick = Math.max(1, Math.round(current * 0.008));
@@ -4020,6 +4411,15 @@
               minuteKey: key,
               createdAt: serverTimestamp()
             });
+            if (generatedNews) {
+              transaction.set(newsLogRef(`${key}_${stock.id}`), {
+                stockId: generatedNews.stockId,
+                stockName: generatedNews.stockName,
+                type: generatedNews.type,
+                content: generatedNews.content,
+                createdAt: serverTimestamp()
+              });
+            }
           }).catch((error) => {
             console.warn(`시세 변동 실패: ${stock.name || stock.id}`, error);
           });
@@ -4027,7 +4427,9 @@
           const cleanupNow = new Date().getMinutes() === 0 && new Date().getHours() % 6 === 0;
           if (cleanupNow) cleanupOldPrices(stock.id).catch((error) => console.warn("가격 기록 정리 실패:", error));
         }
+        await cleanupOldNewsLogs().catch(() => {});
         await listenStocks().catch((error) => console.warn("시세 갱신 후 종목 재수신 실패:", error));
+        if (currentScreenName === "news") await loadNewsLogs().catch(() => {});
       } finally {
         marketUpdating = false;
       }
@@ -4126,6 +4528,7 @@
     adminMenuPanel.addEventListener("click", (event) => event.stopPropagation());
     document.addEventListener("click", () => closeAdminMenu());
     openMarketBtn.addEventListener("click", () => { closeAdminMenu(); showScreen("market"); });
+    openNewsBtn.addEventListener("click", () => { closeAdminMenu(); showScreen("news"); });
     openBankBtn.addEventListener("click", () => { closeAdminMenu(); showScreen("bank"); });
     openTreasuryBtn.addEventListener("click", () => { closeAdminMenu(); showScreen("treasury"); });
     openUpgradeBtn.addEventListener("click", () => {
@@ -4137,11 +4540,15 @@
     openSettingsBtn.addEventListener("click", () => { closeAdminMenu(); fillSettingsInputs(); setSettingsTab("default"); showScreen("settings"); });
     settingsDefaultTab.addEventListener("click", () => setSettingsTab("default"));
     settingsStockTab.addEventListener("click", () => setSettingsTab("stock"));
+    settingsNewsTab.addEventListener("click", () => setSettingsTab("news"));
     settingsBankTab.addEventListener("click", () => setSettingsTab("bank"));
     settingsTreasuryTab.addEventListener("click", () => setSettingsTab("treasury"));
     settingsUserTab.addEventListener("click", () => setSettingsTab("user"));
     settingsPromotionTab.addEventListener("click", () => setSettingsTab("promotion"));
     saveSettingsBtn.addEventListener("click", saveSettings);
+    saveNewsSettingsBtn.addEventListener("click", saveNewsSettings);
+    addGoodNewsBtn.addEventListener("click", () => addNewsTemplate("good"));
+    addBadNewsBtn.addEventListener("click", () => addNewsTemplate("bad"));
     saveBankSettingsBtn.addEventListener("click", saveBankSettings);
     saveTreasurySettingsBtn.addEventListener("click", saveTreasurySettings);
     resetTreasuryBtn.addEventListener("click", resetTreasuryFromSettings);
@@ -4149,6 +4556,7 @@
     addStockBtn.addEventListener("click", addStock);
     backToGameBtn.addEventListener("click", () => showScreen("game"));
     backFromMarketBtn.addEventListener("click", () => showScreen("game"));
+    backFromNewsBtn.addEventListener("click", () => showScreen("game"));
     backFromBankBtn.addEventListener("click", () => showScreen("game"));
     backFromTreasuryBtn.addEventListener("click", () => showScreen("game"));
     backFromUpgradeBtn.addEventListener("click", () => showScreen("game"));
@@ -4205,6 +4613,7 @@
       if (unsubscribeHoldings) { unsubscribeHoldings(); unsubscribeHoldings = null; }
       if (unsubscribeBankLogs) { unsubscribeBankLogs(); unsubscribeBankLogs = null; }
       if (unsubscribeBankGlobal) { unsubscribeBankGlobal(); unsubscribeBankGlobal = null; }
+      if (unsubscribeNewsLogs) { unsubscribeNewsLogs(); unsubscribeNewsLogs = null; }
       for (const unsub of priceUnsubs.values()) {
         try { unsub(); } catch (error) {}
       }
@@ -4216,6 +4625,10 @@
       bankLogs = [];
       bankGlobalData = { totalDeposits: 0 };
       bankDeposits = [];
+      newsLogs = [];
+      newsTemplates = [];
+      newsToastQueue = [];
+      if (newsToastTimer) { clearTimeout(newsToastTimer); newsToastTimer = null; }
       expandedBankDepositId = null;
       rankings = [];
       expandedRankingId = null;
@@ -4229,7 +4642,11 @@
       try {
         await ensureSettingsDocForAdmin();
         await ensurePromotionsDocForAdmin();
+        await ensureNewsSettingsDocForAdmin();
         await listenSettings();
+        await loadNewsSettings().catch(() => {});
+        await loadNewsTemplates().catch(() => {});
+        subscribeNewsLogs();
         await loadPromotions().catch(() => {});
         await listenStocks();
         const snap = await getDoc(userRef(user.uid));
