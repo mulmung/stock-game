@@ -3366,7 +3366,7 @@
             <div class="stock-edit-form">
               <div class="field">
                 <label>종목명</label>
-                <input class="stock-edit-name" type="text" maxlength="18" value="${escapeAttr(stock.name || "")}" autocomplete="off" />
+                <input class="stock-edit-name" type="text" maxlength="18" value="${escapeHtml(stock.name || "")}" autocomplete="off" />
               </div>
               <div class="field">
                 <label>시작가</label>
@@ -3408,7 +3408,13 @@
           `;
           const editBtn = card.querySelector(".stock-edit-btn");
           const toggleBtn = card.querySelector(".stock-toggle-btn");
-          editBtn.addEventListener("click", () => { editingStockId = stock.id; renderStockManage(); });
+          editBtn.addEventListener("click", () => {
+            editingStockId = stock.id;
+            renderStockManage();
+            setTimeout(() => {
+              stockManageList?.querySelector(".stock-edit-form")?.scrollIntoView({ behavior: "smooth", block: "center" });
+            }, 50);
+          });
           toggleBtn.addEventListener("click", () => toggleStockActive(stock));
         }
         stockManageList.appendChild(card);
