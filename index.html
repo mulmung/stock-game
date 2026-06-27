@@ -427,6 +427,23 @@
     .news-toast-content { color: #e5e7eb; font-size: 14px; line-height: 1.55; font-weight: 800; white-space: pre-wrap; }
     .news-toast-body { color: #e5e7eb; font-size: 14px; line-height: 1.55; font-weight: 800; }
 
+
+    .lottery-tabs { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin: 18px 0; }
+    .lottery-tab { height: 52px; border: 1px solid var(--line-strong); background: rgba(255,255,255,0.05); color: var(--muted); font-weight: 1000; font-size: 15px; }
+    .lottery-tab.active { background: #fff; color: #111827; }
+    .lottery-panel { margin-top: 14px; }
+    .lottery-card { border-top: 1px solid var(--line-strong); border-bottom: 1px solid var(--line-strong); padding: 18px 0; margin: 16px 0; }
+    .lottery-title { font-size: 18px; font-weight: 1000; color: #fff; margin-bottom: 10px; }
+    .lottery-meta { color: var(--muted); font-size: 13px; font-weight: 850; line-height: 1.7; margin: 8px 0; }
+    .lottery-number-inputs { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin: 14px 0; }
+    .lottery-number-inputs input { width: 100%; height: 58px; text-align: center; font-size: 24px; font-weight: 1000; }
+    .lottery-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 12px; }
+    .lottery-actions button:disabled, .lottery-tab:disabled { opacity: 0.45; }
+    .lottery-numbers { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; margin: 8px 0; }
+    .lottery-ball { width: 38px; height: 38px; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; background: rgba(37,99,235,0.2); border: 1px solid rgba(96,165,250,0.45); color: #fff; font-weight: 1000; }
+    .lottery-status { min-height: 22px; color: var(--muted); font-size: 13px; font-weight: 900; text-align: center; margin-top: 12px; }
+    .lottery-status.error { color: #f87171; }
+    .lottery-status.success { color: #22c55e; }
   </style>
 </head>
 <body>
@@ -624,24 +641,14 @@
           <h1 class="title">복권</h1>
           <button id="backFromLotteryBtn" class="settings-back-btn">뒤로가기</button>
         </div>
-        <p class="subtitle">복권 구매와 회차별 당첨 결과를 확인할 수 있습니다.</p>
-        <div class="lottery-preview-card">
-          <div class="lottery-preview-title">복권 시스템 준비 중</div>
-          <div class="lottery-preview-row">
-            <div class="lottery-preview-label">이번 단계</div>
-            <div class="lottery-preview-value">v61-1 시간 저장 오류 수정</div>
-          </div>
-          <div class="lottery-preview-row">
-            <div class="lottery-preview-label">구매/수정</div>
-            <div class="lottery-preview-value">v62 적용 예정</div>
-          </div>
-          <div class="lottery-preview-row">
-            <div class="lottery-preview-label">발표/수령</div>
-            <div class="lottery-preview-value">v63~v64 적용 예정</div>
-          </div>
-          <div class="treasury-desc">이번 v61에서는 복권 메뉴와 복권 관리 설정 저장까지만 적용했습니다. 구매, 발표, 수령 기능은 다음 단계에서 순서대로 붙이면 됩니다.</div>
+        <p class="subtitle">복권을 구매하고 회차별 당첨 결과를 확인할 수 있습니다.</p>
+        <div class="lottery-tabs">
+          <button id="lotteryRoundsTab" class="lottery-tab active" type="button">회차별 당첨자</button>
+          <button id="lotteryBuyTab" class="lottery-tab" type="button">복권 구매</button>
         </div>
-        <div id="lotteryPreviewInfo" class="lottery-preview-card"></div>
+        <div id="lotteryRoundsPanel" class="lottery-panel"></div>
+        <div id="lotteryBuyPanel" class="lottery-panel" style="display:none;"></div>
+        <div id="lotteryStatus" class="lottery-status"></div>
       </div>
     </section>
 
@@ -1332,6 +1339,11 @@
     const resetTreasuryBtn = document.getElementById("resetTreasuryBtn");
     const treasurySettingsStatus = document.getElementById("treasurySettingsStatus");
     const lotteryPreviewInfo = document.getElementById("lotteryPreviewInfo");
+    const lotteryRoundsTab = document.getElementById("lotteryRoundsTab");
+    const lotteryBuyTab = document.getElementById("lotteryBuyTab");
+    const lotteryRoundsPanel = document.getElementById("lotteryRoundsPanel");
+    const lotteryBuyPanel = document.getElementById("lotteryBuyPanel");
+    const lotteryStatus = document.getElementById("lotteryStatus");
     const lotteryDailyModeBtn = document.getElementById("lotteryDailyModeBtn");
     const lotteryWeeklyModeBtn = document.getElementById("lotteryWeeklyModeBtn");
     const lotteryDrawDayInput = document.getElementById("lotteryDrawDayInput");
@@ -1438,6 +1450,10 @@
     let currentUserData = null;
     let currentSettings = { ...DEFAULT_SETTINGS };
     let lotterySettings = { ...DEFAULT_LOTTERY_SETTINGS, rankRates: { ...DEFAULT_LOTTERY_SETTINGS.rankRates } };
+    let lotteryActiveTab = "rounds";
+    let currentLotteryRound = null;
+    let myLotteryTicket = null;
+    let lotteryRounds = [];
     let currentScreenName = "loading";
     let unsubscribeUser = null;
     let unsubscribeSettings = null;
@@ -1544,7 +1560,7 @@
           await loadTreasuryContributions();
         }).catch(() => { renderTreasury(); renderTreasuryContributions(); });
       }
-      if (name === "lottery") { loadLotterySettings().then(renderLotteryPreview).catch(() => renderLotteryPreview()); }
+      if (name === "lottery") { loadLottery().catch((error) => { console.error(error); renderLottery(); }); }
       if (name === "upgrade") { loadPromotions().then(renderUpgrade).catch(() => renderUpgrade()); }
       if (name === "ranking") { loadPromotions().then(() => { renderRankings(); loadRankings().catch(() => {}); }).catch(() => { renderRankings(); loadRankings().catch(() => {}); }); }
       if (name === "game") {
@@ -1684,6 +1700,10 @@
     function settingsRef() { return doc(db, "settings", "game"); }
     function newsSettingsRef() { return doc(db, "settings", "news"); }
     function lotterySettingsRef() { return doc(db, "settings", "lottery"); }
+    function lotteryRoundsCol() { return collection(db, "lotteryRounds"); }
+    function lotteryRoundRef(id) { return doc(db, "lotteryRounds", id); }
+    function lotteryTicketsCol(roundId) { return collection(db, "lotteryRounds", roundId, "tickets"); }
+    function lotteryTicketRef(roundId, uid) { return doc(db, "lotteryRounds", roundId, "tickets", uid); }
     function newsTemplatesCol() { return collection(db, "newsTemplates"); }
     function newsTemplateRef(id) { return doc(db, "newsTemplates", id); }
     function newsLogsCol() { return collection(db, "newsLogs"); }
@@ -3348,6 +3368,324 @@
       } finally {
         saveLotterySettingsBtn.disabled = false;
       }
+    }
+
+
+    function addDaysToKey(key, days) {
+      const [y, m, d] = String(key).split("-").map(Number);
+      const dt = new Date(Date.UTC(y, m - 1, d + days));
+      return `${dt.getUTCFullYear()}-${String(dt.getUTCMonth() + 1).padStart(2, "0")}-${String(dt.getUTCDate()).padStart(2, "0")}`;
+    }
+
+    function getKoreaWeekday(date = new Date()) {
+      const key = koreaTodayKey(date);
+      const [y, m, d] = key.split("-").map(Number);
+      return new Date(Date.UTC(y, m - 1, d)).getUTCDay();
+    }
+
+    function koreaNowMinutes(now = new Date()) {
+      const p = getKoreaDateParts(now);
+      return Number(p.hour || 0) * 60 + Number(p.minute || 0);
+    }
+
+    function getLotteryDrawDateKey(settings = lotterySettings, now = new Date()) {
+      const today = koreaTodayKey(now);
+      if ((settings.mode || "daily") === "daily") return today;
+      const todayDay = getKoreaWeekday(now);
+      const targetDay = Math.max(0, Math.min(6, Number(settings.drawDay ?? 6)));
+      let diff = targetDay - todayDay;
+      if (diff < 0) diff += 7;
+      return addDaysToKey(today, diff);
+    }
+
+    function currentLotteryRoundId(settings = lotterySettings) {
+      const drawDate = getLotteryDrawDateKey(settings);
+      return `${settings.mode || "daily"}-${drawDate}`;
+    }
+
+    function isLotteryClosePassed(round = currentLotteryRound, settings = lotterySettings, now = new Date()) {
+      if (!round) return false;
+      const today = koreaTodayKey(now);
+      const drawDate = round.drawDate || round.roundKey || getLotteryDrawDateKey(settings, now);
+      if (today > drawDate) return true;
+      if (today < drawDate) return false;
+      return koreaNowMinutes(now) >= lotteryTimeToMinutes(round.closeTime || settings.closeTime);
+    }
+
+    function isLotteryDrawPassed(round = currentLotteryRound, settings = lotterySettings, now = new Date()) {
+      if (!round) return false;
+      const today = koreaTodayKey(now);
+      const drawDate = round.drawDate || round.roundKey || getLotteryDrawDateKey(settings, now);
+      if (today > drawDate) return true;
+      if (today < drawDate) return false;
+      return koreaNowMinutes(now) >= lotteryTimeToMinutes(round.drawTime || settings.drawTime);
+    }
+
+    function validateLotteryNumbers(numbers) {
+      if (!Array.isArray(numbers) || numbers.length !== 3) return false;
+      if (!numbers.every(n => Number.isInteger(n) && n >= 1 && n <= 15)) return false;
+      return new Set(numbers).size === 3;
+    }
+
+    function randomLotteryNumbers(count, exclude = []) {
+      const excluded = new Set(exclude.filter(n => Number.isInteger(n) && n >= 1 && n <= 15));
+      const pool = [];
+      for (let n = 1; n <= 15; n += 1) if (!excluded.has(n)) pool.push(n);
+      for (let i = pool.length - 1; i > 0; i -= 1) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [pool[i], pool[j]] = [pool[j], pool[i]];
+      }
+      return pool.slice(0, count);
+    }
+
+    async function ensureCurrentLotteryRound() {
+      await loadLotterySettings();
+      const id = currentLotteryRoundId(lotterySettings);
+      const ref = lotteryRoundRef(id);
+      let snap = await getDoc(ref);
+      if (!snap.exists()) {
+        let roundNo = 1;
+        try {
+          const latest = await getDocs(query(lotteryRoundsCol(), orderBy("roundNo", "desc"), limit(1)));
+          if (!latest.empty) roundNo = Number(latest.docs[0].data().roundNo || 0) + 1;
+        } catch (error) {}
+        const drawDate = getLotteryDrawDateKey(lotterySettings);
+        await setDoc(ref, {
+          roundNo,
+          roundKey: drawDate,
+          mode: lotterySettings.mode,
+          status: "open",
+          drawDate,
+          drawTime: lotterySettings.drawTime,
+          closeTime: lotterySettings.closeTime,
+          claimDeadline: `${addDaysToKey(drawDate, 1)}T00:00:00+09:00`,
+          numberMin: 1,
+          numberMax: 15,
+          pickCount: 3,
+          winningNumbers: [],
+          bonusNumber: null,
+          treasuryAtDraw: 0,
+          payoutPool: 0,
+          firstPrizeWinners: [],
+          rankSummary: {
+            rank1: { total: 0, count: 0, perUser: 0 },
+            rank2: { total: 0, count: 0, perUser: 0 },
+            rank3: { total: 0, count: 0, perUser: 0 },
+            rank4: { total: 0, count: 0, perUser: 0 },
+            rank5: { total: 0, count: 0, perUser: 0 }
+          },
+          claimedTotal: 0,
+          claimedCount: 0,
+          createdAt: serverTimestamp(),
+          drawnAt: null
+        });
+        snap = await getDoc(ref);
+      }
+      currentLotteryRound = { id: snap.id, ...snap.data() };
+      return currentLotteryRound;
+    }
+
+    async function loadMyLotteryTicket() {
+      if (!currentUser || !currentLotteryRound) { myLotteryTicket = null; return; }
+      const snap = await getDoc(lotteryTicketRef(currentLotteryRound.id, currentUser.uid));
+      myLotteryTicket = snap.exists() ? { id: snap.id, ...snap.data() } : null;
+    }
+
+    async function loadLotteryRounds() {
+      const maxHistory = Number(lotterySettings.maxRoundHistory || 20);
+      const snap = await getDocs(query(lotteryRoundsCol(), orderBy("roundNo", "desc"), limit(maxHistory)));
+      lotteryRounds = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+    }
+
+    async function loadLottery() {
+      if (!currentUser) return;
+      await ensureTreasuryDoc().catch(() => {});
+      await ensureCurrentLotteryRound();
+      await loadMyLotteryTicket();
+      await loadLotteryRounds();
+      renderLottery();
+    }
+
+    function setLotteryTab(tab) {
+      lotteryActiveTab = tab === "buy" ? "buy" : "rounds";
+      renderLottery();
+    }
+
+    function lotteryNumbersHtml(nums = []) {
+      return `<div class="lottery-numbers">${(nums || []).map(n => `<span class="lottery-ball">${escapeHtml(String(n))}</span>`).join("")}</div>`;
+    }
+
+    function renderLottery() {
+      if (!lotteryRoundsPanel || !lotteryBuyPanel) return;
+      lotteryRoundsTab.classList.toggle("active", lotteryActiveTab === "rounds");
+      lotteryBuyTab.classList.toggle("active", lotteryActiveTab === "buy");
+      lotteryRoundsPanel.style.display = lotteryActiveTab === "rounds" ? "block" : "none";
+      lotteryBuyPanel.style.display = lotteryActiveTab === "buy" ? "block" : "none";
+      renderLotteryRounds();
+      renderLotteryBuy();
+    }
+
+    function renderLotteryRounds() {
+      if (!lotteryRoundsPanel) return;
+      if (!lotteryRounds.length) {
+        lotteryRoundsPanel.innerHTML = `<div class="bank-deposit-empty">아직 복권 회차 기록이 없습니다.</div>`;
+        return;
+      }
+      lotteryRoundsPanel.innerHTML = lotteryRounds.map(round => {
+        const winNums = Array.isArray(round.winningNumbers) && round.winningNumbers.length ? round.winningNumbers.join(", ") : "발표 전";
+        const bonus = round.bonusNumber == null ? "-" : round.bonusNumber;
+        const firstCount = Array.isArray(round.firstPrizeWinners) ? round.firstPrizeWinners.length : 0;
+        return `<div class="lottery-card">
+          <div class="lottery-title">${Number(round.roundNo || 0)}차 ${escapeHtml(round.drawDate || round.roundKey || "-")}</div>
+          <div class="lottery-meta">1등 당첨자 ${firstCount ? firstCount + "명" : "없음"}<br>당첨 번호 ${escapeHtml(winNums)} + 보너스 ${escapeHtml(String(bonus))}</div>
+          <div class="treasury-desc">상세보기는 v65에서 아코디언 방식으로 적용 예정입니다.</div>
+        </div>`;
+      }).join("");
+    }
+
+    function renderLotteryBuy() {
+      if (!lotteryBuyPanel) return;
+      const settings = normalizeLotterySettings(lotterySettings);
+      const round = currentLotteryRound;
+      if (!round) { lotteryBuyPanel.innerHTML = `<div class="bank-deposit-empty">회차 정보를 불러오는 중입니다.</div>`; return; }
+      const closed = isLotteryClosePassed(round, settings);
+      const drawn = round.status === "drawn" || isLotteryDrawPassed(round, settings);
+      const hasTicket = !!myLotteryTicket;
+      let body = `<div class="lottery-card"><div class="lottery-title">이번 회차</div><div class="lottery-meta">${Number(round.roundNo || 0)}차 ${escapeHtml(round.drawDate || "-")}<br>발표 ${escapeHtml(round.drawTime || settings.drawTime)} / 구매 마감 ${escapeHtml(round.closeTime || settings.closeTime)}<br>구매 비용 ${formatWon(settings.ticketPrice)} / 수정 비용 ${formatWon(settings.editPrice)}</div></div>`;
+      if (hasTicket) {
+        body += `<div class="lottery-card"><div class="lottery-title">내 복권</div>${lotteryNumbersHtml(myLotteryTicket.numbers || [])}`;
+        if (!drawn) {
+          body += `<div class="lottery-meta">상태: 발표 대기${closed ? " / 수정 마감" : " / 마감 전까지 수정 가능"}</div>
+            <div class="lottery-number-inputs"><input id="lotteryNum0" type="number" min="1" max="15" value="${myLotteryTicket.numbers?.[0] || ""}"><input id="lotteryNum1" type="number" min="1" max="15" value="${myLotteryTicket.numbers?.[1] || ""}"><input id="lotteryNum2" type="number" min="1" max="15" value="${myLotteryTicket.numbers?.[2] || ""}"></div>
+            <div class="lottery-actions"><button id="lotteryAutoBtn" class="primary-btn" type="button">자동</button><button id="lotteryEditBtn" class="primary-btn" type="button" ${closed ? "disabled" : ""}>수정하기</button></div>`;
+        } else {
+          body += `<div class="lottery-meta">이번 회차는 발표 시간이 지났습니다. 발표/당첨 처리는 v63에서 적용됩니다.</div>`;
+        }
+        body += `</div>`;
+      } else if (!drawn && !closed) {
+        body += `<div class="lottery-card"><div class="lottery-title">복권 구매</div><div class="lottery-meta">1~15 중 서로 다른 숫자 3개를 입력해주세요.</div>
+          <div class="lottery-number-inputs"><input id="lotteryNum0" type="number" min="1" max="15" placeholder="1~15"><input id="lotteryNum1" type="number" min="1" max="15" placeholder="1~15"><input id="lotteryNum2" type="number" min="1" max="15" placeholder="1~15"></div>
+          <div class="lottery-actions"><button id="lotteryAutoBtn" class="primary-btn" type="button">자동</button><button id="lotteryBuyBtn" class="primary-btn" type="button">구매하기</button></div></div>`;
+      } else {
+        body += `<div class="lottery-card"><div class="lottery-title">복권 구매</div><div class="lottery-meta">${drawn ? "이번 회차는 발표 시간이 지났습니다." : "구매 마감 시간이 지났습니다."}</div></div>`;
+      }
+      lotteryBuyPanel.innerHTML = body;
+      attachLotteryBuyEvents();
+    }
+
+    function getLotteryInputNumbers() {
+      return ["lotteryNum0", "lotteryNum1", "lotteryNum2"].map(id => Math.floor(Number(document.getElementById(id)?.value || 0)));
+    }
+
+    function attachLotteryBuyEvents() {
+      ["lotteryNum0", "lotteryNum1", "lotteryNum2"].forEach(id => {
+        const el = document.getElementById(id);
+        if (el) el.addEventListener("input", updateLotteryButtons);
+      });
+      const autoBtn = document.getElementById("lotteryAutoBtn");
+      if (autoBtn) autoBtn.addEventListener("click", autoFillLotteryNumbers);
+      const buyBtn = document.getElementById("lotteryBuyBtn");
+      if (buyBtn) buyBtn.addEventListener("click", buyLotteryTicket);
+      const editBtn = document.getElementById("lotteryEditBtn");
+      if (editBtn) editBtn.addEventListener("click", editLotteryTicket);
+      updateLotteryButtons();
+    }
+
+    function updateLotteryButtons() {
+      const inputs = ["lotteryNum0", "lotteryNum1", "lotteryNum2"].map(id => document.getElementById(id)).filter(Boolean);
+      const nums = inputs.map(i => Math.floor(Number(i.value || 0)));
+      const valid = validateLotteryNumbers(nums);
+      const full = inputs.length === 3 && inputs.every(i => i.value !== "");
+      const autoBtn = document.getElementById("lotteryAutoBtn");
+      const buyBtn = document.getElementById("lotteryBuyBtn");
+      const editBtn = document.getElementById("lotteryEditBtn");
+      if (autoBtn) autoBtn.disabled = full;
+      if (buyBtn) buyBtn.disabled = !valid;
+      if (editBtn && !isLotteryClosePassed()) editBtn.disabled = !valid;
+      if (lotteryStatus) {
+        lotteryStatus.className = "lottery-status";
+        lotteryStatus.textContent = full && !valid ? "번호는 1~15 중 서로 다른 숫자 3개를 입력해주세요." : "";
+      }
+    }
+
+    function autoFillLotteryNumbers() {
+      const inputs = ["lotteryNum0", "lotteryNum1", "lotteryNum2"].map(id => document.getElementById(id)).filter(Boolean);
+      const current = inputs.map(i => Math.floor(Number(i.value || 0))).filter(n => Number.isInteger(n) && n >= 1 && n <= 15);
+      const fill = randomLotteryNumbers(inputs.filter(i => !i.value).length, current);
+      let idx = 0;
+      inputs.forEach(input => { if (!input.value) input.value = fill[idx++] || ""; });
+      updateLotteryButtons();
+    }
+
+    async function buyLotteryTicket() {
+      if (!currentUser || !currentLotteryRound) return;
+      const nums = getLotteryInputNumbers();
+      if (!validateLotteryNumbers(nums)) { if (lotteryStatus) { lotteryStatus.className = "lottery-status error"; lotteryStatus.textContent = "번호는 1~15 중 서로 다른 숫자 3개를 입력해주세요."; } return; }
+      if (isLotteryClosePassed()) { if (lotteryStatus) { lotteryStatus.className = "lottery-status error"; lotteryStatus.textContent = "구매 마감 시간이 지났습니다."; } return; }
+      try {
+        if (lotteryStatus) { lotteryStatus.className = "lottery-status"; lotteryStatus.textContent = "구매 중..."; }
+        await runTransaction(db, async (transaction) => {
+          const uRef = userRef(currentUser.uid);
+          const tRef = treasuryRef();
+          const ticketRef = lotteryTicketRef(currentLotteryRound.id, currentUser.uid);
+          const roundRef = lotteryRoundRef(currentLotteryRound.id);
+          const userSnap = await transaction.get(uRef);
+          const treasurySnap = await transaction.get(tRef);
+          const ticketSnap = await transaction.get(ticketRef);
+          const roundSnap = await transaction.get(roundRef);
+          if (!userSnap.exists() || !roundSnap.exists()) throw new Error("데이터가 없습니다.");
+          if (ticketSnap.exists()) throw new Error("이미 이번 회차 복권을 구매했습니다.");
+          const round = roundSnap.data();
+          if (round.status !== "open" || isLotteryClosePassed({ id: currentLotteryRound.id, ...round })) throw new Error("구매 마감 시간이 지났습니다.");
+          const user = userSnap.data();
+          const price = Number(lotterySettings.ticketPrice || 10000);
+          if (Number(user.cash || 0) < price) throw new Error("보유현금이 부족합니다.");
+          const oldTreasury = Number(treasurySnap.exists() ? treasurySnap.data().totalTreasury || 0 : 0);
+          const oldTracked = Number(treasurySnap.exists() ? treasurySnap.data().trackedContributions || 0 : 0);
+          transaction.update(uRef, { cash: Number(user.cash || 0) - price, lastTradeAt: serverTimestamp() });
+          transaction.set(tRef, { totalTreasury: oldTreasury + price, trackedContributions: oldTracked, updatedAt: serverTimestamp() }, { merge: true });
+          transaction.set(ticketRef, { uid: currentUser.uid, nickname: user.nickname || currentUserData?.nickname || "-", numbers: nums, status: "waiting", rank: null, prizeAmount: 0, claimed: false, claimedAt: null, purchasedAt: serverTimestamp(), editedAt: null });
+        });
+        showEarnPopup("복권 구매 완료");
+        await loadTreasury().catch(() => {});
+        await loadLottery();
+        setTimeout(() => updateMyRanking().catch(() => {}), 800);
+      } catch (error) { if (lotteryStatus) { lotteryStatus.className = "lottery-status error"; lotteryStatus.textContent = error.message || "복권 구매에 실패했습니다."; } }
+    }
+
+    async function editLotteryTicket() {
+      if (!currentUser || !currentLotteryRound || !myLotteryTicket) return;
+      const nums = getLotteryInputNumbers();
+      if (!validateLotteryNumbers(nums)) { if (lotteryStatus) { lotteryStatus.className = "lottery-status error"; lotteryStatus.textContent = "번호는 1~15 중 서로 다른 숫자 3개를 입력해주세요."; } return; }
+      if (isLotteryClosePassed()) { if (lotteryStatus) { lotteryStatus.className = "lottery-status error"; lotteryStatus.textContent = "수정 마감 시간이 지났습니다."; } return; }
+      try {
+        if (lotteryStatus) { lotteryStatus.className = "lottery-status"; lotteryStatus.textContent = "수정 중..."; }
+        await runTransaction(db, async (transaction) => {
+          const uRef = userRef(currentUser.uid);
+          const tRef = treasuryRef();
+          const ticketRef = lotteryTicketRef(currentLotteryRound.id, currentUser.uid);
+          const roundRef = lotteryRoundRef(currentLotteryRound.id);
+          const userSnap = await transaction.get(uRef);
+          const treasurySnap = await transaction.get(tRef);
+          const ticketSnap = await transaction.get(ticketRef);
+          const roundSnap = await transaction.get(roundRef);
+          if (!userSnap.exists() || !ticketSnap.exists() || !roundSnap.exists()) throw new Error("데이터가 없습니다.");
+          const round = roundSnap.data();
+          if (round.status !== "open" || isLotteryClosePassed({ id: currentLotteryRound.id, ...round })) throw new Error("수정 마감 시간이 지났습니다.");
+          const user = userSnap.data();
+          const price = Number(lotterySettings.editPrice || 3000);
+          if (Number(user.cash || 0) < price) throw new Error("보유현금이 부족합니다.");
+          const oldTreasury = Number(treasurySnap.exists() ? treasurySnap.data().totalTreasury || 0 : 0);
+          const oldTracked = Number(treasurySnap.exists() ? treasurySnap.data().trackedContributions || 0 : 0);
+          transaction.update(uRef, { cash: Number(user.cash || 0) - price, lastTradeAt: serverTimestamp() });
+          transaction.set(tRef, { totalTreasury: oldTreasury + price, trackedContributions: oldTracked, updatedAt: serverTimestamp() }, { merge: true });
+          transaction.update(ticketRef, { numbers: nums, editedAt: serverTimestamp() });
+        });
+        showEarnPopup("복권 수정 완료");
+        await loadTreasury().catch(() => {});
+        await loadLottery();
+        setTimeout(() => updateMyRanking().catch(() => {}), 800);
+      } catch (error) { if (lotteryStatus) { lotteryStatus.className = "lottery-status error"; lotteryStatus.textContent = error.message || "복권 수정에 실패했습니다."; } }
     }
 
 
@@ -5097,6 +5435,8 @@
     lotteryDailyModeBtn.addEventListener("click", () => setLotteryMode("daily"));
     lotteryWeeklyModeBtn.addEventListener("click", () => setLotteryMode("weekly"));
     saveLotterySettingsBtn.addEventListener("click", saveLotterySettings);
+    lotteryRoundsTab.addEventListener("click", () => setLotteryTab("rounds"));
+    lotteryBuyTab.addEventListener("click", () => setLotteryTab("buy"));
     resetTreasuryBtn.addEventListener("click", resetTreasuryFromSettings);
     promotionAddBtn.addEventListener("click", addPromotionLevel);
     addStockBtn.addEventListener("click", addStock);
