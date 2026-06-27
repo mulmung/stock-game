@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
-  <title>주식 게임 v65</title>
+  <title>주식 게임 v66</title>
   <style>
     * { box-sizing: border-box; }
     html, body { margin: 0; padding: 0; height: 100%; font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; background: #1f2937; color: #fff; }
@@ -444,6 +444,20 @@
     .lottery-expired-label { margin-top: 10px; color: #f87171; font-size: 15px; font-weight: 1000; }
     .lottery-claim-deadline { margin-top: 8px; color: var(--muted); font-size: 13px; font-weight: 850; line-height: 1.5; }
     .lottery-result-highlight { color: #fff; font-weight: 1000; }
+    .lottery-round-head { width: 100%; min-height: 54px; padding: 0; background: transparent; color: #fff; border: 0; display: flex; align-items: center; justify-content: space-between; gap: 12px; text-align: left; }
+    .lottery-round-title { font-size: 18px; font-weight: 1000; color: #fff; letter-spacing: -0.35px; }
+    .lottery-round-toggle { flex: 0 0 auto; color: var(--text-soft); font-size: 13px; font-weight: 1000; border: 1px solid var(--line); padding: 7px 10px; }
+    .lottery-round-detail { display: none; padding-top: 12px; border-top: 1px solid var(--line); }
+    .lottery-card.expanded .lottery-round-detail { display: block; }
+    .lottery-detail-label { color: var(--muted); font-size: 12px; font-weight: 1000; margin: 14px 0 7px; }
+    .lottery-winner-names { color: #fff; font-size: 15px; font-weight: 1000; line-height: 1.5; word-break: keep-all; }
+    .lottery-summary-divider { height: 1px; background: var(--line-strong); margin: 16px 0 12px; }
+    .lottery-summary-table { border-top: 1px solid var(--line-strong); margin-top: 8px; }
+    .lottery-summary-head, .lottery-summary-row { display: grid; grid-template-columns: 0.62fr 1.35fr 0.9fr; gap: 8px; align-items: center; }
+    .lottery-summary-head { padding: 10px 0; color: var(--muted); font-size: 11px; font-weight: 1000; border-bottom: 1px solid var(--line); }
+    .lottery-summary-row { min-height: 44px; padding: 10px 0; border-bottom: 1px solid var(--line); color: #fff; font-size: 12.5px; font-weight: 950; letter-spacing: -0.35px; }
+    .lottery-summary-money, .lottery-summary-count { text-align: right; }
+    .lottery-round-note { color: var(--muted); font-size: 12px; font-weight: 850; line-height: 1.55; margin: 0 0 12px; }
     .lottery-number-inputs { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin: 14px 0; }
     .lottery-number-inputs input { width: 100%; height: 58px; text-align: center; font-size: 24px; font-weight: 1000; }
     .lottery-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 12px; }
@@ -1468,6 +1482,7 @@
     let lotterySettings = { ...DEFAULT_LOTTERY_SETTINGS, rankRates: { ...DEFAULT_LOTTERY_SETTINGS.rankRates } };
     let lotteryActiveTab = "rounds";
     let currentLotteryRound = null;
+    let expandedLotteryRoundId = null;
     let myLotteryTicket = null;
     let lotteryMyTicketsByRound = new Map();
     let lotteryRounds = [];
@@ -3638,7 +3653,7 @@
     }
 
     async function loadLotteryRounds() {
-      const maxHistory = Number(lotterySettings.maxRoundHistory || 20);
+      const maxHistory = Math.min(20, Math.max(1, Number(lotterySettings.maxRoundHistory || 20)));
       const snap = await getDocs(query(lotteryRoundsCol(), orderBy("roundNo", "desc"), limit(maxHistory)));
       lotteryRounds = snap.docs.map(d => ({ id: d.id, ...d.data() }));
       lotteryMyTicketsByRound = new Map();
@@ -3740,33 +3755,84 @@
         lotteryRoundsPanel.innerHTML = `<div class="bank-deposit-empty">아직 복권 회차 기록이 없습니다.</div>`;
         return;
       }
-      lotteryRoundsPanel.innerHTML = lotteryRounds.map(round => {
+      const limitedRounds = lotteryRounds.slice(0, 20);
+      lotteryRoundsPanel.innerHTML = `<div class="lottery-round-note">최근 20회차만 표시됩니다.</div>` + limitedRounds.map(round => {
         const drawn = round.status === "drawn";
+        const expanded = expandedLotteryRoundId === round.id;
         const drawDate = round.drawDate || round.roundKey || "-";
         const drawTime = round.drawTime || lotterySettings.drawTime;
         const drawTarget = lotteryDateTimeMs(drawDate, drawTime);
         const drawPassed = isLotteryDrawPassed(round, lotterySettings);
-        const firstCount = Array.isArray(round.firstPrizeWinners) ? round.firstPrizeWinners.length : 0;
-        const winNums = drawn && Array.isArray(round.winningNumbers) && round.winningNumbers.length ? lotteryNumbersHtml(round.winningNumbers) : "";
-        const bonus = drawn && round.bonusNumber != null ? lotteryNumbersHtml([round.bonusNumber]) : "";
-        let meta = "";
+        const roundTitle = `${Number(round.roundNo || 0)}차 ${escapeHtml(formatLotteryDateDot(drawDate))}`;
+        const statusText = drawn ? "발표 완료" : drawPassed ? "발표 처리 중" : "발표 대기";
+        let detail = "";
         if (drawn) {
           const roundTicket = lotteryMyTicketsByRound.get(round.id) || (round.id === currentLotteryRound?.id ? myLotteryTicket : null);
-          const myResult = roundTicket
-            ? (roundTicket.status === "win" ? lotteryClaimHtml(roundTicket, round) : `<div class="lottery-claim-box"><div class="lottery-meta">내 결과: <span class="lottery-result-highlight">${escapeHtml(lotteryResultText(roundTicket))}</span></div></div>`)
-            : "";
-          meta = `상태: 발표 완료<br>1등 당첨자 ${firstCount ? firstCount + "명" : "없음"}<br><br>당첨번호${winNums}<div class="lottery-meta">보너스 번호</div>${bonus || `<div class="lottery-meta">-</div>`}${myResult}`;
+          const myClaim = roundTicket && roundTicket.status === "win" ? lotteryClaimHtml(roundTicket, round) : "";
+          detail = `<div class="lottery-detail-label">당첨 번호</div>
+            ${lotteryNumbersHtml(round.winningNumbers || [])}
+            <div class="lottery-detail-label">보너스 번호</div>
+            ${round.bonusNumber != null ? lotteryNumbersHtml([round.bonusNumber]) : `<div class="lottery-meta">-</div>`}
+            <div class="lottery-detail-label">1등 당첨자</div>
+            <div class="lottery-winner-names">${lotteryFirstWinnersText(round)}</div>
+            <div class="lottery-summary-divider"></div>
+            ${lotteryRankSummaryTableHtml(round.rankSummary)}
+            ${myClaim}`;
         } else if (drawPassed) {
-          meta = `상태: 발표 처리 중<br>잠시 후 다시 확인해주세요.`;
+          detail = `<div class="lottery-meta">상태: 발표 처리 중<br>잠시 후 다시 확인해주세요.</div>`;
         } else {
-          meta = `상태: 발표 대기<br>발표까지 ${lotteryCountdownHtml("발표까지", drawTarget, "발표 시간 도달")}`;
+          detail = `<div class="lottery-meta">상태: 발표 대기<br>발표까지 ${lotteryCountdownHtml("발표까지", drawTarget, "발표 시간 도달")}</div>`;
         }
-        return `<div class="lottery-card">
-          <div class="lottery-title">${Number(round.roundNo || 0)}차 ${escapeHtml(drawDate)}</div>
-          <div class="lottery-meta">${meta}</div>
+        return `<div class="lottery-card ${expanded ? "expanded" : ""}">
+          <button class="lottery-round-head" type="button" data-lottery-round-toggle="${escapeHtml(round.id)}">
+            <span class="lottery-round-title">${roundTitle}</span>
+            <span class="lottery-round-toggle">${expanded ? "접기" : "상세보기"}</span>
+          </button>
+          <div class="lottery-meta">상태: ${escapeHtml(statusText)}</div>
+          <div class="lottery-round-detail">${detail}</div>
         </div>`;
       }).join("");
+      document.querySelectorAll('[data-lottery-round-toggle]').forEach(btn => {
+        btn.addEventListener("click", () => {
+          const id = btn.dataset.lotteryRoundToggle;
+          expandedLotteryRoundId = expandedLotteryRoundId === id ? null : id;
+          renderLotteryRounds();
+        });
+      });
       updateLotteryCountdowns();
+    }
+
+    function formatLotteryDateDot(dateKey) {
+      const parts = String(dateKey || "").split("-");
+      if (parts.length === 3) return `${parts[0]}.${parts[1]}.${parts[2]}`;
+      return String(dateKey || "-");
+    }
+
+    function lotteryFirstWinnersText(round) {
+      const winners = Array.isArray(round?.firstPrizeWinners) ? round.firstPrizeWinners : [];
+      if (!winners.length) return "없음";
+      return winners.map(name => escapeHtml(String(name || ""))).filter(Boolean).join(", ");
+    }
+
+    function lotteryRankSummaryTableHtml(summary = {}) {
+      const rows = [1, 2, 3, 4, 5].map(rank => {
+        const row = summary?.[`rank${rank}`] || {};
+        const total = Number(row.total || 0);
+        const count = Number(row.count || 0);
+        return `<div class="lottery-summary-row">
+          <div>${rank}등</div>
+          <div class="lottery-summary-money">${formatWon(total)}</div>
+          <div class="lottery-summary-count">${count}게임</div>
+        </div>`;
+      }).join("");
+      return `<div class="lottery-summary-table">
+        <div class="lottery-summary-head">
+          <div>순위</div>
+          <div class="lottery-summary-money">등위별 총 당첨금</div>
+          <div class="lottery-summary-count">당첨게임 수</div>
+        </div>
+        ${rows}
+      </div>`;
     }
 
     function lotteryResultText(ticket) {
