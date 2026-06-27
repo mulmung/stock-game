@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
-  <title>주식 게임 v54</title>
+  <title>주식 게임 v63-2</title>
   <style>
     * { box-sizing: border-box; }
     html, body { margin: 0; padding: 0; height: 100%; font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; background: #1f2937; color: #fff; }
@@ -448,12 +448,7 @@
     .lottery-ball-gray { background: #6b7280; }
     .lottery-ball-lime { background: #65a30d; }
     .lottery-ball-default { background: #334155; }
-    .lottery-number-inputs input.lottery-input-yellow { background: #d8a400; color: #fff; border-color: transparent; }
-    .lottery-number-inputs input.lottery-input-blue { background: #2563eb; color: #fff; border-color: transparent; }
-    .lottery-number-inputs input.lottery-input-red { background: #dc2626; color: #fff; border-color: transparent; }
-    .lottery-number-inputs input.lottery-input-gray { background: #6b7280; color: #fff; border-color: transparent; }
-    .lottery-number-inputs input.lottery-input-lime { background: #65a30d; color: #fff; border-color: transparent; }
-    .lottery-number-inputs input.lottery-input-default { background: #08111f; color: #fff; }
+    /* v63-2: 복권 입력칸은 번호별 색상 없이 기본 input 스타일을 유지합니다. */
     .lottery-status { min-height: 22px; color: var(--muted); font-size: 13px; font-weight: 900; text-align: center; margin-top: 12px; }
     .lottery-status.error { color: #f87171; }
     .lottery-status.success { color: #22c55e; }
@@ -3640,12 +3635,16 @@
       return "lottery-ball-default";
     }
 
-    function lotteryInputClass(num) {
-      return lotteryBallClass(num).replace("lottery-ball", "lottery-input");
+    function sortLotteryNumbers(nums = []) {
+      return (Array.isArray(nums) ? nums : [])
+        .map(n => Math.floor(Number(n)))
+        .filter(n => Number.isInteger(n) && n >= 1 && n <= 15)
+        .sort((a, b) => a - b);
     }
 
     function lotteryNumbersHtml(nums = []) {
-      return `<div class="lottery-numbers">${(nums || []).map(n => `<span class="lottery-ball ${lotteryBallClass(n)}">${escapeHtml(String(n))}</span>`).join("")}</div>`;
+      const sortedNums = sortLotteryNumbers(nums);
+      return `<div class="lottery-numbers">${sortedNums.map(n => `<span class="lottery-ball ${lotteryBallClass(n)}">${escapeHtml(String(n))}</span>`).join("")}</div>`;
     }
 
     function renderLottery() {
@@ -3737,23 +3736,16 @@
       updateLotteryButtons();
     }
 
-    function updateLotteryInputColors() {
+    function resetLotteryInputStyles() {
       ["lotteryNum0", "lotteryNum1", "lotteryNum2"].forEach(id => {
         const input = document.getElementById(id);
         if (!input) return;
         input.classList.remove("lottery-input-yellow", "lottery-input-blue", "lottery-input-red", "lottery-input-gray", "lottery-input-lime", "lottery-input-default");
-        const raw = input.value;
-        const n = Math.floor(Number(raw || 0));
-        if (raw && Number.isInteger(n) && n >= 1 && n <= 15) {
-          input.classList.add(lotteryInputClass(n));
-        } else {
-          input.classList.add("lottery-input-default");
-        }
       });
     }
 
     function updateLotteryButtons() {
-      updateLotteryInputColors();
+      resetLotteryInputStyles();
       const inputs = ["lotteryNum0", "lotteryNum1", "lotteryNum2"].map(id => document.getElementById(id)).filter(Boolean);
       const nums = inputs.map(i => Math.floor(Number(i.value || 0)));
       const valid = validateLotteryNumbers(nums);
@@ -3781,7 +3773,7 @@
 
     async function buyLotteryTicket() {
       if (!currentUser || !currentLotteryRound) return;
-      const nums = getLotteryInputNumbers();
+      const nums = sortLotteryNumbers(getLotteryInputNumbers());
       if (!validateLotteryNumbers(nums)) { if (lotteryStatus) { lotteryStatus.className = "lottery-status error"; lotteryStatus.textContent = "번호는 1~15 중 서로 다른 숫자 3개를 입력해주세요."; } return; }
       if (isLotteryClosePassed()) { if (lotteryStatus) { lotteryStatus.className = "lottery-status error"; lotteryStatus.textContent = "구매 마감 시간이 지났습니다."; } return; }
       try {
@@ -3817,7 +3809,7 @@
 
     async function editLotteryTicket() {
       if (!currentUser || !currentLotteryRound || !myLotteryTicket) return;
-      const nums = getLotteryInputNumbers();
+      const nums = sortLotteryNumbers(getLotteryInputNumbers());
       if (!validateLotteryNumbers(nums)) { if (lotteryStatus) { lotteryStatus.className = "lottery-status error"; lotteryStatus.textContent = "번호는 1~15 중 서로 다른 숫자 3개를 입력해주세요."; } return; }
       if (isLotteryClosePassed()) { if (lotteryStatus) { lotteryStatus.className = "lottery-status error"; lotteryStatus.textContent = "수정 마감 시간이 지났습니다."; } return; }
       try {
