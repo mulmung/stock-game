@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
-  <title>주식 게임 v66</title>
+  <title>주식 게임 v66-1</title>
   <style>
     * { box-sizing: border-box; }
     html, body { margin: 0; padding: 0; height: 100%; font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; background: #1f2937; color: #fff; }
@@ -462,8 +462,10 @@
     .lottery-number-inputs input { width: 100%; height: 58px; text-align: center; font-size: 24px; font-weight: 1000; }
     .lottery-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 12px; }
     .lottery-actions button:disabled, .lottery-tab:disabled { opacity: 0.45; }
-    .lottery-numbers { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; margin: 8px 0; }
-    .lottery-ball { width: 42px; height: 42px; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; border: 0; color: #fff; font-weight: 1000; font-size: 17px; box-shadow: 0 8px 18px rgba(0,0,0,0.18); }
+    .lottery-numbers { display: flex; gap: 7px; align-items: center; flex-wrap: wrap; margin: 8px 0; }
+    .lottery-numbers.compact { gap: 6px; margin: 7px 0 8px; }
+    .lottery-ball { width: 34px; height: 34px; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; border: 0; color: #fff; font-weight: 1000; font-size: 15px; box-shadow: 0 6px 14px rgba(0,0,0,0.16); }
+    .lottery-bonus-plus { color: var(--text-soft); font-size: 18px; font-weight: 1000; padding: 0 1px; line-height: 1; }
     .lottery-ball-yellow { background: #d8a400; }
     .lottery-ball-blue { background: #2563eb; }
     .lottery-ball-red { background: #dc2626; }
@@ -3700,9 +3702,24 @@
         .sort((a, b) => a - b);
     }
 
+    function lotteryNumberBallHtml(num) {
+      const n = Math.floor(Number(num));
+      if (!Number.isInteger(n) || n < 1 || n > 15) return "";
+      return `<span class="lottery-ball ${lotteryBallClass(n)}">${escapeHtml(String(n))}</span>`;
+    }
+
     function lotteryNumbersHtml(nums = []) {
       const sortedNums = sortLotteryNumbers(nums);
-      return `<div class="lottery-numbers">${sortedNums.map(n => `<span class="lottery-ball ${lotteryBallClass(n)}">${escapeHtml(String(n))}</span>`).join("")}</div>`;
+      return `<div class="lottery-numbers">${sortedNums.map(n => lotteryNumberBallHtml(n)).join("")}</div>`;
+    }
+
+    function lotteryWinningNumbersHtml(winningNums = [], bonusNum = null) {
+      const sortedNums = sortLotteryNumbers(winningNums);
+      const bonus = Math.floor(Number(bonusNum));
+      const bonusHtml = Number.isInteger(bonus) && bonus >= 1 && bonus <= 15
+        ? `<span class="lottery-bonus-plus">+</span>${lotteryNumberBallHtml(bonus)}`
+        : "";
+      return `<div class="lottery-numbers compact">${sortedNums.map(n => lotteryNumberBallHtml(n)).join("")}${bonusHtml}</div>`;
     }
 
     function lotteryDateTimeMs(dateKey, timeText) {
@@ -3769,10 +3786,8 @@
         if (drawn) {
           const roundTicket = lotteryMyTicketsByRound.get(round.id) || (round.id === currentLotteryRound?.id ? myLotteryTicket : null);
           const myClaim = roundTicket && roundTicket.status === "win" ? lotteryClaimHtml(roundTicket, round) : "";
-          detail = `<div class="lottery-detail-label">당첨 번호</div>
-            ${lotteryNumbersHtml(round.winningNumbers || [])}
-            <div class="lottery-detail-label">보너스 번호</div>
-            ${round.bonusNumber != null ? lotteryNumbersHtml([round.bonusNumber]) : `<div class="lottery-meta">-</div>`}
+          detail = `<div class="lottery-detail-label">당첨번호</div>
+            ${lotteryWinningNumbersHtml(round.winningNumbers || [], round.bonusNumber)}
             <div class="lottery-detail-label">1등 당첨자</div>
             <div class="lottery-winner-names">${lotteryFirstWinnersText(round)}</div>
             <div class="lottery-summary-divider"></div>
@@ -3877,7 +3892,7 @@
       const closeLine = closed ? "구매 마감 완료" : `구매 마감까지 ${lotteryCountdownHtml("구매 마감까지", closeTarget, "구매 마감 완료")}`;
       let body = `<div class="lottery-card"><div class="lottery-title">이번 회차</div><div class="lottery-meta">${Number(round.roundNo || 0)}차 ${escapeHtml(drawDate)}<br>${closeLine}<br>구매 비용 <span class="lottery-money-value">${formatWon(settings.ticketPrice)}</span> / 수정 비용 <span class="lottery-money-value">${formatWon(settings.editPrice)}</span></div></div>`;
       if (round.status === "drawn") {
-        body += `<div class="lottery-card"><div class="lottery-title">당첨 번호</div>${lotteryNumbersHtml(round.winningNumbers || [])}<div class="lottery-meta">보너스 번호</div>${lotteryNumbersHtml(round.bonusNumber != null ? [round.bonusNumber] : [])}</div>`;
+        body += `<div class="lottery-card"><div class="lottery-title">당첨번호</div>${lotteryWinningNumbersHtml(round.winningNumbers || [], round.bonusNumber)}</div>`;
       }
       if (myLotteryTicket) {
         body += `<div class="lottery-card"><div class="lottery-title">내 복권</div>${lotteryNumbersHtml(myLotteryTicket.numbers || [])}`;
