@@ -3438,6 +3438,111 @@
       return pool.slice(0, count);
     }
 
+    function drawLotteryNumbers() {
+      const nums = randomLotteryNumbers(4, []);
+      return { winningNumbers: nums.slice(0, 3), bonusNumber: nums[3] };
+    }
+
+    function countLotteryMatches(numbers = [], winningNumbers = []) {
+      const winSet = new Set(winningNumbers || []);
+      return (numbers || []).filter(n => winSet.has(n)).length;
+    }
+
+    function getLotteryRank(numbers = [], winningNumbers = [], bonusNumber = null) {
+      const matchCount = countLotteryMatches(numbers, winningNumbers);
+      const hasBonus = (numbers || []).includes(bonusNumber);
+      if (matchCount === 3) return 1;
+      if (matchCount === 2 && hasBonus) return 2;
+      if (matchCount === 2) return 3;
+      if (matchCount === 1 && hasBonus) return 4;
+      if (matchCount === 1) return 5;
+      return null;
+    }
+
+    function createEmptyLotteryRankSummary() {
+      return {
+        rank1: { total: 0, count: 0, perUser: 0 },
+        rank2: { total: 0, count: 0, perUser: 0 },
+        rank3: { total: 0, count: 0, perUser: 0 },
+        rank4: { total: 0, count: 0, perUser: 0 },
+        rank5: { total: 0, count: 0, perUser: 0 }
+      };
+    }
+
+    function buildLotteryRankSummary(tickets = [], payoutPool = 0, rankRates = lotterySettings.rankRates || {}) {
+      const summary = createEmptyLotteryRankSummary();
+      [1, 2, 3, 4, 5].forEach(rank => {
+        const key = `rank${rank}`;
+        const count = tickets.filter(t => t.rank === rank).length;
+        const total = Math.floor(Number(payoutPool || 0) * Number(rankRates[key] || 0) / 100);
+        summary[key] = { total, count, perUser: count > 0 ? Math.floor(total / count) : 0 };
+      });
+      return summary;
+    }
+
+    async function maybeDrawCurrentLotteryRound() {
+      if (!currentLotteryRound || currentLotteryRound.status !== "open") return false;
+      if (!isLotteryDrawPassed(currentLotteryRound, lotterySettings)) return false;
+      try {
+        if (lotteryStatus) { lotteryStatus.className = "lottery-status"; lotteryStatus.textContent = "당첨 번호 발표 중..."; }
+        const roundRef = lotteryRoundRef(currentLotteryRound.id);
+        const ticketsSnap = await getDocs(lotteryTicketsCol(currentLotteryRound.id));
+        const tickets = ticketsSnap.docs.map(d => ({ id: d.id, ref: d.ref, ...d.data() }));
+        const { winningNumbers, bonusNumber } = drawLotteryNumbers();
+        const ticketsWithRank = tickets.map(ticket => ({
+          ...ticket,
+          rank: getLotteryRank(ticket.numbers || [], winningNumbers, bonusNumber)
+        }));
+        const treasurySnap = await getDoc(treasuryRef());
+        const treasuryAtDraw = Number(treasurySnap.exists() ? treasurySnap.data().totalTreasury || 0 : 0);
+        const payoutPool = Math.floor(treasuryAtDraw * Number(lotterySettings.payoutRate || 80) / 100);
+        const rankSummary = buildLotteryRankSummary(ticketsWithRank, payoutPool, lotterySettings.rankRates || {});
+        const firstPrizeWinners = ticketsWithRank
+          .filter(t => t.rank === 1)
+          .map(t => ({ uid: t.uid || t.id, nickname: t.nickname || "-" }))
+          .slice(0, 50);
+
+        await runTransaction(db, async (transaction) => {
+          const roundSnap = await transaction.get(roundRef);
+          if (!roundSnap.exists()) throw new Error("회차 정보가 없습니다.");
+          const roundData = roundSnap.data();
+          if (roundData.status !== "open") return;
+          transaction.update(roundRef, {
+            status: "drawn",
+            winningNumbers,
+            bonusNumber,
+            treasuryAtDraw,
+            payoutPool,
+            firstPrizeWinners,
+            rankSummary,
+            claimedTotal: Number(roundData.claimedTotal || 0),
+            claimedCount: Number(roundData.claimedCount || 0),
+            drawnAt: serverTimestamp()
+          });
+          ticketsWithRank.forEach(ticket => {
+            const rank = ticket.rank;
+            const key = rank ? `rank${rank}` : null;
+            const prizeAmount = key ? Number(rankSummary[key]?.perUser || 0) : 0;
+            transaction.update(ticket.ref, {
+              status: rank ? "win" : "lose",
+              rank: rank || null,
+              prizeAmount,
+              claimed: false,
+              claimedAt: null
+            });
+          });
+        });
+        const freshRound = await getDoc(roundRef);
+        if (freshRound.exists()) currentLotteryRound = { id: freshRound.id, ...freshRound.data() };
+        if (lotteryStatus) { lotteryStatus.className = "lottery-status success"; lotteryStatus.textContent = "당첨 번호가 발표되었습니다."; }
+        return true;
+      } catch (error) {
+        console.error(error);
+        if (lotteryStatus) { lotteryStatus.className = "lottery-status error"; lotteryStatus.textContent = error.message || "당첨 발표 처리에 실패했습니다."; }
+        return false;
+      }
+    }
+
     async function ensureCurrentLotteryRound() {
       await loadLotterySettings();
       const id = currentLotteryRoundId(lotterySettings);
@@ -3501,6 +3606,7 @@
       if (!currentUser) return;
       await ensureTreasuryDoc().catch(() => {});
       await ensureCurrentLotteryRound();
+      await maybeDrawCurrentLotteryRound();
       await loadMyLotteryTicket();
       await loadLotteryRounds();
       renderLottery();
@@ -3532,15 +3638,23 @@
         return;
       }
       lotteryRoundsPanel.innerHTML = lotteryRounds.map(round => {
-        const winNums = Array.isArray(round.winningNumbers) && round.winningNumbers.length ? round.winningNumbers.join(", ") : "발표 전";
-        const bonus = round.bonusNumber == null ? "-" : round.bonusNumber;
+        const drawn = round.status === "drawn";
+        const winNums = drawn && Array.isArray(round.winningNumbers) && round.winningNumbers.length ? round.winningNumbers.join(", ") : "발표 전";
+        const bonus = drawn && round.bonusNumber != null ? round.bonusNumber : "-";
         const firstCount = Array.isArray(round.firstPrizeWinners) ? round.firstPrizeWinners.length : 0;
         return `<div class="lottery-card">
           <div class="lottery-title">${Number(round.roundNo || 0)}차 ${escapeHtml(round.drawDate || round.roundKey || "-")}</div>
-          <div class="lottery-meta">1등 당첨자 ${firstCount ? firstCount + "명" : "없음"}<br>당첨 번호 ${escapeHtml(winNums)} + 보너스 ${escapeHtml(String(bonus))}</div>
-          <div class="treasury-desc">상세보기는 v65에서 아코디언 방식으로 적용 예정입니다.</div>
+          <div class="lottery-meta">${drawn ? `1등 당첨자 ${firstCount ? firstCount + "명" : "없음"}<br>당첨 번호 ${escapeHtml(winNums)} + 보너스 ${escapeHtml(String(bonus))}` : `발표 대기<br>발표 시간 ${escapeHtml(round.drawTime || "-")}`}</div>
         </div>`;
       }).join("");
+    }
+
+    function lotteryResultText(ticket) {
+      if (!ticket) return "-";
+      if (ticket.status === "waiting") return "발표 대기";
+      if (ticket.status === "win") return `${Number(ticket.rank || 0)}등 당첨`;
+      if (ticket.status === "lose") return "꽝";
+      return "-";
     }
 
     function renderLotteryBuy() {
@@ -3550,16 +3664,21 @@
       if (!round) { lotteryBuyPanel.innerHTML = `<div class="bank-deposit-empty">회차 정보를 불러오는 중입니다.</div>`; return; }
       const closed = isLotteryClosePassed(round, settings);
       const drawn = round.status === "drawn" || isLotteryDrawPassed(round, settings);
-      const hasTicket = !!myLotteryTicket;
       let body = `<div class="lottery-card"><div class="lottery-title">이번 회차</div><div class="lottery-meta">${Number(round.roundNo || 0)}차 ${escapeHtml(round.drawDate || "-")}<br>발표 ${escapeHtml(round.drawTime || settings.drawTime)} / 구매 마감 ${escapeHtml(round.closeTime || settings.closeTime)}<br>구매 비용 ${formatWon(settings.ticketPrice)} / 수정 비용 ${formatWon(settings.editPrice)}</div></div>`;
-      if (hasTicket) {
+      if (round.status === "drawn") {
+        body += `<div class="lottery-card"><div class="lottery-title">당첨 번호</div>${lotteryNumbersHtml(round.winningNumbers || [])}<div class="lottery-meta">보너스 번호</div>${lotteryNumbersHtml(round.bonusNumber != null ? [round.bonusNumber] : [])}</div>`;
+      }
+      if (myLotteryTicket) {
         body += `<div class="lottery-card"><div class="lottery-title">내 복권</div>${lotteryNumbersHtml(myLotteryTicket.numbers || [])}`;
-        if (!drawn) {
-          body += `<div class="lottery-meta">상태: 발표 대기${closed ? " / 수정 마감" : " / 마감 전까지 수정 가능"}</div>
+        if (myLotteryTicket.status === "waiting" && !drawn && !closed) {
+          body += `<div class="lottery-meta">상태: 발표 대기 / 마감 전까지 수정 가능</div>
             <div class="lottery-number-inputs"><input id="lotteryNum0" type="number" min="1" max="15" value="${myLotteryTicket.numbers?.[0] || ""}"><input id="lotteryNum1" type="number" min="1" max="15" value="${myLotteryTicket.numbers?.[1] || ""}"><input id="lotteryNum2" type="number" min="1" max="15" value="${myLotteryTicket.numbers?.[2] || ""}"></div>
-            <div class="lottery-actions"><button id="lotteryAutoBtn" class="primary-btn" type="button">자동</button><button id="lotteryEditBtn" class="primary-btn" type="button" ${closed ? "disabled" : ""}>수정하기</button></div>`;
+            <div class="lottery-actions"><button id="lotteryAutoBtn" class="primary-btn" type="button">자동</button><button id="lotteryEditBtn" class="primary-btn" type="button">수정하기</button></div>`;
+        } else if (myLotteryTicket.status === "waiting") {
+          body += `<div class="lottery-meta">상태: 발표 대기${closed ? " / 수정 마감" : ""}</div>`;
         } else {
-          body += `<div class="lottery-meta">이번 회차는 발표 시간이 지났습니다. 발표/당첨 처리는 v63에서 적용됩니다.</div>`;
+          const prize = Number(myLotteryTicket.prizeAmount || 0);
+          body += `<div class="lottery-meta">결과: ${escapeHtml(lotteryResultText(myLotteryTicket))}<br>수령 가능 금액: ${formatWon(prize)}<br>수령 기능은 다음 단계 v64에서 적용됩니다.</div>`;
         }
         body += `</div>`;
       } else if (!drawn && !closed) {
@@ -3567,7 +3686,7 @@
           <div class="lottery-number-inputs"><input id="lotteryNum0" type="number" min="1" max="15" placeholder="1~15"><input id="lotteryNum1" type="number" min="1" max="15" placeholder="1~15"><input id="lotteryNum2" type="number" min="1" max="15" placeholder="1~15"></div>
           <div class="lottery-actions"><button id="lotteryAutoBtn" class="primary-btn" type="button">자동</button><button id="lotteryBuyBtn" class="primary-btn" type="button">구매하기</button></div></div>`;
       } else {
-        body += `<div class="lottery-card"><div class="lottery-title">복권 구매</div><div class="lottery-meta">${drawn ? "이번 회차는 발표 시간이 지났습니다." : "구매 마감 시간이 지났습니다."}</div></div>`;
+        body += `<div class="lottery-card"><div class="lottery-title">복권 구매</div><div class="lottery-meta">${round.status === "drawn" ? "이번 회차는 발표가 완료되었습니다." : drawn ? "이번 회차는 발표 시간이 지났습니다. 잠시 후 새로고침하면 발표 결과가 표시됩니다." : "구매 마감 시간이 지났습니다."}</div></div>`;
       }
       lotteryBuyPanel.innerHTML = body;
       attachLotteryBuyEvents();
