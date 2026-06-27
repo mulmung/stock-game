@@ -428,9 +428,10 @@
     .news-toast-body { color: #e5e7eb; font-size: 14px; line-height: 1.55; font-weight: 800; }
 
 
-    .lottery-tabs { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin: 18px 0; }
-    .lottery-tab { height: 52px; border: 1px solid var(--line-strong); background: rgba(255,255,255,0.05); color: var(--muted); font-weight: 1000; font-size: 15px; }
-    .lottery-tab.active { background: #fff; color: #111827; }
+    .lottery-tabs { display: flex; align-items: center; gap: 28px; border-bottom: 1px solid var(--line-strong); margin: 18px 0 22px; overflow-x: auto; -webkit-overflow-scrolling: touch; }
+    .lottery-tab { position: relative; flex: 0 0 auto; height: 46px; padding: 0; border: 0; background: transparent; color: var(--muted); font-weight: 750; font-size: 15px; border-radius: 0; }
+    .lottery-tab.active { color: #fff; font-weight: 1000; }
+    .lottery-tab.active::after { content: ""; position: absolute; left: 0; right: 0; bottom: -1px; height: 3px; background: #fff; border-radius: 999px 999px 0 0; }
     .lottery-panel { margin-top: 14px; }
     .lottery-card { border-top: 1px solid var(--line-strong); border-bottom: 1px solid var(--line-strong); padding: 18px 0; margin: 16px 0; }
     .lottery-title { font-size: 18px; font-weight: 1000; color: #fff; margin-bottom: 10px; }
@@ -440,7 +441,19 @@
     .lottery-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 12px; }
     .lottery-actions button:disabled, .lottery-tab:disabled { opacity: 0.45; }
     .lottery-numbers { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; margin: 8px 0; }
-    .lottery-ball { width: 38px; height: 38px; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; background: rgba(37,99,235,0.2); border: 1px solid rgba(96,165,250,0.45); color: #fff; font-weight: 1000; }
+    .lottery-ball { width: 42px; height: 42px; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; border: 0; color: #fff; font-weight: 1000; font-size: 17px; box-shadow: 0 8px 18px rgba(0,0,0,0.18); }
+    .lottery-ball-yellow { background: #d8a400; }
+    .lottery-ball-blue { background: #2563eb; }
+    .lottery-ball-red { background: #dc2626; }
+    .lottery-ball-gray { background: #6b7280; }
+    .lottery-ball-lime { background: #65a30d; }
+    .lottery-ball-default { background: #334155; }
+    .lottery-number-inputs input.lottery-input-yellow { background: #d8a400; color: #fff; border-color: transparent; }
+    .lottery-number-inputs input.lottery-input-blue { background: #2563eb; color: #fff; border-color: transparent; }
+    .lottery-number-inputs input.lottery-input-red { background: #dc2626; color: #fff; border-color: transparent; }
+    .lottery-number-inputs input.lottery-input-gray { background: #6b7280; color: #fff; border-color: transparent; }
+    .lottery-number-inputs input.lottery-input-lime { background: #65a30d; color: #fff; border-color: transparent; }
+    .lottery-number-inputs input.lottery-input-default { background: #08111f; color: #fff; }
     .lottery-status { min-height: 22px; color: var(--muted); font-size: 13px; font-weight: 900; text-align: center; margin-top: 12px; }
     .lottery-status.error { color: #f87171; }
     .lottery-status.success { color: #22c55e; }
@@ -3617,8 +3630,22 @@
       renderLottery();
     }
 
+    function lotteryBallClass(num) {
+      const n = Number(num);
+      if (n >= 1 && n <= 3) return "lottery-ball-yellow";
+      if (n >= 4 && n <= 6) return "lottery-ball-blue";
+      if (n >= 7 && n <= 9) return "lottery-ball-red";
+      if (n >= 10 && n <= 12) return "lottery-ball-gray";
+      if (n >= 13 && n <= 15) return "lottery-ball-lime";
+      return "lottery-ball-default";
+    }
+
+    function lotteryInputClass(num) {
+      return lotteryBallClass(num).replace("lottery-ball", "lottery-input");
+    }
+
     function lotteryNumbersHtml(nums = []) {
-      return `<div class="lottery-numbers">${(nums || []).map(n => `<span class="lottery-ball">${escapeHtml(String(n))}</span>`).join("")}</div>`;
+      return `<div class="lottery-numbers">${(nums || []).map(n => `<span class="lottery-ball ${lotteryBallClass(n)}">${escapeHtml(String(n))}</span>`).join("")}</div>`;
     }
 
     function renderLottery() {
@@ -3710,7 +3737,23 @@
       updateLotteryButtons();
     }
 
+    function updateLotteryInputColors() {
+      ["lotteryNum0", "lotteryNum1", "lotteryNum2"].forEach(id => {
+        const input = document.getElementById(id);
+        if (!input) return;
+        input.classList.remove("lottery-input-yellow", "lottery-input-blue", "lottery-input-red", "lottery-input-gray", "lottery-input-lime", "lottery-input-default");
+        const raw = input.value;
+        const n = Math.floor(Number(raw || 0));
+        if (raw && Number.isInteger(n) && n >= 1 && n <= 15) {
+          input.classList.add(lotteryInputClass(n));
+        } else {
+          input.classList.add("lottery-input-default");
+        }
+      });
+    }
+
     function updateLotteryButtons() {
+      updateLotteryInputColors();
       const inputs = ["lotteryNum0", "lotteryNum1", "lotteryNum2"].map(id => document.getElementById(id)).filter(Boolean);
       const nums = inputs.map(i => Math.floor(Number(i.value || 0)));
       const valid = validateLotteryNumbers(nums);
