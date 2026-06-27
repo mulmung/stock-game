@@ -2453,6 +2453,13 @@
       startBtn.disabled = true;
       setStatus(nicknameStatus, "저장 중...");
       try {
+        const existingUserSnap = await getDoc(userRef(currentUser.uid));
+        if (existingUserSnap.exists()) {
+          currentUserData = existingUserSnap.data();
+          setStatus(nicknameStatus, "기존 계정으로 시작합니다!", "success");
+          showScreen("game");
+          return;
+        }
         const batch = writeBatch(db);
         batch.set(userRef(currentUser.uid), {
           nickname,
@@ -2480,7 +2487,8 @@
         await batch.commit();
         setStatus(nicknameStatus, "시작합니다!", "success");
       } catch (error) {
-        setStatus(nicknameStatus, "닉네임 저장에 실패했습니다. Firestore 규칙과 설정값을 확인해주세요.", "error");
+        console.error("createNewUser failed", error);
+        setStatus(nicknameStatus, "닉네임 저장에 실패했습니다. 이미 사용 중인 닉네임이거나 저장 권한 문제가 있을 수 있습니다.", "error");
         startBtn.disabled = false;
       }
     }
@@ -3461,15 +3469,15 @@
       if (!round) return 0;
       if (round.claimDeadlineAt && typeof round.claimDeadlineAt.toMillis === "function") return round.claimDeadlineAt.toMillis();
       const raw = String(round.claimDeadline || "").trim();
-      const parsed = raw && raw.includes("T12:00") ? Date.parse(raw) : NaN;
+      const parsed = raw && raw.includes("T") ? Date.parse(raw) : NaN;
       if (Number.isFinite(parsed)) return parsed;
       const drawDate = round.drawDate || round.roundKey || koreaTodayKey();
-      const fallback = Date.parse(`${addDaysToKey(drawDate, 1)}T12:00:00+09:00`);
+      const fallback = Date.parse(`${addDaysToKey(drawDate, 1)}T00:00:00+09:00`);
       return Number.isFinite(fallback) ? fallback : 0;
     }
 
     function lotteryClaimDeadlineAt(drawDate) {
-      const ms = Date.parse(`${addDaysToKey(drawDate, 1)}T12:00:00+09:00`);
+      const ms = Date.parse(`${addDaysToKey(drawDate, 1)}T00:00:00+09:00`);
       return Timestamp.fromDate(new Date(ms));
     }
 
@@ -3620,7 +3628,7 @@
           drawDate,
           drawTime: lotterySettings.drawTime,
           closeTime: lotterySettings.closeTime,
-          claimDeadline: `${addDaysToKey(drawDate, 1)}T12:00:00+09:00`,
+          claimDeadline: `${addDaysToKey(drawDate, 1)}T00:00:00+09:00`,
           claimDeadlineAt: lotteryClaimDeadlineAt(drawDate),
           numberMin: 1,
           numberMax: 15,
@@ -3866,7 +3874,7 @@
       const deadlineMs = lotteryClaimDeadlineMs(round);
       const deadlineLine = deadlineMs > Date.now()
         ? `<div class="lottery-claim-deadline">수령 마감까지 ${lotteryCountdownHtml("수령 마감까지", deadlineMs, "수령 만료")}</div>`
-        : `<div class="lottery-claim-deadline">수령 마감: 다음날 12:00</div>`;
+        : `<div class="lottery-claim-deadline">수령 마감: 자정</div>`;
       if (ticket.claimed) {
         return `<div class="lottery-claim-box"><div class="lottery-meta">내 결과: <span class="lottery-result-highlight">${resultText}</span><br>당첨금 <span class="lottery-money-value">${formatWon(prize)}</span></div><div class="lottery-claimed-label">수령 완료</div></div>`;
       }
