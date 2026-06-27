@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
-  <title>주식 게임 v64</title>
+  <title>주식 게임 v65</title>
   <style>
     * { box-sizing: border-box; }
     html, body { margin: 0; padding: 0; height: 100%; font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; background: #1f2937; color: #fff; }
@@ -441,6 +441,8 @@
     .lottery-claim-box { margin-top: 12px; padding-top: 12px; border-top: 1px solid var(--line); }
     .lottery-claim-btn { margin-top: 10px; }
     .lottery-claimed-label { margin-top: 10px; color: var(--green); font-size: 15px; font-weight: 1000; }
+    .lottery-expired-label { margin-top: 10px; color: #f87171; font-size: 15px; font-weight: 1000; }
+    .lottery-claim-deadline { margin-top: 8px; color: var(--muted); font-size: 13px; font-weight: 850; line-height: 1.5; }
     .lottery-result-highlight { color: #fff; font-weight: 1000; }
     .lottery-number-inputs { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin: 14px 0; }
     .lottery-number-inputs input { width: 100%; height: 58px; text-align: center; font-size: 24px; font-weight: 1000; }
@@ -1467,6 +1469,7 @@
     let lotteryActiveTab = "rounds";
     let currentLotteryRound = null;
     let myLotteryTicket = null;
+    let lotteryMyTicketsByRound = new Map();
     let lotteryRounds = [];
     let currentScreenName = "loading";
     let unsubscribeUser = null;
@@ -3437,6 +3440,27 @@
       return koreaNowMinutes(now) >= lotteryTimeToMinutes(round.drawTime || settings.drawTime);
     }
 
+    function lotteryClaimDeadlineMs(round = currentLotteryRound) {
+      if (!round) return 0;
+      if (round.claimDeadlineAt && typeof round.claimDeadlineAt.toMillis === "function") return round.claimDeadlineAt.toMillis();
+      const raw = String(round.claimDeadline || "").trim();
+      const parsed = raw && raw.includes("T12:00") ? Date.parse(raw) : NaN;
+      if (Number.isFinite(parsed)) return parsed;
+      const drawDate = round.drawDate || round.roundKey || koreaTodayKey();
+      const fallback = Date.parse(`${addDaysToKey(drawDate, 1)}T12:00:00+09:00`);
+      return Number.isFinite(fallback) ? fallback : 0;
+    }
+
+    function lotteryClaimDeadlineAt(drawDate) {
+      const ms = Date.parse(`${addDaysToKey(drawDate, 1)}T12:00:00+09:00`);
+      return Timestamp.fromDate(new Date(ms));
+    }
+
+    function isLotteryClaimExpired(round = currentLotteryRound, now = new Date()) {
+      const deadline = lotteryClaimDeadlineMs(round);
+      return deadline > 0 && now.getTime() >= deadline;
+    }
+
     function validateLotteryNumbers(numbers) {
       if (!Array.isArray(numbers) || numbers.length !== 3) return false;
       if (!numbers.every(n => Number.isInteger(n) && n >= 1 && n <= 15)) return false;
@@ -3579,7 +3603,8 @@
           drawDate,
           drawTime: lotterySettings.drawTime,
           closeTime: lotterySettings.closeTime,
-          claimDeadline: `${addDaysToKey(drawDate, 1)}T00:00:00+09:00`,
+          claimDeadline: `${addDaysToKey(drawDate, 1)}T12:00:00+09:00`,
+          claimDeadlineAt: lotteryClaimDeadlineAt(drawDate),
           numberMin: 1,
           numberMax: 15,
           pickCount: 3,
@@ -3616,6 +3641,16 @@
       const maxHistory = Number(lotterySettings.maxRoundHistory || 20);
       const snap = await getDocs(query(lotteryRoundsCol(), orderBy("roundNo", "desc"), limit(maxHistory)));
       lotteryRounds = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+      lotteryMyTicketsByRound = new Map();
+      if (!currentUser || !lotteryRounds.length) return;
+      await Promise.all(lotteryRounds.map(async (round) => {
+        try {
+          const ticketSnap = await getDoc(lotteryTicketRef(round.id, currentUser.uid));
+          if (ticketSnap.exists()) lotteryMyTicketsByRound.set(round.id, { id: ticketSnap.id, roundId: round.id, ...ticketSnap.data() });
+        } catch (error) {
+          console.warn("복권 내 티켓 조회 실패:", round.id, error);
+        }
+      }));
     }
 
     async function loadLottery() {
@@ -3716,8 +3751,9 @@
         const bonus = drawn && round.bonusNumber != null ? lotteryNumbersHtml([round.bonusNumber]) : "";
         let meta = "";
         if (drawn) {
-          const myResult = round.id === currentLotteryRound?.id && myLotteryTicket
-            ? (myLotteryTicket.status === "win" ? lotteryClaimHtml(myLotteryTicket) : `<div class="lottery-claim-box"><div class="lottery-meta">내 결과: <span class="lottery-result-highlight">${escapeHtml(lotteryResultText(myLotteryTicket))}</span></div></div>`)
+          const roundTicket = lotteryMyTicketsByRound.get(round.id) || (round.id === currentLotteryRound?.id ? myLotteryTicket : null);
+          const myResult = roundTicket
+            ? (roundTicket.status === "win" ? lotteryClaimHtml(roundTicket, round) : `<div class="lottery-claim-box"><div class="lottery-meta">내 결과: <span class="lottery-result-highlight">${escapeHtml(lotteryResultText(roundTicket))}</span></div></div>`)
             : "";
           meta = `상태: 발표 완료<br>1등 당첨자 ${firstCount ? firstCount + "명" : "없음"}<br><br>당첨번호${winNums}<div class="lottery-meta">보너스 번호</div>${bonus || `<div class="lottery-meta">-</div>`}${myResult}`;
         } else if (drawPassed) {
@@ -3741,17 +3777,26 @@
       return "-";
     }
 
-    function lotteryClaimHtml(ticket = myLotteryTicket) {
+    function lotteryClaimHtml(ticket = myLotteryTicket, round = currentLotteryRound) {
       if (!ticket || ticket.status !== "win") return "";
       const prize = Number(ticket.prizeAmount || 0);
       const resultText = escapeHtml(lotteryResultText(ticket));
+      const expired = isLotteryClaimExpired(round);
+      const deadlineMs = lotteryClaimDeadlineMs(round);
+      const deadlineLine = deadlineMs > Date.now()
+        ? `<div class="lottery-claim-deadline">수령 마감까지 ${lotteryCountdownHtml("수령 마감까지", deadlineMs, "수령 만료")}</div>`
+        : `<div class="lottery-claim-deadline">수령 마감: 다음날 12:00</div>`;
       if (ticket.claimed) {
         return `<div class="lottery-claim-box"><div class="lottery-meta">내 결과: <span class="lottery-result-highlight">${resultText}</span><br>당첨금 <span class="lottery-money-value">${formatWon(prize)}</span></div><div class="lottery-claimed-label">수령 완료</div></div>`;
+      }
+      if (expired) {
+        return `<div class="lottery-claim-box"><div class="lottery-meta">내 결과: <span class="lottery-result-highlight">${resultText}</span><br>당첨금 <span class="lottery-money-value">${formatWon(prize)}</span></div><div class="lottery-expired-label">수령 만료</div></div>`;
       }
       if (prize <= 0) {
         return `<div class="lottery-claim-box"><div class="lottery-meta">내 결과: <span class="lottery-result-highlight">${resultText}</span><br>당첨금 <span class="lottery-money-value">${formatWon(prize)}</span><br>수령 가능한 당첨금이 없습니다.</div></div>`;
       }
-      return `<div class="lottery-claim-box"><div class="lottery-meta">내 결과: <span class="lottery-result-highlight">${resultText}</span><br>당첨금 <span class="lottery-money-value">${formatWon(prize)}</span></div><button class="primary-btn lottery-claim-btn" data-lottery-claim="1" type="button">당첨금 수령</button></div>`;
+      const roundId = round?.id || currentLotteryRound?.id || "";
+      return `<div class="lottery-claim-box"><div class="lottery-meta">내 결과: <span class="lottery-result-highlight">${resultText}</span><br>당첨금 <span class="lottery-money-value">${formatWon(prize)}</span></div>${deadlineLine}<button class="primary-btn lottery-claim-btn" data-lottery-claim="1" data-round-id="${escapeHtml(roundId)}" type="button">당첨금 수령</button></div>`;
     }
 
     function renderLotteryBuy() {
@@ -3779,7 +3824,7 @@
         } else {
           const prize = Number(myLotteryTicket.prizeAmount || 0);
           if (myLotteryTicket.status === "win") {
-            body += lotteryClaimHtml(myLotteryTicket);
+            body += lotteryClaimHtml(myLotteryTicket, round);
           } else {
             body += `<div class="lottery-meta">결과: ${escapeHtml(lotteryResultText(myLotteryTicket))}<br>수령 가능 금액: ${formatWon(prize)}</div>`;
           }
@@ -3812,7 +3857,7 @@
       if (buyBtn) buyBtn.addEventListener("click", buyLotteryTicket);
       const editBtn = document.getElementById("lotteryEditBtn");
       if (editBtn) editBtn.addEventListener("click", editLotteryTicket);
-      document.querySelectorAll('[data-lottery-claim="1"]').forEach(btn => btn.addEventListener("click", claimLotteryPrize));
+      document.querySelectorAll('[data-lottery-claim="1"]').forEach(btn => btn.addEventListener("click", () => claimLotteryPrize(btn.dataset.roundId)));
       updateLotteryButtons();
     }
 
@@ -3851,14 +3896,20 @@
       updateLotteryButtons();
     }
 
-    async function claimLotteryPrize() {
-      if (!currentUser || !currentLotteryRound || !myLotteryTicket) return;
-      if (myLotteryTicket.status !== "win") {
+    async function claimLotteryPrize(roundId = currentLotteryRound?.id) {
+      if (!currentUser || !roundId) return;
+      const targetRound = lotteryRounds.find(r => r.id === roundId) || (currentLotteryRound?.id === roundId ? currentLotteryRound : null);
+      const targetTicket = lotteryMyTicketsByRound.get(roundId) || (roundId === currentLotteryRound?.id ? myLotteryTicket : null);
+      if (!targetTicket || targetTicket.status !== "win") {
         if (lotteryStatus) { lotteryStatus.className = "lottery-status error"; lotteryStatus.textContent = "당첨된 복권만 수령할 수 있습니다."; }
         return;
       }
-      const prize = Number(myLotteryTicket.prizeAmount || 0);
-      if (myLotteryTicket.claimed) {
+      if (isLotteryClaimExpired(targetRound)) {
+        if (lotteryStatus) { lotteryStatus.className = "lottery-status error"; lotteryStatus.textContent = "수령 마감 시간이 지나 당첨금을 받을 수 없습니다."; }
+        return;
+      }
+      const prize = Number(targetTicket.prizeAmount || 0);
+      if (targetTicket.claimed) {
         if (lotteryStatus) { lotteryStatus.className = "lottery-status success"; lotteryStatus.textContent = "이미 수령 완료된 당첨금입니다."; }
         return;
       }
@@ -3871,8 +3922,8 @@
         await runTransaction(db, async (transaction) => {
           const uRef = userRef(currentUser.uid);
           const tRef = treasuryRef();
-          const ticketRef = lotteryTicketRef(currentLotteryRound.id, currentUser.uid);
-          const roundRef = lotteryRoundRef(currentLotteryRound.id);
+          const ticketRef = lotteryTicketRef(roundId, currentUser.uid);
+          const roundRef = lotteryRoundRef(roundId);
           const userSnap = await transaction.get(uRef);
           const treasurySnap = await transaction.get(tRef);
           const ticketSnap = await transaction.get(ticketRef);
@@ -3880,8 +3931,9 @@
           if (!userSnap.exists() || !ticketSnap.exists() || !roundSnap.exists()) throw new Error("데이터가 없습니다.");
           const user = userSnap.data();
           const ticket = ticketSnap.data();
-          const round = roundSnap.data();
+          const round = { id: roundSnap.id, ...roundSnap.data() };
           if (round.status !== "drawn") throw new Error("아직 발표가 완료되지 않았습니다.");
+          if (isLotteryClaimExpired(round)) throw new Error("수령 마감 시간이 지나 당첨금을 받을 수 없습니다.");
           if (ticket.status !== "win") throw new Error("당첨된 복권만 수령할 수 있습니다.");
           if (ticket.claimed) throw new Error("이미 수령 완료된 당첨금입니다.");
           const amount = Number(ticket.prizeAmount || 0);
@@ -3902,77 +3954,6 @@
       } catch (error) {
         if (lotteryStatus) { lotteryStatus.className = "lottery-status error"; lotteryStatus.textContent = error.message || "당첨금 수령에 실패했습니다."; }
       }
-    }
-
-    async function buyLotteryTicket() {
-      if (!currentUser || !currentLotteryRound) return;
-      const nums = sortLotteryNumbers(getLotteryInputNumbers());
-      if (!validateLotteryNumbers(nums)) { if (lotteryStatus) { lotteryStatus.className = "lottery-status error"; lotteryStatus.textContent = "번호는 1~15 중 서로 다른 숫자 3개를 입력해주세요."; } return; }
-      if (isLotteryClosePassed()) { if (lotteryStatus) { lotteryStatus.className = "lottery-status error"; lotteryStatus.textContent = "구매 마감 시간이 지났습니다."; } return; }
-      try {
-        if (lotteryStatus) { lotteryStatus.className = "lottery-status"; lotteryStatus.textContent = "구매 중..."; }
-        await runTransaction(db, async (transaction) => {
-          const uRef = userRef(currentUser.uid);
-          const tRef = treasuryRef();
-          const ticketRef = lotteryTicketRef(currentLotteryRound.id, currentUser.uid);
-          const roundRef = lotteryRoundRef(currentLotteryRound.id);
-          const userSnap = await transaction.get(uRef);
-          const treasurySnap = await transaction.get(tRef);
-          const ticketSnap = await transaction.get(ticketRef);
-          const roundSnap = await transaction.get(roundRef);
-          if (!userSnap.exists() || !roundSnap.exists()) throw new Error("데이터가 없습니다.");
-          if (ticketSnap.exists()) throw new Error("이미 이번 회차 복권을 구매했습니다.");
-          const round = roundSnap.data();
-          if (round.status !== "open" || isLotteryClosePassed({ id: currentLotteryRound.id, ...round })) throw new Error("구매 마감 시간이 지났습니다.");
-          const user = userSnap.data();
-          const price = Number(lotterySettings.ticketPrice || 10000);
-          if (Number(user.cash || 0) < price) throw new Error("보유현금이 부족합니다.");
-          const oldTreasury = Number(treasurySnap.exists() ? treasurySnap.data().totalTreasury || 0 : 0);
-          const oldTracked = Number(treasurySnap.exists() ? treasurySnap.data().trackedContributions || 0 : 0);
-          transaction.update(uRef, { cash: Number(user.cash || 0) - price, lastTradeAt: serverTimestamp() });
-          transaction.set(tRef, { totalTreasury: oldTreasury + price, trackedContributions: oldTracked, updatedAt: serverTimestamp() }, { merge: true });
-          transaction.set(ticketRef, { uid: currentUser.uid, nickname: user.nickname || currentUserData?.nickname || "-", numbers: nums, status: "waiting", rank: null, prizeAmount: 0, claimed: false, claimedAt: null, purchasedAt: serverTimestamp(), editedAt: null });
-        });
-        showEarnPopup("복권 구매 완료");
-        await loadTreasury().catch(() => {});
-        await loadLottery();
-        setTimeout(() => updateMyRanking().catch(() => {}), 800);
-      } catch (error) { if (lotteryStatus) { lotteryStatus.className = "lottery-status error"; lotteryStatus.textContent = error.message || "복권 구매에 실패했습니다."; } }
-    }
-
-    async function editLotteryTicket() {
-      if (!currentUser || !currentLotteryRound || !myLotteryTicket) return;
-      const nums = sortLotteryNumbers(getLotteryInputNumbers());
-      if (!validateLotteryNumbers(nums)) { if (lotteryStatus) { lotteryStatus.className = "lottery-status error"; lotteryStatus.textContent = "번호는 1~15 중 서로 다른 숫자 3개를 입력해주세요."; } return; }
-      if (isLotteryClosePassed()) { if (lotteryStatus) { lotteryStatus.className = "lottery-status error"; lotteryStatus.textContent = "수정 마감 시간이 지났습니다."; } return; }
-      try {
-        if (lotteryStatus) { lotteryStatus.className = "lottery-status"; lotteryStatus.textContent = "수정 중..."; }
-        await runTransaction(db, async (transaction) => {
-          const uRef = userRef(currentUser.uid);
-          const tRef = treasuryRef();
-          const ticketRef = lotteryTicketRef(currentLotteryRound.id, currentUser.uid);
-          const roundRef = lotteryRoundRef(currentLotteryRound.id);
-          const userSnap = await transaction.get(uRef);
-          const treasurySnap = await transaction.get(tRef);
-          const ticketSnap = await transaction.get(ticketRef);
-          const roundSnap = await transaction.get(roundRef);
-          if (!userSnap.exists() || !ticketSnap.exists() || !roundSnap.exists()) throw new Error("데이터가 없습니다.");
-          const round = roundSnap.data();
-          if (round.status !== "open" || isLotteryClosePassed({ id: currentLotteryRound.id, ...round })) throw new Error("수정 마감 시간이 지났습니다.");
-          const user = userSnap.data();
-          const price = Number(lotterySettings.editPrice || 3000);
-          if (Number(user.cash || 0) < price) throw new Error("보유현금이 부족합니다.");
-          const oldTreasury = Number(treasurySnap.exists() ? treasurySnap.data().totalTreasury || 0 : 0);
-          const oldTracked = Number(treasurySnap.exists() ? treasurySnap.data().trackedContributions || 0 : 0);
-          transaction.update(uRef, { cash: Number(user.cash || 0) - price, lastTradeAt: serverTimestamp() });
-          transaction.set(tRef, { totalTreasury: oldTreasury + price, trackedContributions: oldTracked, updatedAt: serverTimestamp() }, { merge: true });
-          transaction.update(ticketRef, { numbers: nums, editedAt: serverTimestamp() });
-        });
-        showEarnPopup("복권 수정 완료");
-        await loadTreasury().catch(() => {});
-        await loadLottery();
-        setTimeout(() => updateMyRanking().catch(() => {}), 800);
-      } catch (error) { if (lotteryStatus) { lotteryStatus.className = "lottery-status error"; lotteryStatus.textContent = error.message || "복권 수정에 실패했습니다."; } }
     }
 
 
