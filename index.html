@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
-  <title>주식 게임 v63-4</title>
+  <title>주식 게임 v64</title>
   <style>
     * { box-sizing: border-box; }
     html, body { margin: 0; padding: 0; height: 100%; font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; background: #1f2937; color: #fff; }
@@ -438,6 +438,10 @@
     .lottery-meta { color: var(--muted); font-size: 13px; font-weight: 850; line-height: 1.7; margin: 8px 0; }
     .lottery-time-value { color: var(--yellow); font-size: 16px; font-weight: 1000; letter-spacing: -0.25px; font-variant-numeric: tabular-nums; }
     .lottery-money-value { color: #fff; font-weight: 1000; letter-spacing: -0.25px; }
+    .lottery-claim-box { margin-top: 12px; padding-top: 12px; border-top: 1px solid var(--line); }
+    .lottery-claim-btn { margin-top: 10px; }
+    .lottery-claimed-label { margin-top: 10px; color: var(--green); font-size: 15px; font-weight: 1000; }
+    .lottery-result-highlight { color: #fff; font-weight: 1000; }
     .lottery-number-inputs { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin: 14px 0; }
     .lottery-number-inputs input { width: 100%; height: 58px; text-align: center; font-size: 24px; font-weight: 1000; }
     .lottery-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 12px; }
@@ -3712,7 +3716,10 @@
         const bonus = drawn && round.bonusNumber != null ? lotteryNumbersHtml([round.bonusNumber]) : "";
         let meta = "";
         if (drawn) {
-          meta = `상태: 발표 완료<br>1등 당첨자 ${firstCount ? firstCount + "명" : "없음"}<br><br>당첨번호${winNums}<div class="lottery-meta">보너스 번호</div>${bonus || `<div class="lottery-meta">-</div>`}`;
+          const myResult = round.id === currentLotteryRound?.id && myLotteryTicket
+            ? (myLotteryTicket.status === "win" ? lotteryClaimHtml(myLotteryTicket) : `<div class="lottery-claim-box"><div class="lottery-meta">내 결과: <span class="lottery-result-highlight">${escapeHtml(lotteryResultText(myLotteryTicket))}</span></div></div>`)
+            : "";
+          meta = `상태: 발표 완료<br>1등 당첨자 ${firstCount ? firstCount + "명" : "없음"}<br><br>당첨번호${winNums}<div class="lottery-meta">보너스 번호</div>${bonus || `<div class="lottery-meta">-</div>`}${myResult}`;
         } else if (drawPassed) {
           meta = `상태: 발표 처리 중<br>잠시 후 다시 확인해주세요.`;
         } else {
@@ -3732,6 +3739,19 @@
       if (ticket.status === "win") return `${Number(ticket.rank || 0)}등 당첨`;
       if (ticket.status === "lose") return "꽝";
       return "-";
+    }
+
+    function lotteryClaimHtml(ticket = myLotteryTicket) {
+      if (!ticket || ticket.status !== "win") return "";
+      const prize = Number(ticket.prizeAmount || 0);
+      const resultText = escapeHtml(lotteryResultText(ticket));
+      if (ticket.claimed) {
+        return `<div class="lottery-claim-box"><div class="lottery-meta">내 결과: <span class="lottery-result-highlight">${resultText}</span><br>당첨금 <span class="lottery-money-value">${formatWon(prize)}</span></div><div class="lottery-claimed-label">수령 완료</div></div>`;
+      }
+      if (prize <= 0) {
+        return `<div class="lottery-claim-box"><div class="lottery-meta">내 결과: <span class="lottery-result-highlight">${resultText}</span><br>당첨금 <span class="lottery-money-value">${formatWon(prize)}</span><br>수령 가능한 당첨금이 없습니다.</div></div>`;
+      }
+      return `<div class="lottery-claim-box"><div class="lottery-meta">내 결과: <span class="lottery-result-highlight">${resultText}</span><br>당첨금 <span class="lottery-money-value">${formatWon(prize)}</span></div><button class="primary-btn lottery-claim-btn" data-lottery-claim="1" type="button">당첨금 수령</button></div>`;
     }
 
     function renderLotteryBuy() {
@@ -3758,7 +3778,11 @@
           body += `<div class="lottery-meta">상태: 발표 대기${closed ? " / 수정 마감" : ""}</div>`;
         } else {
           const prize = Number(myLotteryTicket.prizeAmount || 0);
-          body += `<div class="lottery-meta">결과: ${escapeHtml(lotteryResultText(myLotteryTicket))}<br>수령 가능 금액: ${formatWon(prize)}<br>수령 기능은 다음 단계 v64에서 적용됩니다.</div>`;
+          if (myLotteryTicket.status === "win") {
+            body += lotteryClaimHtml(myLotteryTicket);
+          } else {
+            body += `<div class="lottery-meta">결과: ${escapeHtml(lotteryResultText(myLotteryTicket))}<br>수령 가능 금액: ${formatWon(prize)}</div>`;
+          }
         }
         body += `</div>`;
       } else if (!drawn && !closed) {
@@ -3788,6 +3812,7 @@
       if (buyBtn) buyBtn.addEventListener("click", buyLotteryTicket);
       const editBtn = document.getElementById("lotteryEditBtn");
       if (editBtn) editBtn.addEventListener("click", editLotteryTicket);
+      document.querySelectorAll('[data-lottery-claim="1"]').forEach(btn => btn.addEventListener("click", claimLotteryPrize));
       updateLotteryButtons();
     }
 
@@ -3824,6 +3849,59 @@
       let idx = 0;
       inputs.forEach(input => { if (!input.value) input.value = fill[idx++] || ""; });
       updateLotteryButtons();
+    }
+
+    async function claimLotteryPrize() {
+      if (!currentUser || !currentLotteryRound || !myLotteryTicket) return;
+      if (myLotteryTicket.status !== "win") {
+        if (lotteryStatus) { lotteryStatus.className = "lottery-status error"; lotteryStatus.textContent = "당첨된 복권만 수령할 수 있습니다."; }
+        return;
+      }
+      const prize = Number(myLotteryTicket.prizeAmount || 0);
+      if (myLotteryTicket.claimed) {
+        if (lotteryStatus) { lotteryStatus.className = "lottery-status success"; lotteryStatus.textContent = "이미 수령 완료된 당첨금입니다."; }
+        return;
+      }
+      if (prize <= 0) {
+        if (lotteryStatus) { lotteryStatus.className = "lottery-status error"; lotteryStatus.textContent = "수령 가능한 당첨금이 없습니다."; }
+        return;
+      }
+      try {
+        if (lotteryStatus) { lotteryStatus.className = "lottery-status"; lotteryStatus.textContent = "당첨금 수령 중..."; }
+        await runTransaction(db, async (transaction) => {
+          const uRef = userRef(currentUser.uid);
+          const tRef = treasuryRef();
+          const ticketRef = lotteryTicketRef(currentLotteryRound.id, currentUser.uid);
+          const roundRef = lotteryRoundRef(currentLotteryRound.id);
+          const userSnap = await transaction.get(uRef);
+          const treasurySnap = await transaction.get(tRef);
+          const ticketSnap = await transaction.get(ticketRef);
+          const roundSnap = await transaction.get(roundRef);
+          if (!userSnap.exists() || !ticketSnap.exists() || !roundSnap.exists()) throw new Error("데이터가 없습니다.");
+          const user = userSnap.data();
+          const ticket = ticketSnap.data();
+          const round = roundSnap.data();
+          if (round.status !== "drawn") throw new Error("아직 발표가 완료되지 않았습니다.");
+          if (ticket.status !== "win") throw new Error("당첨된 복권만 수령할 수 있습니다.");
+          if (ticket.claimed) throw new Error("이미 수령 완료된 당첨금입니다.");
+          const amount = Number(ticket.prizeAmount || 0);
+          if (amount <= 0) throw new Error("수령 가능한 당첨금이 없습니다.");
+          const oldTreasury = Number(treasurySnap.exists() ? treasurySnap.data().totalTreasury || 0 : 0);
+          const oldTracked = Number(treasurySnap.exists() ? treasurySnap.data().trackedContributions || 0 : 0);
+          if (oldTreasury < amount) throw new Error("국고 잔액이 부족하여 당첨금을 수령할 수 없습니다.");
+          transaction.update(uRef, { cash: Number(user.cash || 0) + amount, lastTradeAt: serverTimestamp() });
+          transaction.set(tRef, { totalTreasury: oldTreasury - amount, trackedContributions: oldTracked, updatedAt: serverTimestamp() }, { merge: true });
+          transaction.update(ticketRef, { claimed: true, claimedAt: serverTimestamp() });
+          transaction.update(roundRef, { claimedTotal: Number(round.claimedTotal || 0) + amount, claimedCount: Number(round.claimedCount || 0) + 1 });
+        });
+        showEarnPopup(`당첨금 ${formatWon(prize)} 수령`);
+        if (lotteryStatus) { lotteryStatus.className = "lottery-status success"; lotteryStatus.textContent = `당첨금 ${formatWon(prize)}을 수령했습니다.`; }
+        await loadTreasury().catch(() => {});
+        await loadLottery();
+        setTimeout(() => updateMyRanking().catch(() => {}), 800);
+      } catch (error) {
+        if (lotteryStatus) { lotteryStatus.className = "lottery-status error"; lotteryStatus.textContent = error.message || "당첨금 수령에 실패했습니다."; }
+      }
     }
 
     async function buyLotteryTicket() {
