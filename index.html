@@ -629,7 +629,7 @@
           <div class="lottery-preview-title">복권 시스템 준비 중</div>
           <div class="lottery-preview-row">
             <div class="lottery-preview-label">이번 단계</div>
-            <div class="lottery-preview-value">v61 기본 설정</div>
+            <div class="lottery-preview-value">v61-1 시간 저장 오류 수정</div>
           </div>
           <div class="lottery-preview-row">
             <div class="lottery-preview-label">구매/수정</div>
@@ -3212,14 +3212,34 @@
     }
 
 
+    function normalizeLotteryTimeText(value, fallback) {
+      const text = String(value || '').trim();
+      if (/^\d{2}:\d{2}$/.test(text)) return text;
+      if (/^\d{1}:\d{2}$/.test(text)) return `0${text}`;
+      return fallback;
+    }
+
+    function lotteryTimeToMinutes(value) {
+      const text = String(value || '').trim();
+      if (!/^\d{2}:\d{2}$/.test(text)) return NaN;
+      const [hour, minute] = text.split(':').map(Number);
+      if (!Number.isInteger(hour) || !Number.isInteger(minute)) return NaN;
+      if (hour < 0 || hour > 23 || minute < 0 || minute > 59) return NaN;
+      return hour * 60 + minute;
+    }
+
+    function isValidLotteryTimeText(value) {
+      return Number.isFinite(lotteryTimeToMinutes(value));
+    }
+
     function normalizeLotterySettings(data = {}) {
       const rankRates = data.rankRates || {};
       const mode = data.mode === "weekly" ? "weekly" : "daily";
       return {
         mode,
         drawDay: Math.max(0, Math.min(6, Math.floor(Number(data.drawDay ?? DEFAULT_LOTTERY_SETTINGS.drawDay)))),
-        drawTime: /^\\d{2}:\\d{2}$/.test(String(data.drawTime || "")) ? String(data.drawTime) : DEFAULT_LOTTERY_SETTINGS.drawTime,
-        closeTime: /^\\d{2}:\\d{2}$/.test(String(data.closeTime || "")) ? String(data.closeTime) : DEFAULT_LOTTERY_SETTINGS.closeTime,
+        drawTime: normalizeLotteryTimeText(data.drawTime, DEFAULT_LOTTERY_SETTINGS.drawTime),
+        closeTime: normalizeLotteryTimeText(data.closeTime, DEFAULT_LOTTERY_SETTINGS.closeTime),
         ticketPrice: Math.max(1, Math.floor(Number(data.ticketPrice ?? DEFAULT_LOTTERY_SETTINGS.ticketPrice))),
         editPrice: Math.max(0, Math.floor(Number(data.editPrice ?? DEFAULT_LOTTERY_SETTINGS.editPrice))),
         payoutRate: Math.max(0, Math.min(100, Number(data.payoutRate ?? DEFAULT_LOTTERY_SETTINGS.payoutRate))),
@@ -3288,8 +3308,8 @@
       if (!isAdmin()) return;
       const mode = lotterySettings.mode === "weekly" ? "weekly" : "daily";
       const drawDay = Math.floor(Number(lotteryDrawDayInput.value));
-      const drawTime = String(lotteryDrawTimeInput.value || "");
-      const closeTime = String(lotteryCloseTimeInput.value || "");
+      const drawTime = normalizeLotteryTimeText(lotteryDrawTimeInput.value, DEFAULT_LOTTERY_SETTINGS.drawTime);
+      const closeTime = normalizeLotteryTimeText(lotteryCloseTimeInput.value, DEFAULT_LOTTERY_SETTINGS.closeTime);
       const ticketPrice = Math.floor(Number(lotteryTicketPriceInput.value));
       const editPrice = Math.floor(Number(lotteryEditPriceInput.value));
       const maxRoundHistory = Math.floor(Number(lotteryMaxRoundHistoryInput.value));
@@ -3304,7 +3324,8 @@
       const rankSum = rankRates.rank1 + rankRates.rank2 + rankRates.rank3 + rankRates.rank4 + rankRates.rank5;
       if (!(mode === "daily" || mode === "weekly")) return;
       if (!Number.isInteger(drawDay) || drawDay < 0 || drawDay > 6) { setStatus(lotterySettingsStatus, "발표 요일을 확인해주세요.", "error"); return; }
-      if (!/^\\d{2}:\\d{2}$/.test(drawTime) || !/^\\d{2}:\\d{2}$/.test(closeTime)) { setStatus(lotterySettingsStatus, "발표 시간과 구매 마감 시간을 확인해주세요.", "error"); return; }
+      if (!isValidLotteryTimeText(drawTime) || !isValidLotteryTimeText(closeTime)) { setStatus(lotterySettingsStatus, "발표 시간과 구매 마감 시간을 확인해주세요.", "error"); return; }
+      if (lotteryTimeToMinutes(closeTime) >= lotteryTimeToMinutes(drawTime)) { setStatus(lotterySettingsStatus, "구매 마감 시간은 발표 시간보다 빨라야 합니다.", "error"); return; }
       if (!Number.isFinite(ticketPrice) || ticketPrice < 1) { setStatus(lotterySettingsStatus, "구매 비용은 1원 이상이어야 합니다.", "error"); return; }
       if (!Number.isFinite(editPrice) || editPrice < 0) { setStatus(lotterySettingsStatus, "수정 비용은 0원 이상이어야 합니다.", "error"); return; }
       if (!Number.isFinite(maxRoundHistory) || maxRoundHistory < 1 || maxRoundHistory > 100) { setStatus(lotterySettingsStatus, "회차 보관 수는 1~100 사이로 입력해주세요.", "error"); return; }
