@@ -400,6 +400,17 @@
     .news-divider { height: 1px; background: var(--line); margin: 0 0 10px; }
     .news-content { color: var(--muted); font-size: 14px; line-height: 1.55; font-weight: 750; white-space: pre-wrap; }
     .news-empty { padding: 20px 0; color: var(--muted); font-size: 14px; font-weight: 800; text-align: center; border-bottom: 1px solid var(--line); }
+    .lottery-preview-card { border-top: 1px solid var(--line-strong); border-bottom: 1px solid var(--line-strong); padding: 18px 0; margin: 18px 0; }
+    .lottery-preview-title { font-size: 18px; font-weight: 1000; margin-bottom: 12px; }
+    .lottery-preview-row { display: flex; align-items: center; justify-content: space-between; gap: 14px; padding: 10px 0; border-bottom: 1px solid var(--line); }
+    .lottery-preview-row:last-child { border-bottom: 0; }
+    .lottery-preview-label { color: var(--muted); font-size: 12px; font-weight: 950; }
+    .lottery-preview-value { color: #fff; font-size: 15px; font-weight: 950; text-align: right; }
+    .lottery-manage-card { border-top: 1px solid var(--line-strong); border-bottom: 1px solid var(--line-strong); padding: 18px 0; margin: 0 0 18px; }
+    .lottery-mode-row { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 16px; }
+    .lottery-mode-btn { background: rgba(255,255,255,0.06); color: #fff; border: 1px solid var(--line-strong); }
+    .lottery-mode-btn.active { background: #fff; color: #111827; }
+
     .news-template-header { display:flex; align-items:center; justify-content:space-between; gap:12px; padding: 12px 0; border-bottom: 1px solid var(--line); }
     .news-template-title { font-size: 15px; font-weight: 1000; color: #fff; }
     .news-template-list { border-top: 1px solid var(--line); margin-top: 10px; }
@@ -607,6 +618,32 @@
       </div>
     </section>
 
+    <section id="lotteryScreen" class="screen page-screen">
+      <div class="page">
+        <div class="settings-top market-top">
+          <h1 class="title">복권</h1>
+          <button id="backFromLotteryBtn" class="settings-back-btn">뒤로가기</button>
+        </div>
+        <p class="subtitle">복권 구매와 회차별 당첨 결과를 확인할 수 있습니다.</p>
+        <div class="lottery-preview-card">
+          <div class="lottery-preview-title">복권 시스템 준비 중</div>
+          <div class="lottery-preview-row">
+            <div class="lottery-preview-label">이번 단계</div>
+            <div class="lottery-preview-value">v61 기본 설정</div>
+          </div>
+          <div class="lottery-preview-row">
+            <div class="lottery-preview-label">구매/수정</div>
+            <div class="lottery-preview-value">v62 적용 예정</div>
+          </div>
+          <div class="lottery-preview-row">
+            <div class="lottery-preview-label">발표/수령</div>
+            <div class="lottery-preview-value">v63~v64 적용 예정</div>
+          </div>
+          <div class="treasury-desc">이번 v61에서는 복권 메뉴와 복권 관리 설정 저장까지만 적용했습니다. 구매, 발표, 수령 기능은 다음 단계에서 순서대로 붙이면 됩니다.</div>
+        </div>
+        <div id="lotteryPreviewInfo" class="lottery-preview-card"></div>
+      </div>
+    </section>
 
 
     <section id="upgradeScreen" class="screen page-screen">
@@ -690,6 +727,7 @@
           <button id="settingsNewsTab" class="settings-tab" type="button">뉴스 관리</button>
           <button id="settingsBankTab" class="settings-tab" type="button">은행 관리</button>
           <button id="settingsTreasuryTab" class="settings-tab" type="button">국고 관리</button>
+          <button id="settingsLotteryTab" class="settings-tab" type="button">복권 관리</button>
           <button id="settingsUserTab" class="settings-tab" type="button">유저 관리</button>
           <button id="settingsPromotionTab" class="settings-tab" type="button">승급 관리</button>
         </div>
@@ -841,6 +879,90 @@
             <div id="treasurySettingsStatus" class="status"></div>
           </div>
 
+          <div id="settingsLotteryPanel" class="settings-panel">
+            <div class="promotion-manage-desc">복권 운영 방식과 발표 시간, 구매/수정 비용, 당첨금 비율을 관리합니다. 이번 v61은 설정 저장까지만 적용됩니다.</div>
+
+            <div class="lottery-manage-card">
+              <div class="promotion-title">복권 운영 방식</div>
+              <div class="lottery-mode-row">
+                <button id="lotteryDailyModeBtn" class="lottery-mode-btn" type="button">매일 발표</button>
+                <button id="lotteryWeeklyModeBtn" class="lottery-mode-btn" type="button">매주 발표</button>
+              </div>
+
+              <div class="field">
+                <label for="lotteryDrawDayInput">발표 요일</label>
+                <select id="lotteryDrawDayInput">
+                  <option value="0">일요일</option>
+                  <option value="1">월요일</option>
+                  <option value="2">화요일</option>
+                  <option value="3">수요일</option>
+                  <option value="4">목요일</option>
+                  <option value="5">금요일</option>
+                  <option value="6">토요일</option>
+                </select>
+              </div>
+              <div class="hint">매주 발표일 때 사용됩니다. 기본값은 토요일입니다.</div>
+
+              <div class="field">
+                <label for="lotteryDrawTimeInput">발표 시간</label>
+                <input id="lotteryDrawTimeInput" type="time" />
+              </div>
+
+              <div class="field">
+                <label for="lotteryCloseTimeInput">구매 마감 시간</label>
+                <input id="lotteryCloseTimeInput" type="time" />
+              </div>
+              <div class="hint">기본값: 발표 10분 전인 19:50까지 구매/수정 가능</div>
+            </div>
+
+            <div class="lottery-manage-card">
+              <div class="promotion-title">복권 비용 / 번호</div>
+              <div class="field">
+                <label for="lotteryTicketPriceInput">구매 비용</label>
+                <div class="settings-row">
+                  <input id="lotteryTicketPriceInput" type="number" inputmode="numeric" min="1" step="1" />
+                  <div class="won">원</div>
+                </div>
+              </div>
+              <div class="field">
+                <label for="lotteryEditPriceInput">수정 비용</label>
+                <div class="settings-row">
+                  <input id="lotteryEditPriceInput" type="number" inputmode="numeric" min="0" step="1" />
+                  <div class="won">원</div>
+                </div>
+              </div>
+              <div class="field">
+                <label for="lotteryMaxRoundHistoryInput">회차 보관 수</label>
+                <div class="settings-row">
+                  <input id="lotteryMaxRoundHistoryInput" type="number" inputmode="numeric" min="1" max="100" step="1" />
+                  <div class="won">회차</div>
+                </div>
+              </div>
+              <div class="hint">번호 범위는 1~15, 선택 개수는 중복 없이 3개로 고정합니다. 회차 보관 수 기본값은 20회차입니다.</div>
+            </div>
+
+            <div class="lottery-manage-card">
+              <div class="promotion-title">당첨금 비율</div>
+              <div class="field">
+                <label for="lotteryPayoutRateInput">국고 사용 비율</label>
+                <div class="settings-row">
+                  <input id="lotteryPayoutRateInput" type="number" inputmode="decimal" min="0" max="100" step="0.01" />
+                  <div class="won">%</div>
+                </div>
+              </div>
+              <div class="field"><label for="lotteryRank1RateInput">1등 배분 비율</label><div class="settings-row"><input id="lotteryRank1RateInput" type="number" inputmode="decimal" min="0" max="100" step="0.01" /><div class="won">%</div></div></div>
+              <div class="field"><label for="lotteryRank2RateInput">2등 배분 비율</label><div class="settings-row"><input id="lotteryRank2RateInput" type="number" inputmode="decimal" min="0" max="100" step="0.01" /><div class="won">%</div></div></div>
+              <div class="field"><label for="lotteryRank3RateInput">3등 배분 비율</label><div class="settings-row"><input id="lotteryRank3RateInput" type="number" inputmode="decimal" min="0" max="100" step="0.01" /><div class="won">%</div></div></div>
+              <div class="field"><label for="lotteryRank4RateInput">4등 배분 비율</label><div class="settings-row"><input id="lotteryRank4RateInput" type="number" inputmode="decimal" min="0" max="100" step="0.01" /><div class="won">%</div></div></div>
+              <div class="field"><label for="lotteryRank5RateInput">5등 배분 비율</label><div class="settings-row"><input id="lotteryRank5RateInput" type="number" inputmode="decimal" min="0" max="100" step="0.01" /><div class="won">%</div></div></div>
+              <div class="hint">등수별 배분 비율 합계는 100%여야 합니다. 기본값: 50 / 20 / 15 / 10 / 5</div>
+            </div>
+
+            <button id="saveLotterySettingsBtn" class="primary-btn" type="button">복권 설정 저장하기</button>
+            <div id="lotterySettingsStatus" class="status"></div>
+          </div>
+
+
           <div id="settingsUserPanel" class="settings-panel">
             <div class="user-manage-desc">가입한 유저를 닉네임 가나다 / abc 순서로 관리할 수 있습니다.</div>
             <div id="userManageList" class="user-manage-list"></div>
@@ -883,6 +1005,7 @@
       <button id="openNewsBtn" class="menu-item">뉴스</button>
       <button id="openBankBtn" class="menu-item">은행</button>
       <button id="openTreasuryBtn" class="menu-item">국고</button>
+      <button id="openLotteryBtn" class="menu-item">복권</button>
       <button id="openUpgradeBtn" class="menu-item">업그레이드</button>
       <button id="openRankingBtn" class="menu-item">순위</button>
       <button id="openSettingsBtn" class="menu-item admin-only">설정</button>
@@ -1040,6 +1163,20 @@
 
     const ADMIN_EMAIL = "khu9918@gmail.com";
     const DEFAULT_SETTINGS = { signupBonus: 1000000, earnMin: 10000, earnMax: 50000, earnMaxLevel: 10, bankHourlyInterestRate: 1, buyTaxRate: 0.3, sellTaxRate: 0.5, salaryTaxRate: 3.3 };
+    const DEFAULT_LOTTERY_SETTINGS = {
+      mode: "daily",
+      drawDay: 6,
+      drawTime: "20:00",
+      closeTime: "19:50",
+      ticketPrice: 10000,
+      editPrice: 3000,
+      payoutRate: 80,
+      numberMin: 1,
+      numberMax: 15,
+      pickCount: 3,
+      maxRoundHistory: 20,
+      rankRates: { rank1: 50, rank2: 20, rank3: 15, rank4: 10, rank5: 5 }
+    };
     const DEFAULT_PROMOTIONS = [
       { level: 1, name: "스톤", cost: 500000, dailySalary: 100000, style: { type: "solid", color: "#8A8F98", gradientFrom: "", gradientTo: "" } },
       { level: 2, name: "브론즈", cost: 1500000, dailySalary: 214000, style: { type: "solid", color: "#B87333", gradientFrom: "", gradientTo: "" } },
@@ -1100,6 +1237,7 @@
       news: document.getElementById("newsScreen"),
       bank: document.getElementById("bankScreen"),
       treasury: document.getElementById("treasuryScreen"),
+      lottery: document.getElementById("lotteryScreen"),
       upgrade: document.getElementById("upgradeScreen"),
       ranking: document.getElementById("rankingScreen"),
       settings: document.getElementById("settingsScreen")
@@ -1123,6 +1261,7 @@
     const openNewsBtn = document.getElementById("openNewsBtn");
     const openBankBtn = document.getElementById("openBankBtn");
     const openTreasuryBtn = document.getElementById("openTreasuryBtn");
+    const openLotteryBtn = document.getElementById("openLotteryBtn");
     const openUpgradeBtn = document.getElementById("openUpgradeBtn");
     const openRankingBtn = document.getElementById("openRankingBtn");
     const openSettingsBtn = document.getElementById("openSettingsBtn");
@@ -1138,6 +1277,7 @@
     const backFromNewsBtn = document.getElementById("backFromNewsBtn");
     const backFromBankBtn = document.getElementById("backFromBankBtn");
     const backFromTreasuryBtn = document.getElementById("backFromTreasuryBtn");
+    const backFromLotteryBtn = document.getElementById("backFromLotteryBtn");
     const backFromUpgradeBtn = document.getElementById("backFromUpgradeBtn");
     const backFromRankingBtn = document.getElementById("backFromRankingBtn");
     const settingsDefaultTab = document.getElementById("settingsDefaultTab");
@@ -1145,6 +1285,7 @@
     const settingsNewsTab = document.getElementById("settingsNewsTab");
     const settingsBankTab = document.getElementById("settingsBankTab");
     const settingsTreasuryTab = document.getElementById("settingsTreasuryTab");
+    const settingsLotteryTab = document.getElementById("settingsLotteryTab");
     const settingsUserTab = document.getElementById("settingsUserTab");
     const settingsPromotionTab = document.getElementById("settingsPromotionTab");
     const settingsDefaultPanel = document.getElementById("settingsDefaultPanel");
@@ -1152,6 +1293,7 @@
     const settingsNewsPanel = document.getElementById("settingsNewsPanel");
     const settingsBankPanel = document.getElementById("settingsBankPanel");
     const settingsTreasuryPanel = document.getElementById("settingsTreasuryPanel");
+    const settingsLotteryPanel = document.getElementById("settingsLotteryPanel");
     const settingsUserPanel = document.getElementById("settingsUserPanel");
     const settingsPromotionPanel = document.getElementById("settingsPromotionPanel");
     const userManageList = document.getElementById("userManageList");
@@ -1189,6 +1331,23 @@
     const saveTreasurySettingsBtn = document.getElementById("saveTreasurySettingsBtn");
     const resetTreasuryBtn = document.getElementById("resetTreasuryBtn");
     const treasurySettingsStatus = document.getElementById("treasurySettingsStatus");
+    const lotteryPreviewInfo = document.getElementById("lotteryPreviewInfo");
+    const lotteryDailyModeBtn = document.getElementById("lotteryDailyModeBtn");
+    const lotteryWeeklyModeBtn = document.getElementById("lotteryWeeklyModeBtn");
+    const lotteryDrawDayInput = document.getElementById("lotteryDrawDayInput");
+    const lotteryDrawTimeInput = document.getElementById("lotteryDrawTimeInput");
+    const lotteryCloseTimeInput = document.getElementById("lotteryCloseTimeInput");
+    const lotteryTicketPriceInput = document.getElementById("lotteryTicketPriceInput");
+    const lotteryEditPriceInput = document.getElementById("lotteryEditPriceInput");
+    const lotteryMaxRoundHistoryInput = document.getElementById("lotteryMaxRoundHistoryInput");
+    const lotteryPayoutRateInput = document.getElementById("lotteryPayoutRateInput");
+    const lotteryRank1RateInput = document.getElementById("lotteryRank1RateInput");
+    const lotteryRank2RateInput = document.getElementById("lotteryRank2RateInput");
+    const lotteryRank3RateInput = document.getElementById("lotteryRank3RateInput");
+    const lotteryRank4RateInput = document.getElementById("lotteryRank4RateInput");
+    const lotteryRank5RateInput = document.getElementById("lotteryRank5RateInput");
+    const saveLotterySettingsBtn = document.getElementById("saveLotterySettingsBtn");
+    const lotterySettingsStatus = document.getElementById("lotterySettingsStatus");
     const stockList = document.getElementById("stockList");
     const marketCountdown = document.getElementById("marketCountdown");
     const portfolioMarketCountdown = document.getElementById("portfolioMarketCountdown");
@@ -1278,6 +1437,7 @@
     let currentUser = null;
     let currentUserData = null;
     let currentSettings = { ...DEFAULT_SETTINGS };
+    let lotterySettings = { ...DEFAULT_LOTTERY_SETTINGS, rankRates: { ...DEFAULT_LOTTERY_SETTINGS.rankRates } };
     let currentScreenName = "loading";
     let unsubscribeUser = null;
     let unsubscribeSettings = null;
@@ -1335,7 +1495,7 @@
     let authFlowStarted = false;
 
     function isAdmin() { return currentUser && currentUser.email === ADMIN_EMAIL; }
-    function activeMainScreens() { return ["game", "market", "news", "bank", "treasury", "upgrade", "ranking", "settings"]; }
+    function activeMainScreens() { return ["game", "market", "news", "bank", "treasury", "lottery", "upgrade", "ranking", "settings"]; }
 
     function closeAllModals() {
       if (tradeModalOverlay) tradeModalOverlay.classList.remove("active");
@@ -1384,6 +1544,7 @@
           await loadTreasuryContributions();
         }).catch(() => { renderTreasury(); renderTreasuryContributions(); });
       }
+      if (name === "lottery") { loadLotterySettings().then(renderLotteryPreview).catch(() => renderLotteryPreview()); }
       if (name === "upgrade") { loadPromotions().then(renderUpgrade).catch(() => renderUpgrade()); }
       if (name === "ranking") { loadPromotions().then(() => { renderRankings(); loadRankings().catch(() => {}); }).catch(() => { renderRankings(); loadRankings().catch(() => {}); }); }
       if (name === "game") {
@@ -1420,7 +1581,7 @@
       if (userAdminModalOverlay.classList.contains("active")) { closeUserAdminModal(); return true; }
       if (adminMenuPanel.classList.contains("active")) { closeAdminMenu(); return true; }
       if (currentScreenName === "market") { expandedStockId = null; showScreen("game"); return true; }
-      if (currentScreenName === "news" || currentScreenName === "bank" || currentScreenName === "treasury" || currentScreenName === "upgrade" || currentScreenName === "ranking" || currentScreenName === "settings") { showScreen("game"); return true; }
+      if (currentScreenName === "news" || currentScreenName === "bank" || currentScreenName === "treasury" || currentScreenName === "lottery" || currentScreenName === "upgrade" || currentScreenName === "ranking" || currentScreenName === "settings") { showScreen("game"); return true; }
       return false;
     }
 
@@ -1465,6 +1626,7 @@
       const isNews = tab === "news";
       const isBank = tab === "bank";
       const isTreasury = tab === "treasury";
+      const isLottery = tab === "lottery";
       const isUser = tab === "user";
       const isPromotion = tab === "promotion";
       settingsDefaultTab.classList.toggle("active", isDefault);
@@ -1472,6 +1634,7 @@
       settingsNewsTab.classList.toggle("active", isNews);
       settingsBankTab.classList.toggle("active", isBank);
       settingsTreasuryTab.classList.toggle("active", isTreasury);
+      settingsLotteryTab.classList.toggle("active", isLottery);
       settingsUserTab.classList.toggle("active", isUser);
       settingsPromotionTab.classList.toggle("active", isPromotion);
       settingsDefaultPanel.classList.toggle("active", isDefault);
@@ -1479,6 +1642,7 @@
       settingsNewsPanel.classList.toggle("active", isNews);
       settingsBankPanel.classList.toggle("active", isBank);
       settingsTreasuryPanel.classList.toggle("active", isTreasury);
+      settingsLotteryPanel.classList.toggle("active", isLottery);
       settingsUserPanel.classList.toggle("active", isUser);
       settingsPromotionPanel.classList.toggle("active", isPromotion);
       setStatus(settingsStatus, "");
@@ -1486,12 +1650,14 @@
       setStatus(newsSettingsStatus, "");
       setStatus(bankSettingsStatus, "");
       setStatus(treasurySettingsStatus, "");
+      if (lotterySettingsStatus) setStatus(lotterySettingsStatus, "");
       if (userManageStatus) userManageStatus.textContent = "";
       if (promotionManageStatus) promotionManageStatus.textContent = "";
       if (!isStock) editingStockId = null;
       if (isStock) { listenStocks().then(() => renderStockManage()).catch(() => renderStockManage()); }
       if (isNews) { loadNewsSettings().then(() => loadNewsTemplates()).catch(() => renderNewsManage()); }
       if (isTreasury) { ensureTreasuryDoc().then(loadTreasury).catch(() => renderTreasury()); }
+      if (isLottery) { loadLotterySettings().then(fillLotterySettingsInputs).catch(() => fillLotterySettingsInputs()); }
       if (isUser) loadAdminUsers().catch(() => {});
       if (isPromotion) { loadPromotions().then(renderPromotionManageList).catch(() => { if (promotionManageStatus) promotionManageStatus.textContent = "승급 설정을 불러오지 못했습니다."; }); }
     }
@@ -1517,6 +1683,7 @@
     }
     function settingsRef() { return doc(db, "settings", "game"); }
     function newsSettingsRef() { return doc(db, "settings", "news"); }
+    function lotterySettingsRef() { return doc(db, "settings", "lottery"); }
     function newsTemplatesCol() { return collection(db, "newsTemplates"); }
     function newsTemplateRef(id) { return doc(db, "newsTemplates", id); }
     function newsLogsCol() { return collection(db, "newsLogs"); }
@@ -1720,6 +1887,7 @@
       dailyTaxRateInput.value = currentSettings.salaryTaxRate;
       bankInterestRateInput.value = currentSettings.bankHourlyInterestRate;
       if (newsChanceInput) newsChanceInput.value = Number(newsSettings.chancePerStock ?? DEFAULT_NEWS_SETTINGS.chancePerStock);
+      fillLotterySettingsInputs();
     }
 
     async function ensureUserUpgradeSchema(uid, data) {
@@ -2872,6 +3040,7 @@
 
     function renderNewsManage() {
       if (newsChanceInput) newsChanceInput.value = Number(newsSettings.chancePerStock ?? DEFAULT_NEWS_SETTINGS.chancePerStock);
+      fillLotterySettingsInputs();
       const renderList = (el, type) => {
         if (!el) return;
         const list = newsTemplates.filter(t => t.type === type);
@@ -3040,6 +3209,124 @@
       const ref = doc(newsLogsCol());
       await setDoc(ref, { stockId, stockName, type, content, createdAt: serverTimestamp() });
       cleanupOldNewsLogs().catch(() => {});
+    }
+
+
+    function normalizeLotterySettings(data = {}) {
+      const rankRates = data.rankRates || {};
+      const mode = data.mode === "weekly" ? "weekly" : "daily";
+      return {
+        mode,
+        drawDay: Math.max(0, Math.min(6, Math.floor(Number(data.drawDay ?? DEFAULT_LOTTERY_SETTINGS.drawDay)))),
+        drawTime: /^\\d{2}:\\d{2}$/.test(String(data.drawTime || "")) ? String(data.drawTime) : DEFAULT_LOTTERY_SETTINGS.drawTime,
+        closeTime: /^\\d{2}:\\d{2}$/.test(String(data.closeTime || "")) ? String(data.closeTime) : DEFAULT_LOTTERY_SETTINGS.closeTime,
+        ticketPrice: Math.max(1, Math.floor(Number(data.ticketPrice ?? DEFAULT_LOTTERY_SETTINGS.ticketPrice))),
+        editPrice: Math.max(0, Math.floor(Number(data.editPrice ?? DEFAULT_LOTTERY_SETTINGS.editPrice))),
+        payoutRate: Math.max(0, Math.min(100, Number(data.payoutRate ?? DEFAULT_LOTTERY_SETTINGS.payoutRate))),
+        numberMin: 1,
+        numberMax: 15,
+        pickCount: 3,
+        maxRoundHistory: Math.max(1, Math.min(100, Math.floor(Number(data.maxRoundHistory ?? DEFAULT_LOTTERY_SETTINGS.maxRoundHistory)))),
+        rankRates: {
+          rank1: Math.max(0, Math.min(100, Number(rankRates.rank1 ?? DEFAULT_LOTTERY_SETTINGS.rankRates.rank1))),
+          rank2: Math.max(0, Math.min(100, Number(rankRates.rank2 ?? DEFAULT_LOTTERY_SETTINGS.rankRates.rank2))),
+          rank3: Math.max(0, Math.min(100, Number(rankRates.rank3 ?? DEFAULT_LOTTERY_SETTINGS.rankRates.rank3))),
+          rank4: Math.max(0, Math.min(100, Number(rankRates.rank4 ?? DEFAULT_LOTTERY_SETTINGS.rankRates.rank4))),
+          rank5: Math.max(0, Math.min(100, Number(rankRates.rank5 ?? DEFAULT_LOTTERY_SETTINGS.rankRates.rank5)))
+        }
+      };
+    }
+
+    async function loadLotterySettings() {
+      const snap = await getDoc(lotterySettingsRef());
+      lotterySettings = snap.exists() ? normalizeLotterySettings(snap.data()) : normalizeLotterySettings(DEFAULT_LOTTERY_SETTINGS);
+      fillLotterySettingsInputs();
+      return lotterySettings;
+    }
+
+    function setLotteryMode(mode) {
+      lotterySettings.mode = mode === "weekly" ? "weekly" : "daily";
+      fillLotterySettingsInputs();
+    }
+
+    function fillLotterySettingsInputs() {
+      if (!lotteryDailyModeBtn || !lotteryWeeklyModeBtn) return;
+      const s = normalizeLotterySettings(lotterySettings);
+      lotteryDailyModeBtn.classList.toggle("active", s.mode === "daily");
+      lotteryWeeklyModeBtn.classList.toggle("active", s.mode === "weekly");
+      lotteryDrawDayInput.value = String(s.drawDay);
+      lotteryDrawDayInput.disabled = s.mode !== "weekly";
+      lotteryDrawTimeInput.value = s.drawTime;
+      lotteryCloseTimeInput.value = s.closeTime;
+      lotteryTicketPriceInput.value = s.ticketPrice;
+      lotteryEditPriceInput.value = s.editPrice;
+      lotteryMaxRoundHistoryInput.value = s.maxRoundHistory;
+      lotteryPayoutRateInput.value = s.payoutRate;
+      lotteryRank1RateInput.value = s.rankRates.rank1;
+      lotteryRank2RateInput.value = s.rankRates.rank2;
+      lotteryRank3RateInput.value = s.rankRates.rank3;
+      lotteryRank4RateInput.value = s.rankRates.rank4;
+      lotteryRank5RateInput.value = s.rankRates.rank5;
+    }
+
+    function renderLotteryPreview() {
+      if (!lotteryPreviewInfo) return;
+      const s = normalizeLotterySettings(lotterySettings);
+      const dayNames = ["일", "월", "화", "수", "목", "금", "토"];
+      lotteryPreviewInfo.innerHTML = `
+        <div class="lottery-preview-title">현재 복권 설정</div>
+        <div class="lottery-preview-row"><div class="lottery-preview-label">운영 방식</div><div class="lottery-preview-value">${s.mode === "weekly" ? "매주 " + dayNames[s.drawDay] + "요일" : "매일"}</div></div>
+        <div class="lottery-preview-row"><div class="lottery-preview-label">발표 / 마감</div><div class="lottery-preview-value">${escapeHtml(s.drawTime)} 발표 · ${escapeHtml(s.closeTime)} 마감</div></div>
+        <div class="lottery-preview-row"><div class="lottery-preview-label">구매 / 수정 비용</div><div class="lottery-preview-value">${formatWon(s.ticketPrice)} / ${formatWon(s.editPrice)}</div></div>
+        <div class="lottery-preview-row"><div class="lottery-preview-label">번호 규칙</div><div class="lottery-preview-value">1~15 중 중복 없이 3개</div></div>
+        <div class="lottery-preview-row"><div class="lottery-preview-label">당첨금 기준</div><div class="lottery-preview-value">발표 시점 국고의 ${s.payoutRate}%</div></div>
+        <div class="lottery-preview-row"><div class="lottery-preview-label">회차 보관</div><div class="lottery-preview-value">최신 ${s.maxRoundHistory}회차</div></div>
+      `;
+    }
+
+    async function saveLotterySettings() {
+      if (!isAdmin()) return;
+      const mode = lotterySettings.mode === "weekly" ? "weekly" : "daily";
+      const drawDay = Math.floor(Number(lotteryDrawDayInput.value));
+      const drawTime = String(lotteryDrawTimeInput.value || "");
+      const closeTime = String(lotteryCloseTimeInput.value || "");
+      const ticketPrice = Math.floor(Number(lotteryTicketPriceInput.value));
+      const editPrice = Math.floor(Number(lotteryEditPriceInput.value));
+      const maxRoundHistory = Math.floor(Number(lotteryMaxRoundHistoryInput.value));
+      const payoutRate = Number(lotteryPayoutRateInput.value);
+      const rankRates = {
+        rank1: Number(lotteryRank1RateInput.value),
+        rank2: Number(lotteryRank2RateInput.value),
+        rank3: Number(lotteryRank3RateInput.value),
+        rank4: Number(lotteryRank4RateInput.value),
+        rank5: Number(lotteryRank5RateInput.value)
+      };
+      const rankSum = rankRates.rank1 + rankRates.rank2 + rankRates.rank3 + rankRates.rank4 + rankRates.rank5;
+      if (!(mode === "daily" || mode === "weekly")) return;
+      if (!Number.isInteger(drawDay) || drawDay < 0 || drawDay > 6) { setStatus(lotterySettingsStatus, "발표 요일을 확인해주세요.", "error"); return; }
+      if (!/^\\d{2}:\\d{2}$/.test(drawTime) || !/^\\d{2}:\\d{2}$/.test(closeTime)) { setStatus(lotterySettingsStatus, "발표 시간과 구매 마감 시간을 확인해주세요.", "error"); return; }
+      if (!Number.isFinite(ticketPrice) || ticketPrice < 1) { setStatus(lotterySettingsStatus, "구매 비용은 1원 이상이어야 합니다.", "error"); return; }
+      if (!Number.isFinite(editPrice) || editPrice < 0) { setStatus(lotterySettingsStatus, "수정 비용은 0원 이상이어야 합니다.", "error"); return; }
+      if (!Number.isFinite(maxRoundHistory) || maxRoundHistory < 1 || maxRoundHistory > 100) { setStatus(lotterySettingsStatus, "회차 보관 수는 1~100 사이로 입력해주세요.", "error"); return; }
+      if (!Number.isFinite(payoutRate) || payoutRate < 0 || payoutRate > 100) { setStatus(lotterySettingsStatus, "국고 사용 비율은 0~100 사이여야 합니다.", "error"); return; }
+      if (![rankRates.rank1, rankRates.rank2, rankRates.rank3, rankRates.rank4, rankRates.rank5].every(v => Number.isFinite(v) && v >= 0 && v <= 100)) { setStatus(lotterySettingsStatus, "등수별 배분 비율은 0~100 사이여야 합니다.", "error"); return; }
+      if (Math.abs(rankSum - 100) > 0.0001) { setStatus(lotterySettingsStatus, "등수별 배분 비율 합계는 100%여야 합니다.", "error"); return; }
+      saveLotterySettingsBtn.disabled = true;
+      setStatus(lotterySettingsStatus, "저장 중...");
+      try {
+        await setDoc(lotterySettingsRef(), {
+          mode, drawDay, drawTime, closeTime, ticketPrice, editPrice, payoutRate,
+          numberMin: 1, numberMax: 15, pickCount: 3, maxRoundHistory, rankRates,
+          updatedAt: serverTimestamp(), updatedBy: currentUser.uid
+        }, { merge: true });
+        await loadLotterySettings();
+        setStatus(lotterySettingsStatus, "복권 설정이 저장되었습니다.", "success");
+      } catch (error) {
+        console.error(error);
+        setStatus(lotterySettingsStatus, "복권 설정 저장에 실패했습니다.", "error");
+      } finally {
+        saveLotterySettingsBtn.disabled = false;
+      }
     }
 
 
@@ -4764,6 +5051,7 @@
     openNewsBtn.addEventListener("click", () => { closeAdminMenu(); showScreen("news"); });
     openBankBtn.addEventListener("click", () => { closeAdminMenu(); showScreen("bank"); });
     openTreasuryBtn.addEventListener("click", () => { closeAdminMenu(); showScreen("treasury"); });
+    openLotteryBtn.addEventListener("click", () => { closeAdminMenu(); showScreen("lottery"); });
     openUpgradeBtn.addEventListener("click", () => {
       closeAdminMenu();
       activeUpgradePanel = "";
@@ -4776,6 +5064,7 @@
     settingsNewsTab.addEventListener("click", () => setSettingsTab("news"));
     settingsBankTab.addEventListener("click", () => setSettingsTab("bank"));
     settingsTreasuryTab.addEventListener("click", () => setSettingsTab("treasury"));
+    settingsLotteryTab.addEventListener("click", () => setSettingsTab("lottery"));
     settingsUserTab.addEventListener("click", () => setSettingsTab("user"));
     settingsPromotionTab.addEventListener("click", () => setSettingsTab("promotion"));
     saveSettingsBtn.addEventListener("click", saveSettings);
@@ -4784,6 +5073,9 @@
     addBadNewsBtn.addEventListener("click", () => addNewsTemplate("bad"));
     saveBankSettingsBtn.addEventListener("click", saveBankSettings);
     saveTreasurySettingsBtn.addEventListener("click", saveTreasurySettings);
+    lotteryDailyModeBtn.addEventListener("click", () => setLotteryMode("daily"));
+    lotteryWeeklyModeBtn.addEventListener("click", () => setLotteryMode("weekly"));
+    saveLotterySettingsBtn.addEventListener("click", saveLotterySettings);
     resetTreasuryBtn.addEventListener("click", resetTreasuryFromSettings);
     promotionAddBtn.addEventListener("click", addPromotionLevel);
     addStockBtn.addEventListener("click", addStock);
@@ -4792,6 +5084,7 @@
     backFromNewsBtn.addEventListener("click", () => showScreen("game"));
     backFromBankBtn.addEventListener("click", () => showScreen("game"));
     backFromTreasuryBtn.addEventListener("click", () => showScreen("game"));
+    backFromLotteryBtn.addEventListener("click", () => showScreen("game"));
     backFromUpgradeBtn.addEventListener("click", () => showScreen("game"));
     backFromRankingBtn.addEventListener("click", () => showScreen("game"));
     infoDailyTab.addEventListener("click", () => setInfoTab("daily"));
