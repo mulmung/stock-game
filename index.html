@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
-  <title>주식 게임 v63-3</title>
+  <title>주식 게임 v63-4</title>
   <style>
     * { box-sizing: border-box; }
     html, body { margin: 0; padding: 0; height: 100%; font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; background: #1f2937; color: #fff; }
@@ -436,6 +436,8 @@
     .lottery-card { border-top: 1px solid var(--line-strong); border-bottom: 1px solid var(--line-strong); padding: 18px 0; margin: 16px 0; }
     .lottery-title { font-size: 18px; font-weight: 1000; color: #fff; margin-bottom: 10px; }
     .lottery-meta { color: var(--muted); font-size: 13px; font-weight: 850; line-height: 1.7; margin: 8px 0; }
+    .lottery-time-value { color: var(--yellow); font-size: 16px; font-weight: 1000; letter-spacing: -0.25px; font-variant-numeric: tabular-nums; }
+    .lottery-money-value { color: #fff; font-weight: 1000; letter-spacing: -0.25px; }
     .lottery-number-inputs { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin: 14px 0; }
     .lottery-number-inputs input { width: 100%; height: 58px; text-align: center; font-size: 24px; font-weight: 1000; }
     .lottery-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 12px; }
@@ -3659,7 +3661,7 @@
     function lotteryCountdownHtml(label, targetMs, doneText) {
       const safeTarget = Number(targetMs || 0);
       const text = safeTarget > Date.now() ? formatHms(safeTarget - Date.now()) : doneText;
-      return `<span data-lottery-countdown="1" data-target="${safeTarget}" data-done="${escapeHtml(doneText)}">${escapeHtml(text)}</span>`;
+      return `<span class="lottery-time-value" data-lottery-countdown="1" data-target="${safeTarget}" data-done="${escapeHtml(doneText)}">${escapeHtml(text)}</span>`;
     }
 
     function updateLotteryCountdowns() {
@@ -3742,7 +3744,7 @@
       const drawDate = round.drawDate || round.roundKey || "-";
       const closeTarget = lotteryDateTimeMs(drawDate, round.closeTime || settings.closeTime);
       const closeLine = closed ? "구매 마감 완료" : `구매 마감까지 ${lotteryCountdownHtml("구매 마감까지", closeTarget, "구매 마감 완료")}`;
-      let body = `<div class="lottery-card"><div class="lottery-title">이번 회차</div><div class="lottery-meta">${Number(round.roundNo || 0)}차 ${escapeHtml(drawDate)}<br>${closeLine}<br>구매 비용 ${formatWon(settings.ticketPrice)} / 수정 비용 ${formatWon(settings.editPrice)}</div></div>`;
+      let body = `<div class="lottery-card"><div class="lottery-title">이번 회차</div><div class="lottery-meta">${Number(round.roundNo || 0)}차 ${escapeHtml(drawDate)}<br>${closeLine}<br>구매 비용 <span class="lottery-money-value">${formatWon(settings.ticketPrice)}</span> / 수정 비용 <span class="lottery-money-value">${formatWon(settings.editPrice)}</span></div></div>`;
       if (round.status === "drawn") {
         body += `<div class="lottery-card"><div class="lottery-title">당첨 번호</div>${lotteryNumbersHtml(round.winningNumbers || [])}<div class="lottery-meta">보너스 번호</div>${lotteryNumbersHtml(round.bonusNumber != null ? [round.bonusNumber] : [])}</div>`;
       }
