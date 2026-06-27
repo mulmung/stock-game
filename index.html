@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
-  <title>주식 게임 v63-2</title>
+  <title>주식 게임 v63-3</title>
   <style>
     * { box-sizing: border-box; }
     html, body { margin: 0; padding: 0; height: 100%; font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; background: #1f2937; color: #fff; }
@@ -1471,6 +1471,7 @@
     let earnPopupTimer = null;
     let marketTimer = null;
     let marketCountdownTimer = null;
+    let lotteryCountdownTimer = null;
     let stocks = [];
     let priceHistories = new Map();
     let expandedStockId = null;
@@ -1560,6 +1561,7 @@
       closeAdminMenu();
       if (activeMainScreens().includes(name)) ensureAppBackHistory();
       if (name === "market") { renderStocks(); listenStocks().catch(() => {}); startMarketCountdownTimer(); } else if (name === "game") { startMarketCountdownTimer(); } else { stopMarketCountdownTimer(); }
+      if (name === "lottery") startLotteryCountdownTimer(); else stopLotteryCountdownTimer();
       if (name === "news") { loadNewsSettings().then(() => loadNewsLogs()).catch(() => { renderNewsScreen(); }); }
       if (name === "bank") { renderGlobalBank(); ensureMyBankDepositPublic().catch(() => {}).then(() => listenBankGlobal()).then(() => loadBankDeposits()).catch(() => {}); }
       if (name === "treasury") {
@@ -3647,6 +3649,40 @@
       return `<div class="lottery-numbers">${sortedNums.map(n => `<span class="lottery-ball ${lotteryBallClass(n)}">${escapeHtml(String(n))}</span>`).join("")}</div>`;
     }
 
+    function lotteryDateTimeMs(dateKey, timeText) {
+      const date = String(dateKey || "").trim();
+      const time = normalizeLotteryTimeText(timeText, "00:00");
+      const ms = Date.parse(`${date}T${time}:00+09:00`);
+      return Number.isFinite(ms) ? ms : 0;
+    }
+
+    function lotteryCountdownHtml(label, targetMs, doneText) {
+      const safeTarget = Number(targetMs || 0);
+      const text = safeTarget > Date.now() ? formatHms(safeTarget - Date.now()) : doneText;
+      return `<span data-lottery-countdown="1" data-target="${safeTarget}" data-done="${escapeHtml(doneText)}">${escapeHtml(text)}</span>`;
+    }
+
+    function updateLotteryCountdowns() {
+      document.querySelectorAll('[data-lottery-countdown="1"]').forEach(el => {
+        const target = Number(el.dataset.target || 0);
+        const done = el.dataset.done || "완료";
+        el.textContent = target > Date.now() ? formatHms(target - Date.now()) : done;
+      });
+    }
+
+    function startLotteryCountdownTimer() {
+      updateLotteryCountdowns();
+      if (lotteryCountdownTimer) clearInterval(lotteryCountdownTimer);
+      lotteryCountdownTimer = setInterval(updateLotteryCountdowns, 1000);
+    }
+
+    function stopLotteryCountdownTimer() {
+      if (lotteryCountdownTimer) {
+        clearInterval(lotteryCountdownTimer);
+        lotteryCountdownTimer = null;
+      }
+    }
+
     function renderLottery() {
       if (!lotteryRoundsPanel || !lotteryBuyPanel) return;
       lotteryRoundsTab.classList.toggle("active", lotteryActiveTab === "rounds");
@@ -3665,14 +3701,27 @@
       }
       lotteryRoundsPanel.innerHTML = lotteryRounds.map(round => {
         const drawn = round.status === "drawn";
-        const winNums = drawn && Array.isArray(round.winningNumbers) && round.winningNumbers.length ? round.winningNumbers.join(", ") : "발표 전";
-        const bonus = drawn && round.bonusNumber != null ? round.bonusNumber : "-";
+        const drawDate = round.drawDate || round.roundKey || "-";
+        const drawTime = round.drawTime || lotterySettings.drawTime;
+        const drawTarget = lotteryDateTimeMs(drawDate, drawTime);
+        const drawPassed = isLotteryDrawPassed(round, lotterySettings);
         const firstCount = Array.isArray(round.firstPrizeWinners) ? round.firstPrizeWinners.length : 0;
+        const winNums = drawn && Array.isArray(round.winningNumbers) && round.winningNumbers.length ? lotteryNumbersHtml(round.winningNumbers) : "";
+        const bonus = drawn && round.bonusNumber != null ? lotteryNumbersHtml([round.bonusNumber]) : "";
+        let meta = "";
+        if (drawn) {
+          meta = `상태: 발표 완료<br>1등 당첨자 ${firstCount ? firstCount + "명" : "없음"}<br><br>당첨번호${winNums}<div class="lottery-meta">보너스 번호</div>${bonus || `<div class="lottery-meta">-</div>`}`;
+        } else if (drawPassed) {
+          meta = `상태: 발표 처리 중<br>잠시 후 다시 확인해주세요.`;
+        } else {
+          meta = `상태: 발표 대기<br>발표까지 ${lotteryCountdownHtml("발표까지", drawTarget, "발표 시간 도달")}`;
+        }
         return `<div class="lottery-card">
-          <div class="lottery-title">${Number(round.roundNo || 0)}차 ${escapeHtml(round.drawDate || round.roundKey || "-")}</div>
-          <div class="lottery-meta">${drawn ? `1등 당첨자 ${firstCount ? firstCount + "명" : "없음"}<br>당첨 번호 ${escapeHtml(winNums)} + 보너스 ${escapeHtml(String(bonus))}` : `발표 대기<br>발표 시간 ${escapeHtml(round.drawTime || "-")}`}</div>
+          <div class="lottery-title">${Number(round.roundNo || 0)}차 ${escapeHtml(drawDate)}</div>
+          <div class="lottery-meta">${meta}</div>
         </div>`;
       }).join("");
+      updateLotteryCountdowns();
     }
 
     function lotteryResultText(ticket) {
@@ -3690,7 +3739,10 @@
       if (!round) { lotteryBuyPanel.innerHTML = `<div class="bank-deposit-empty">회차 정보를 불러오는 중입니다.</div>`; return; }
       const closed = isLotteryClosePassed(round, settings);
       const drawn = round.status === "drawn" || isLotteryDrawPassed(round, settings);
-      let body = `<div class="lottery-card"><div class="lottery-title">이번 회차</div><div class="lottery-meta">${Number(round.roundNo || 0)}차 ${escapeHtml(round.drawDate || "-")}<br>발표 ${escapeHtml(round.drawTime || settings.drawTime)} / 구매 마감 ${escapeHtml(round.closeTime || settings.closeTime)}<br>구매 비용 ${formatWon(settings.ticketPrice)} / 수정 비용 ${formatWon(settings.editPrice)}</div></div>`;
+      const drawDate = round.drawDate || round.roundKey || "-";
+      const closeTarget = lotteryDateTimeMs(drawDate, round.closeTime || settings.closeTime);
+      const closeLine = closed ? "구매 마감 완료" : `구매 마감까지 ${lotteryCountdownHtml("구매 마감까지", closeTarget, "구매 마감 완료")}`;
+      let body = `<div class="lottery-card"><div class="lottery-title">이번 회차</div><div class="lottery-meta">${Number(round.roundNo || 0)}차 ${escapeHtml(drawDate)}<br>${closeLine}<br>구매 비용 ${formatWon(settings.ticketPrice)} / 수정 비용 ${formatWon(settings.editPrice)}</div></div>`;
       if (round.status === "drawn") {
         body += `<div class="lottery-card"><div class="lottery-title">당첨 번호</div>${lotteryNumbersHtml(round.winningNumbers || [])}<div class="lottery-meta">보너스 번호</div>${lotteryNumbersHtml(round.bonusNumber != null ? [round.bonusNumber] : [])}</div>`;
       }
@@ -3715,6 +3767,7 @@
         body += `<div class="lottery-card"><div class="lottery-title">복권 구매</div><div class="lottery-meta">${round.status === "drawn" ? "이번 회차는 발표가 완료되었습니다." : drawn ? "이번 회차는 발표 시간이 지났습니다. 잠시 후 새로고침하면 발표 결과가 표시됩니다." : "구매 마감 시간이 지났습니다."}</div></div>`;
       }
       lotteryBuyPanel.innerHTML = body;
+      updateLotteryCountdowns();
       attachLotteryBuyEvents();
     }
 
