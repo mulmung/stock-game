@@ -39,6 +39,8 @@
     input { width: 100%; height: 48px; border: 1px solid var(--line); background: var(--input-bg); color: #fff; padding: 0 14px; outline: none; border-radius: 0; }
     input:focus { border-color: #60a5fa; }
     .primary-btn { width: 100%; height: 48px; background: var(--blue); color: #fff; font-weight: 900; border-radius: 0; }
+    .secondary-btn { width: 100%; height: 48px; background: rgba(255,255,255,0.08); color: #fff; font-weight: 900; border: 1px solid var(--line-strong); border-radius: 0; }
+    .danger-btn { width: 100%; height: 48px; background: #dc2626; color: #fff; font-weight: 900; border-radius: 0; }
     .primary-btn:active { transform: translateY(1px); }
     .ghost-btn { width: 100%; height: 46px; background: var(--panel-bg); color: #fff; border: 1px solid var(--line); font-weight: 800; border-radius: 0; margin-top: 10px; }
     .status { min-height: 22px; color: #93c5fd; font-size: 13px; margin-top: 12px; text-align: center; line-height: 1.5; }
@@ -476,6 +478,60 @@
     .lottery-status { min-height: 22px; color: var(--muted); font-size: 13px; font-weight: 900; text-align: center; margin-top: 12px; }
     .lottery-status.error { color: #f87171; }
     .lottery-status.success { color: #22c55e; }
+
+
+    /* Company system v67 */
+    .company-tabs { display: flex; align-items: center; gap: 28px; border-bottom: 1px solid var(--line-strong); margin: 18px 0 22px; overflow-x: auto; -webkit-overflow-scrolling: touch; }
+    .company-tab { position: relative; flex: 0 0 auto; height: 46px; padding: 0; border: 0; background: transparent; color: var(--muted); font-weight: 750; font-size: 15px; border-radius: 0; }
+    .company-tab.active { color: #fff; font-weight: 1000; }
+    .company-tab.active::after { content: ""; position: absolute; left: 0; right: 0; bottom: -1px; height: 3px; background: #fff; border-radius: 999px 999px 0 0; }
+    .company-panel { margin-top: 14px; }
+    .company-card { border-top: 1px solid var(--line-strong); border-bottom: 1px solid var(--line-strong); padding: 18px 0; margin: 16px 0; }
+    .company-title { font-size: 20px; font-weight: 1000; color: #fff; margin-bottom: 10px; letter-spacing: -0.45px; }
+    .company-subtitle { color: var(--muted); font-size: 13px; font-weight: 850; line-height: 1.6; margin: 8px 0 14px; }
+    .company-cost { color: #fff; font-size: 16px; font-weight: 1000; margin-top: 10px; }
+    .company-row { display: flex; align-items: center; justify-content: space-between; gap: 14px; padding: 11px 0; border-bottom: 1px solid var(--line); }
+    .company-row:last-child { border-bottom: 0; }
+    .company-label { color: var(--muted); font-size: 13px; font-weight: 900; }
+    .company-value { color: #fff; font-size: 15px; font-weight: 1000; text-align: right; }
+    .company-level-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin: 14px 0; padding-top: 14px; border-top: 1px solid var(--line-strong); }
+    .company-level-box { min-width: 0; }
+    .company-level-title { color: var(--muted); font-size: 12px; font-weight: 950; margin-bottom: 8px; }
+    .company-level-value { color: #fff; font-size: 15px; font-weight: 1000; line-height: 1.55; }
+    .company-summary { border-top: 1px solid var(--line-strong); margin-top: 16px; padding-top: 12px; }
+    .company-status { min-height: 22px; color: var(--muted); font-size: 13px; font-weight: 900; text-align: center; margin-top: 12px; }
+    .company-status.error { color: #f87171; }
+    .company-status.success { color: #22c55e; }
+    .company-actions-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 12px; }
+    .company-inline-input { margin: 12px 0; }
+    .company-list { border-top: 1px solid var(--line-strong); margin-top: 16px; }
+    .company-employee-item { border-bottom: 1px solid var(--line); padding: 13px 0; }
+    .company-employee-head { width: 100%; background: transparent; border: 0; padding: 0; color: #fff; display: flex; justify-content: space-between; align-items: center; gap: 12px; text-align: left; }
+    .company-employee-name { font-size: 16px; font-weight: 1000; letter-spacing: -0.35px; }
+    .company-employee-toggle { color: var(--text-soft); font-size: 12px; font-weight: 950; }
+    .company-employee-detail { display: none; margin-top: 12px; padding-top: 12px; border-top: 1px solid var(--line); }
+    .company-employee-item.expanded .company-employee-detail { display: block; }
+    .company-rule-card { background: rgba(255,255,255,0.035); border: 1px solid var(--line); border-radius: 18px; padding: 16px; margin: 14px 0; }
+    .company-rule-title { color: #fff; font-size: 17px; font-weight: 1000; margin-bottom: 12px; }
+    .company-rule-table { width: 100%; border-collapse: collapse; table-layout: fixed; }
+    .company-rule-table th, .company-rule-table td { border-bottom: 1px solid var(--line); padding: 10px 6px; text-align: left; font-size: 12.5px; font-weight: 900; color: #fff; word-break: keep-all; }
+    .company-rule-table th { color: var(--muted); font-size: 11.5px; font-weight: 1000; }
+    .company-grade-SSS { color: #facc15; }
+    .company-grade-SS { color: #fb923c; }
+    .company-grade-S { color: #ef4444; }
+    .company-grade-A { color: #a855f7; }
+    .company-grade-B { color: #3b82f6; }
+    .company-grade-C { color: #22c55e; }
+    .company-grade-D { color: #ffffff; }
+    .company-grade-E { color: #9ca3af; }
+    .company-grade-F { color: #6b7280; }
+    .company-modal { position: fixed; inset: 0; display: none; align-items: center; justify-content: center; padding: 18px; background: rgba(0,0,0,0.58); z-index: 120; }
+    .company-modal.active { display: flex; }
+    .company-modal-card { width: min(420px, 100%); background: var(--panel-bg); border: 1px solid var(--line-strong); box-shadow: 0 24px 60px rgba(0,0,0,0.45); padding: 20px; }
+    .company-modal-title { color: #fff; font-size: 20px; font-weight: 1000; margin-bottom: 10px; }
+    .company-modal-body { color: var(--muted); font-size: 13px; font-weight: 850; line-height: 1.7; }
+    .company-modal-body input { margin-top: 8px; }
+
   </style>
 </head>
 <body>
@@ -738,6 +794,29 @@
         </div>
       </div>
     </section>
+
+
+
+    <section id="companyScreen" class="screen page-screen">
+      <div class="page">
+        <div class="settings-top market-top">
+          <h1 class="title">회사</h1>
+          <button id="backFromCompanyBtn" class="settings-back-btn">뒤로가기</button>
+        </div>
+        <p class="subtitle">회사를 설립하고 직원을 채용해 성장시킬 수 있습니다.</p>
+        <div id="companyContent"></div>
+        <div id="companyStatus" class="company-status"></div>
+      </div>
+    </section>
+
+    <div id="companyModalOverlay" class="company-modal">
+      <div class="company-modal-card">
+        <div id="companyModalTitle" class="company-modal-title">회사</div>
+        <div id="companyModalBody" class="company-modal-body"></div>
+        <div id="companyModalActions" class="company-actions-2"></div>
+        <div id="companyModalStatus" class="company-status"></div>
+      </div>
+    </div>
 
     <section id="rankingScreen" class="screen page-screen">
       <div class="page">
@@ -1046,6 +1125,7 @@
       <button id="openTreasuryBtn" class="menu-item">국고</button>
       <button id="openLotteryBtn" class="menu-item">복권</button>
       <button id="openUpgradeBtn" class="menu-item">업그레이드</button>
+      <button id="openCompanyBtn" class="menu-item">회사</button>
       <button id="openRankingBtn" class="menu-item">순위</button>
       <button id="openSettingsBtn" class="menu-item admin-only">설정</button>
     </div>
@@ -1254,6 +1334,44 @@
     const BANK_INTEREST_INTERVAL_MS = 10 * 60 * 1000;
     const NEWS_LOG_LIMIT = 10;
     const DEFAULT_NEWS_SETTINGS = { chancePerStock: 7, goodInitialMin: 0.03, goodInitialMax: 0.07, goodFollowMin: 0.005, goodFollowMax: 0.015, badInitialMin: 0.03, badInitialMax: 0.07, badFollowMin: 0.005, badFollowMax: 0.015, followCountMin: 3, followCountMax: 5 };
+
+    const COMPANY_FOUND_COST = 100000000;
+    const COMPANY_FOUND_TREASURY_RATE = 0.05;
+    const EMPLOYEE_HIRE_COST = 1000000;
+    const COMPANY_LEVELS = [
+      { level: 1, maxEmployees: 4, cost: 0 },
+      { level: 2, maxEmployees: 6, cost: 100000000 },
+      { level: 3, maxEmployees: 8, cost: 200000000 },
+      { level: 4, maxEmployees: 10, cost: 400000000 },
+      { level: 5, maxEmployees: 12, cost: 800000000 },
+      { level: 6, maxEmployees: 14, cost: 1600000000 },
+      { level: 7, maxEmployees: 16, cost: 3200000000 },
+      { level: 8, maxEmployees: 18, cost: 6400000000 },
+      { level: 9, maxEmployees: 20, cost: 12800000000 },
+      { level: 10, maxEmployees: 22, cost: 25600000000 }
+    ];
+    const COMPANY_RANKS = [
+      { name: "인턴", income: 100000, days: 0 },
+      { name: "사원", income: 200000, days: 1 },
+      { name: "대리", income: 400000, days: 3 },
+      { name: "과장", income: 800000, days: 6 },
+      { name: "차장", income: 1500000, days: 10 },
+      { name: "부장", income: 3000000, days: 15 },
+      { name: "팀장", income: 6000000, days: 21 }
+    ];
+    const COMPANY_GRADES = [
+      { grade: "SSS", chance: 0.1, multiplier: 10 },
+      { grade: "SS", chance: 0.4, multiplier: 7 },
+      { grade: "S", chance: 1.5, multiplier: 5 },
+      { grade: "A", chance: 5, multiplier: 3 },
+      { grade: "B", chance: 10, multiplier: 2 },
+      { grade: "C", chance: 18, multiplier: 1.5 },
+      { grade: "D", chance: 25, multiplier: 1 },
+      { grade: "E", chance: 25, multiplier: 0.7 },
+      { grade: "F", chance: 15, multiplier: 0.4 }
+    ];
+    const KOREAN_LAST_NAMES = ["김", "이", "박", "최", "정", "강", "조", "윤", "장", "임", "한", "오", "서", "신", "권", "황", "안", "송", "류", "홍"];
+    const KOREAN_GIVEN_NAMES = ["민준", "서준", "도윤", "예준", "시우", "주원", "하준", "지호", "지훈", "준우", "현우", "건우", "우진", "서연", "서윤", "지우", "하은", "민서", "지민", "수아", "예은", "유진", "채원", "다은"];
     const DEFAULT_GOOD_NEWS = ["대규모 수주 기대감이 커지고 있습니다.", "신제품 흥행 기대감이 반영되고 있습니다.", "실적 개선 전망이 나오고 있습니다."];
     const DEFAULT_BAD_NEWS = ["실적 부진 우려가 커지고 있습니다.", "품질 논란으로 투자 심리가 약화되고 있습니다.", "업황 둔화 우려가 반영되고 있습니다."];
 
@@ -1278,6 +1396,7 @@
       treasury: document.getElementById("treasuryScreen"),
       lottery: document.getElementById("lotteryScreen"),
       upgrade: document.getElementById("upgradeScreen"),
+      company: document.getElementById("companyScreen"),
       ranking: document.getElementById("rankingScreen"),
       settings: document.getElementById("settingsScreen")
     };
@@ -1302,6 +1421,7 @@
     const openTreasuryBtn = document.getElementById("openTreasuryBtn");
     const openLotteryBtn = document.getElementById("openLotteryBtn");
     const openUpgradeBtn = document.getElementById("openUpgradeBtn");
+    const openCompanyBtn = document.getElementById("openCompanyBtn");
     const openRankingBtn = document.getElementById("openRankingBtn");
     const openSettingsBtn = document.getElementById("openSettingsBtn");
     const signupBonusInput = document.getElementById("signupBonusInput");
@@ -1318,6 +1438,7 @@
     const backFromTreasuryBtn = document.getElementById("backFromTreasuryBtn");
     const backFromLotteryBtn = document.getElementById("backFromLotteryBtn");
     const backFromUpgradeBtn = document.getElementById("backFromUpgradeBtn");
+    const backFromCompanyBtn = document.getElementById("backFromCompanyBtn");
     const backFromRankingBtn = document.getElementById("backFromRankingBtn");
     const settingsDefaultTab = document.getElementById("settingsDefaultTab");
     const settingsStockTab = document.getElementById("settingsStockTab");
@@ -1478,6 +1599,14 @@
     const userAdminCancelBtn = document.getElementById("userAdminCancelBtn");
     const userAdminModalStatus = document.getElementById("userAdminModalStatus");
 
+    const companyContent = document.getElementById("companyContent");
+    const companyStatus = document.getElementById("companyStatus");
+    const companyModalOverlay = document.getElementById("companyModalOverlay");
+    const companyModalTitle = document.getElementById("companyModalTitle");
+    const companyModalBody = document.getElementById("companyModalBody");
+    const companyModalActions = document.getElementById("companyModalActions");
+    const companyModalStatus = document.getElementById("companyModalStatus");
+
     let currentUser = null;
     let currentUserData = null;
     let currentSettings = { ...DEFAULT_SETTINGS };
@@ -1531,6 +1660,11 @@
     let expandedPromotionManageLevel = null;
     let editingPromotionLevel = null;
     let expandedRankingId = null;
+    let companyData = null;
+    let companyEmployees = [];
+    let activeCompanyTab = "info";
+    let expandedCompanyEmployeeId = null;
+    let companyModalMode = null;
     let userAdminModalState = null;
     let infoTab = "daily";
     let dailySalaryTimer = null;
@@ -1546,18 +1680,21 @@
     let authFlowStarted = false;
 
     function isAdmin() { return currentUser && currentUser.email === ADMIN_EMAIL; }
-    function activeMainScreens() { return ["game", "market", "news", "bank", "treasury", "lottery", "upgrade", "ranking", "settings"]; }
+    function activeMainScreens() { return ["game", "market", "news", "bank", "treasury", "lottery", "upgrade", "company", "ranking", "settings"]; }
 
     function closeAllModals() {
       if (tradeModalOverlay) tradeModalOverlay.classList.remove("active");
       if (bankModalOverlay) bankModalOverlay.classList.remove("active");
       if (userAdminModalOverlay) userAdminModalOverlay.classList.remove("active");
+      if (companyModalOverlay) companyModalOverlay.classList.remove("active");
       tradeModalState = null;
       bankModalState = null;
       userAdminModalState = null;
+      companyModalMode = null;
       if (tradeModalStatus) tradeModalStatus.textContent = "";
       if (bankModalStatus) bankModalStatus.textContent = "";
       if (userAdminModalStatus) userAdminModalStatus.textContent = "";
+      if (companyModalStatus) companyModalStatus.textContent = "";
     }
 
     function showScreen(name) {
@@ -1576,6 +1713,9 @@
       if (currentScreenName === "upgrade" && name !== "upgrade") {
         activeUpgradePanel = "";
         renderUpgradeAccordion();
+      }
+      if (currentScreenName === "company" && name !== "company") {
+        expandedCompanyEmployeeId = null;
       }
       if (name === "upgrade" && currentScreenName !== "upgrade") {
         activeUpgradePanel = "";
@@ -1597,6 +1737,7 @@
         }).catch(() => { renderTreasury(); renderTreasuryContributions(); });
       }
       if (name === "lottery") { loadLottery().catch((error) => { console.error(error); renderLottery(); }); }
+      if (name === "company") { loadCompany().catch((error) => { console.error(error); renderCompany(); }); }
       if (name === "upgrade") { loadPromotions().then(renderUpgrade).catch(() => renderUpgrade()); }
       if (name === "ranking") { loadPromotions().then(() => { renderRankings(); loadRankings().catch(() => {}); }).catch(() => { renderRankings(); loadRankings().catch(() => {}); }); }
       if (name === "game") {
@@ -1633,7 +1774,7 @@
       if (userAdminModalOverlay.classList.contains("active")) { closeUserAdminModal(); return true; }
       if (adminMenuPanel.classList.contains("active")) { closeAdminMenu(); return true; }
       if (currentScreenName === "market") { expandedStockId = null; showScreen("game"); return true; }
-      if (currentScreenName === "news" || currentScreenName === "bank" || currentScreenName === "treasury" || currentScreenName === "lottery" || currentScreenName === "upgrade" || currentScreenName === "ranking" || currentScreenName === "settings") { showScreen("game"); return true; }
+      if (currentScreenName === "news" || currentScreenName === "bank" || currentScreenName === "treasury" || currentScreenName === "lottery" || currentScreenName === "upgrade" || currentScreenName === "company" || currentScreenName === "ranking" || currentScreenName === "settings") { showScreen("game"); return true; }
       return false;
     }
 
@@ -2635,6 +2776,7 @@
     function closeUserAdminModal() {
       userAdminModalOverlay.classList.remove("active");
       userAdminModalState = null;
+      companyModalMode = null;
       userAdminModalStatus.textContent = "";
     }
 
@@ -4870,6 +5012,394 @@
       await setDoc(rankingRef(currentUser.uid), buildMyRankingData(), { merge: true });
     }
 
+
+    function escapeAttr(value) {
+      return String(value ?? "").replace(/[&<>"]/g, (ch) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[ch]));
+    }
+
+    function companyDateFrom(value) {
+      if (value instanceof Timestamp) return value.toDate();
+      if (value?.toDate) return value.toDate();
+      if (value instanceof Date) return value;
+      return null;
+    }
+
+    function formatCompanyDate(value) {
+      const date = companyDateFrom(value);
+      if (!date) return "-";
+      const y = date.getFullYear();
+      const m = String(date.getMonth() + 1).padStart(2, "0");
+      const d = String(date.getDate()).padStart(2, "0");
+      return `${y}년 ${m}월 ${d}일`;
+    }
+
+    function companyDaysSince(value) {
+      const date = companyDateFrom(value);
+      if (!date) return 0;
+      const start = new Date(date.getFullYear(), date.getMonth(), date.getDate()).getTime();
+      const now = new Date();
+      const today = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
+      return Math.max(0, Math.floor((today - start) / 86400000));
+    }
+
+    function getCompanyLevelInfo(level) {
+      return COMPANY_LEVELS.find(item => item.level === Number(level || 1)) || COMPANY_LEVELS[0];
+    }
+
+    function getNextCompanyLevelInfo(level) {
+      return COMPANY_LEVELS.find(item => item.level === Number(level || 1) + 1) || null;
+    }
+
+    function getEmployeeRankByDays(days) {
+      let current = COMPANY_RANKS[0];
+      for (const rank of COMPANY_RANKS) {
+        if (days >= rank.days) current = rank;
+      }
+      return current;
+    }
+
+    function getEmployeeNextRank(days) {
+      return COMPANY_RANKS.find(rank => rank.days > days) || null;
+    }
+
+    function getEmployeeComputed(employee) {
+      const days = companyDaysSince(employee.hiredAt);
+      const rank = getEmployeeRankByDays(days);
+      const next = getEmployeeNextRank(days);
+      const multiplier = Number(employee.gradeMultiplier || 1);
+      const dailyIncome = Math.floor(Number(rank.income || 0) * multiplier);
+      const nextText = next ? `${next.name}까지 ${Math.max(0, next.days - days)}일` : "최고 직급";
+      return { days, rank, next, multiplier, dailyIncome, nextText };
+    }
+
+    function gradeClass(grade) {
+      return `company-grade-${String(grade || "F").replace(/[^A-Z]/g, "")}`;
+    }
+
+    function pickRandomEmployeeName() {
+      const last = KOREAN_LAST_NAMES[Math.floor(Math.random() * KOREAN_LAST_NAMES.length)];
+      const given = KOREAN_GIVEN_NAMES[Math.floor(Math.random() * KOREAN_GIVEN_NAMES.length)];
+      return last + given;
+    }
+
+    function pickRandomGrade() {
+      const roll = Math.random() * 100;
+      let acc = 0;
+      for (const row of COMPANY_GRADES) {
+        acc += row.chance;
+        if (roll < acc) return row;
+      }
+      return COMPANY_GRADES[COMPANY_GRADES.length - 1];
+    }
+
+    function setCompanyStatus(text, type = "") {
+      if (!companyStatus) return;
+      companyStatus.textContent = text || "";
+      companyStatus.className = "company-status" + (type ? " " + type : "");
+    }
+
+    async function loadCompany() {
+      if (!currentUser) return;
+      const cRef = doc(db, "companies", currentUser.uid);
+      const cSnap = await getDoc(cRef);
+      companyData = cSnap.exists() ? { id: cSnap.id, ...cSnap.data() } : null;
+      companyEmployees = [];
+      if (companyData) {
+        const eSnap = await getDocs(query(collection(db, "companies", currentUser.uid, "employees"), orderBy("hiredAt", "asc"), limit(30)));
+        companyEmployees = eSnap.docs.map(d => ({ id: d.id, ...d.data() }));
+      }
+      renderCompany();
+    }
+
+    function renderCompany() {
+      if (!companyContent) return;
+      setCompanyStatus("");
+      if (!companyData) {
+        companyContent.innerHTML = `
+          <div class="company-card">
+            <div class="company-title">회사 설립하기</div>
+            <div class="company-subtitle">회사를 설립하면 직원을 채용하고 하루 예상 수익을 만들 수 있습니다.</div>
+            <button id="foundCompanyOpenBtn" class="primary-btn" type="button">회사 설립하기</button>
+            <div class="company-cost">비용 ${formatWon(COMPANY_FOUND_COST)}</div>
+            <div class="company-subtitle">설립 비용의 5%인 ${formatWon(COMPANY_FOUND_COST * COMPANY_FOUND_TREASURY_RATE)}은 국고로 적립됩니다.</div>
+          </div>`;
+        document.getElementById("foundCompanyOpenBtn")?.addEventListener("click", openFoundCompanyModal);
+        return;
+      }
+
+      companyContent.innerHTML = `
+        <div class="company-tabs">
+          <button class="company-tab ${activeCompanyTab === "info" ? "active" : ""}" data-company-tab="info" type="button">회사 정보</button>
+          <button class="company-tab ${activeCompanyTab === "employees" ? "active" : ""}" data-company-tab="employees" type="button">직원 관리</button>
+          <button class="company-tab ${activeCompanyTab === "rules" ? "active" : ""}" data-company-tab="rules" type="button">성장 규칙</button>
+        </div>
+        <div id="companyPanel" class="company-panel"></div>`;
+      companyContent.querySelectorAll("[data-company-tab]").forEach(btn => {
+        btn.addEventListener("click", () => { activeCompanyTab = btn.dataset.companyTab; renderCompany(); });
+      });
+      renderCompanyPanel();
+    }
+
+    function renderCompanyPanel() {
+      const panel = document.getElementById("companyPanel");
+      if (!panel || !companyData) return;
+      if (activeCompanyTab === "employees") renderCompanyEmployees(panel);
+      else if (activeCompanyTab === "rules") renderCompanyRules(panel);
+      else renderCompanyInfo(panel);
+    }
+
+    function renderCompanyInfo(panel) {
+      const level = Number(companyData.level || 1);
+      const levelInfo = getCompanyLevelInfo(level);
+      const next = getNextCompanyLevelInfo(level);
+      const totalIncome = companyEmployees.reduce((sum, emp) => sum + getEmployeeComputed(emp).dailyIncome, 0);
+      panel.innerHTML = `
+        <div class="company-card">
+          <div class="company-row"><div class="company-label">회사 이름</div><div class="company-value">${escapeHtml(companyData.name || "-")}</div></div>
+          <div class="company-row"><div class="company-label">회사 운영일</div><div class="company-value">${companyDaysSince(companyData.createdAt)}일</div></div>
+          <div class="company-row"><div class="company-label">회사 설립일</div><div class="company-value">${formatCompanyDate(companyData.createdAt)}</div></div>
+          <div class="company-level-grid">
+            <div class="company-level-box">
+              <div class="company-level-title">현재 레벨</div>
+              <div class="company-level-value">Lv.${level}<br />직원 최대 ${levelInfo.maxEmployees}명</div>
+            </div>
+            <div class="company-level-box">
+              <div class="company-level-title">다음 레벨</div>
+              <div class="company-level-value">${next ? `Lv.${next.level}<br />${formatWon(next.cost)}` : `최대 레벨<br />-`}</div>
+            </div>
+          </div>
+          <button id="companyLevelUpBtn" class="primary-btn" type="button" ${next ? "" : "disabled"}>회사 레벨업</button>
+          <div class="company-summary">
+            <div class="company-row"><div class="company-label">하루 예상 수익</div><div class="company-value">${formatWon(totalIncome)}</div></div>
+            <div class="company-row"><div class="company-label">직원 수</div><div class="company-value">${companyEmployees.length}/${levelInfo.maxEmployees}명</div></div>
+          </div>
+        </div>`;
+      document.getElementById("companyLevelUpBtn")?.addEventListener("click", levelUpCompany);
+    }
+
+    function renderCompanyEmployees(panel) {
+      const levelInfo = getCompanyLevelInfo(companyData.level || 1);
+      const rows = companyEmployees.map(emp => {
+        const c = getEmployeeComputed(emp);
+        const expanded = expandedCompanyEmployeeId === emp.id;
+        return `<div class="company-employee-item ${expanded ? "expanded" : ""}">
+          <button class="company-employee-head" data-employee-toggle="${escapeAttr(emp.id)}" type="button">
+            <span class="company-employee-name ${gradeClass(emp.grade)}">${escapeHtml(emp.name || "직원")} [${escapeHtml(c.rank.name)}] [${escapeHtml(emp.grade || "F")}]</span>
+            <span class="company-employee-toggle">${expanded ? "접기" : "상세보기"}</span>
+          </button>
+          <div class="company-employee-detail">
+            <div class="company-row"><div class="company-label">채용일</div><div class="company-value">${formatCompanyDate(emp.hiredAt)}</div></div>
+            <div class="company-row"><div class="company-label">근속일</div><div class="company-value">${c.days}일</div></div>
+            <div class="company-row"><div class="company-label">하루 수익</div><div class="company-value">${formatWon(c.dailyIncome)}</div></div>
+            <div class="company-row"><div class="company-label">등급 배율</div><div class="company-value">${c.multiplier}배</div></div>
+            <div class="company-row"><div class="company-label">다음 승진</div><div class="company-value">${escapeHtml(c.nextText)}</div></div>
+            <div class="company-actions-2">
+              <button class="secondary-btn" data-employee-edit="${escapeAttr(emp.id)}" type="button">수정</button>
+              <button class="danger-btn" data-employee-fire="${escapeAttr(emp.id)}" type="button">해고</button>
+            </div>
+          </div>
+        </div>`;
+      }).join("");
+      panel.innerHTML = `
+        <div class="company-card">
+          <button id="hireEmployeeOpenBtn" class="primary-btn" type="button" ${companyEmployees.length >= levelInfo.maxEmployees ? "disabled" : ""}>직원 채용</button>
+          <div class="company-subtitle">직원 ${companyEmployees.length}/${levelInfo.maxEmployees}명 · 채용 비용 ${formatWon(EMPLOYEE_HIRE_COST)}</div>
+          <div class="company-list">${rows || `<div class="company-subtitle">아직 채용한 직원이 없습니다.</div>`}</div>
+        </div>`;
+      document.getElementById("hireEmployeeOpenBtn")?.addEventListener("click", openHireEmployeeModal);
+      panel.querySelectorAll("[data-employee-toggle]").forEach(btn => btn.addEventListener("click", () => {
+        expandedCompanyEmployeeId = expandedCompanyEmployeeId === btn.dataset.employeeToggle ? null : btn.dataset.employeeToggle;
+        renderCompany();
+      }));
+      panel.querySelectorAll("[data-employee-edit]").forEach(btn => btn.addEventListener("click", (e) => { e.stopPropagation(); openEditEmployeeModal(btn.dataset.employeeEdit); }));
+      panel.querySelectorAll("[data-employee-fire]").forEach(btn => btn.addEventListener("click", (e) => { e.stopPropagation(); openFireEmployeeModal(btn.dataset.employeeFire); }));
+    }
+
+    function renderCompanyRules(panel) {
+      const levelRows = COMPANY_LEVELS.map(item => `<tr><td>Lv.${item.level}</td><td>${item.maxEmployees}명</td><td>${item.level === 1 ? "기본" : formatWon(item.cost)}</td></tr>`).join("");
+      const rankRows = COMPANY_RANKS.map(item => `<tr><td>${item.name}</td><td>${formatWon(item.income)}</td><td>${item.days === 0 ? "시작" : item.days + "일 이상"}</td></tr>`).join("");
+      const gradeRows = COMPANY_GRADES.map(item => `<tr><td class="${gradeClass(item.grade)}">${item.grade}</td><td>${item.chance}%</td><td>${item.multiplier}배</td></tr>`).join("");
+      panel.innerHTML = `
+        <div class="company-rule-card"><div class="company-rule-title">회사 레벨 / 최대 직원 수 / 레벨업 비용</div><table class="company-rule-table"><thead><tr><th>레벨</th><th>최대 직원</th><th>필요 비용</th></tr></thead><tbody>${levelRows}</tbody></table></div>
+        <div class="company-rule-card"><div class="company-rule-title">직급별 기본 하루 수익</div><table class="company-rule-table"><thead><tr><th>직급</th><th>기본 수익</th><th>승진 기준</th></tr></thead><tbody>${rankRows}</tbody></table></div>
+        <div class="company-rule-card"><div class="company-rule-title">등급별 확률 / 수익 배율</div><table class="company-rule-table"><thead><tr><th>등급</th><th>확률</th><th>배율</th></tr></thead><tbody>${gradeRows}</tbody></table></div>`;
+    }
+
+    function openCompanyModal(title, bodyHtml, actionsHtml, mode = "") {
+      companyModalMode = mode;
+      companyModalTitle.textContent = title;
+      companyModalBody.innerHTML = bodyHtml;
+      companyModalActions.innerHTML = actionsHtml;
+      companyModalStatus.textContent = "";
+      companyModalStatus.className = "company-status";
+      companyModalOverlay.classList.add("active");
+    }
+
+    function closeCompanyModal() {
+      companyModalOverlay.classList.remove("active");
+      companyModalMode = null;
+      companyModalStatus.textContent = "";
+    }
+
+    function setCompanyModalStatus(text, type = "") {
+      companyModalStatus.textContent = text || "";
+      companyModalStatus.className = "company-status" + (type ? " " + type : "");
+    }
+
+    function openFoundCompanyModal() {
+      openCompanyModal("회사 설립", `<label>회사 이름</label><input id="companyNameInput" type="text" maxlength="16" placeholder="회사 이름을 입력하세요" /><div class="company-subtitle">설립 비용 ${formatWon(COMPANY_FOUND_COST)}<br />국고 적립 ${formatWon(COMPANY_FOUND_COST * COMPANY_FOUND_TREASURY_RATE)}</div>`, `<button id="foundCompanyConfirmBtn" class="primary-btn" type="button">회사 설립</button><button id="foundCompanyCancelBtn" class="secondary-btn" type="button">설립 취소</button>`, "found");
+      document.getElementById("foundCompanyCancelBtn")?.addEventListener("click", closeCompanyModal);
+      document.getElementById("foundCompanyConfirmBtn")?.addEventListener("click", foundCompany);
+    }
+
+    async function foundCompany() {
+      if (!currentUser || !currentUserData) return;
+      const input = document.getElementById("companyNameInput");
+      const name = (input?.value || "").trim();
+      if (name.length < 1 || name.length > 16) { setCompanyModalStatus("회사 이름은 1~16자로 입력해주세요.", "error"); return; }
+      if (Number(currentUserData.cash || 0) < COMPANY_FOUND_COST) { setCompanyModalStatus("보유 현금이 부족합니다.", "error"); return; }
+      try {
+        const uRef = doc(db, "users", currentUser.uid);
+        const cRef = doc(db, "companies", currentUser.uid);
+        const tRef = doc(db, "treasury", "global");
+        await runTransaction(db, async (tx) => {
+          const [uSnap, cSnap, tSnap] = await Promise.all([tx.get(uRef), tx.get(cRef), tx.get(tRef)]);
+          if (!uSnap.exists()) throw new Error("사용자 정보를 찾을 수 없습니다.");
+          if (cSnap.exists()) throw new Error("이미 설립한 회사가 있습니다.");
+          const cash = Number(uSnap.data().cash || 0);
+          if (cash < COMPANY_FOUND_COST) throw new Error("보유 현금이 부족합니다.");
+          tx.update(uRef, { cash: cash - COMPANY_FOUND_COST, lastTradeAt: serverTimestamp() });
+          tx.set(cRef, { uid: currentUser.uid, name, level: 1, createdAt: serverTimestamp(), updatedAt: serverTimestamp() });
+          const treasury = Number(tSnap.exists() ? tSnap.data().totalTreasury || 0 : 0);
+          tx.set(tRef, { totalTreasury: treasury + Math.floor(COMPANY_FOUND_COST * COMPANY_FOUND_TREASURY_RATE), updatedAt: serverTimestamp() }, { merge: true });
+        });
+        closeCompanyModal();
+        setCompanyStatus("회사를 설립했습니다.", "success");
+        await loadCompany();
+      } catch (error) {
+        console.error(error);
+        setCompanyModalStatus(error.message || "회사 설립에 실패했습니다.", "error");
+      }
+    }
+
+    async function levelUpCompany() {
+      if (!currentUser || !currentUserData || !companyData) return;
+      const next = getNextCompanyLevelInfo(companyData.level || 1);
+      if (!next) { setCompanyStatus("이미 최대 레벨입니다.", "error"); return; }
+      if (Number(currentUserData.cash || 0) < next.cost) { setCompanyStatus("보유 현금이 부족합니다.", "error"); return; }
+      try {
+        await runTransaction(db, async (tx) => {
+          const uRef = doc(db, "users", currentUser.uid);
+          const cRef = doc(db, "companies", currentUser.uid);
+          const [uSnap, cSnap] = await Promise.all([tx.get(uRef), tx.get(cRef)]);
+          if (!uSnap.exists() || !cSnap.exists()) throw new Error("회사 정보를 찾을 수 없습니다.");
+          const nowLevel = Number(cSnap.data().level || 1);
+          const nextInfo = getNextCompanyLevelInfo(nowLevel);
+          if (!nextInfo) throw new Error("이미 최대 레벨입니다.");
+          const cash = Number(uSnap.data().cash || 0);
+          if (cash < nextInfo.cost) throw new Error("보유 현금이 부족합니다.");
+          tx.update(uRef, { cash: cash - nextInfo.cost, lastTradeAt: serverTimestamp() });
+          tx.update(cRef, { level: nowLevel + 1, updatedAt: serverTimestamp() });
+        });
+        setCompanyStatus("회사 레벨업이 완료되었습니다.", "success");
+        await loadCompany();
+      } catch (error) {
+        console.error(error);
+        setCompanyStatus(error.message || "회사 레벨업에 실패했습니다.", "error");
+      }
+    }
+
+    function openHireEmployeeModal() {
+      if (!companyData) return;
+      const levelInfo = getCompanyLevelInfo(companyData.level || 1);
+      if (companyEmployees.length >= levelInfo.maxEmployees) { setCompanyStatus("직원 최대 수에 도달했습니다.", "error"); return; }
+      openCompanyModal("직원 채용", `<div class="company-subtitle">직원 채용 비용 ${formatWon(EMPLOYEE_HIRE_COST)}<br />채용 시 랜덤 한국식 이름과 등급이 자동으로 정해집니다.</div>`, `<button id="hireEmployeeConfirmBtn" class="primary-btn" type="button">채용</button><button id="hireEmployeeCancelBtn" class="secondary-btn" type="button">채용 취소</button>`, "hire");
+      document.getElementById("hireEmployeeCancelBtn")?.addEventListener("click", closeCompanyModal);
+      document.getElementById("hireEmployeeConfirmBtn")?.addEventListener("click", hireEmployee);
+    }
+
+    async function hireEmployee() {
+      if (!currentUser || !currentUserData || !companyData) return;
+      if (Number(currentUserData.cash || 0) < EMPLOYEE_HIRE_COST) { setCompanyModalStatus("보유 현금이 부족합니다.", "error"); return; }
+      try {
+        let hired = null;
+        await runTransaction(db, async (tx) => {
+          const uRef = doc(db, "users", currentUser.uid);
+          const cRef = doc(db, "companies", currentUser.uid);
+          const eRef = doc(collection(db, "companies", currentUser.uid, "employees"));
+          const [uSnap, cSnap] = await Promise.all([tx.get(uRef), tx.get(cRef)]);
+          if (!uSnap.exists() || !cSnap.exists()) throw new Error("회사 정보를 찾을 수 없습니다.");
+          const max = getCompanyLevelInfo(cSnap.data().level || 1).maxEmployees;
+          if (companyEmployees.length >= max) throw new Error("직원 최대 수에 도달했습니다.");
+          const cash = Number(uSnap.data().cash || 0);
+          if (cash < EMPLOYEE_HIRE_COST) throw new Error("보유 현금이 부족합니다.");
+          const grade = pickRandomGrade();
+          hired = { id: eRef.id, uid: currentUser.uid, name: pickRandomEmployeeName(), grade: grade.grade, gradeMultiplier: grade.multiplier };
+          tx.update(uRef, { cash: cash - EMPLOYEE_HIRE_COST, lastTradeAt: serverTimestamp() });
+          tx.set(eRef, { ...hired, hiredAt: serverTimestamp(), createdAt: serverTimestamp(), updatedAt: serverTimestamp() });
+        });
+        closeCompanyModal();
+        await loadCompany();
+        if (hired) openHiredEmployeeResultModal(hired.id);
+      } catch (error) {
+        console.error(error);
+        setCompanyModalStatus(error.message || "직원 채용에 실패했습니다.", "error");
+      }
+    }
+
+    function openHiredEmployeeResultModal(employeeId) {
+      const emp = companyEmployees.find(item => item.id === employeeId);
+      if (!emp) return;
+      const c = getEmployeeComputed(emp);
+      openCompanyModal("직원 채용 완료", `<div class="company-title ${gradeClass(emp.grade)}">${escapeHtml(emp.name)} [${escapeHtml(c.rank.name)}] [${escapeHtml(emp.grade)}]</div><div class="company-row"><div class="company-label">하루 수익</div><div class="company-value">${formatWon(c.dailyIncome)}</div></div><div class="company-row"><div class="company-label">등급 배율</div><div class="company-value">${c.multiplier}배</div></div><div class="company-row"><div class="company-label">다음 승진</div><div class="company-value">${escapeHtml(c.nextText)}</div></div>`, `<button id="hiredEmployeeOkBtn" class="primary-btn" type="button">채용</button><button id="hiredEmployeeFireBtn" class="danger-btn" type="button">해고</button>`, "hired");
+      document.getElementById("hiredEmployeeOkBtn")?.addEventListener("click", closeCompanyModal);
+      document.getElementById("hiredEmployeeFireBtn")?.addEventListener("click", async () => { closeCompanyModal(); await fireEmployee(employeeId); });
+    }
+
+    function openEditEmployeeModal(employeeId) {
+      const emp = companyEmployees.find(item => item.id === employeeId);
+      if (!emp) return;
+      openCompanyModal("직원 이름 수정", `<label>직원 이름</label><input id="employeeNameEditInput" type="text" maxlength="12" value="${escapeAttr(emp.name || "")}" />`, `<button id="employeeNameSaveBtn" class="primary-btn" type="button">수정 완료</button><button id="employeeNameCancelBtn" class="secondary-btn" type="button">취소</button>`, "editEmployee");
+      document.getElementById("employeeNameCancelBtn")?.addEventListener("click", closeCompanyModal);
+      document.getElementById("employeeNameSaveBtn")?.addEventListener("click", () => saveEmployeeName(employeeId));
+    }
+
+    async function saveEmployeeName(employeeId) {
+      const input = document.getElementById("employeeNameEditInput");
+      const name = (input?.value || "").trim();
+      if (name.length < 1 || name.length > 12) { setCompanyModalStatus("직원 이름은 1~12자로 입력해주세요.", "error"); return; }
+      try {
+        await updateDoc(doc(db, "companies", currentUser.uid, "employees", employeeId), { name, updatedAt: serverTimestamp() });
+        closeCompanyModal();
+        setCompanyStatus("직원 이름을 수정했습니다.", "success");
+        await loadCompany();
+      } catch (error) {
+        console.error(error);
+        setCompanyModalStatus("직원 이름 수정에 실패했습니다.", "error");
+      }
+    }
+
+    function openFireEmployeeModal(employeeId) {
+      const emp = companyEmployees.find(item => item.id === employeeId);
+      if (!emp) return;
+      openCompanyModal("직원 해고", `<div class="company-subtitle">${escapeHtml(emp.name)} 직원을 해고하시겠습니까?<br />채용 비용은 환불되지 않습니다.</div>`, `<button id="employeeFireConfirmBtn" class="danger-btn" type="button">해고</button><button id="employeeFireCancelBtn" class="secondary-btn" type="button">취소</button>`, "fireEmployee");
+      document.getElementById("employeeFireCancelBtn")?.addEventListener("click", closeCompanyModal);
+      document.getElementById("employeeFireConfirmBtn")?.addEventListener("click", async () => { closeCompanyModal(); await fireEmployee(employeeId); });
+    }
+
+    async function fireEmployee(employeeId) {
+      if (!currentUser) return;
+      try {
+        await deleteDoc(doc(db, "companies", currentUser.uid, "employees", employeeId));
+        expandedCompanyEmployeeId = null;
+        setCompanyStatus("직원을 해고했습니다.", "success");
+        await loadCompany();
+      } catch (error) {
+        console.error(error);
+        setCompanyStatus("직원 해고에 실패했습니다.", "error");
+      }
+    }
+
     async function loadRankings() {
       if (!rankingList || !currentUser || !currentUserData) return;
       rankingStatus.textContent = "순위를 갱신 중입니다...";
@@ -5923,6 +6453,7 @@
       activeUpgradePanel = "";
       showScreen("upgrade");
     });
+    openCompanyBtn.addEventListener("click", () => { closeAdminMenu(); activeCompanyTab = "info"; showScreen("company"); });
     openRankingBtn.addEventListener("click", () => { closeAdminMenu(); showScreen("ranking"); });
     openSettingsBtn.addEventListener("click", () => { closeAdminMenu(); fillSettingsInputs(); setSettingsTab("default"); showScreen("settings"); });
     settingsDefaultTab.addEventListener("click", () => setSettingsTab("default"));
@@ -5954,6 +6485,7 @@
     backFromTreasuryBtn.addEventListener("click", () => showScreen("game"));
     backFromLotteryBtn.addEventListener("click", () => showScreen("game"));
     backFromUpgradeBtn.addEventListener("click", () => showScreen("game"));
+    backFromCompanyBtn.addEventListener("click", () => showScreen("game"));
     backFromRankingBtn.addEventListener("click", () => showScreen("game"));
     infoDailyTab.addEventListener("click", () => setInfoTab("daily"));
     infoStockTab.addEventListener("click", () => setInfoTab("stock"));
@@ -5994,6 +6526,7 @@
     bankModalOverlay.addEventListener("click", closeBankModal);
     userAdminConfirmBtn.addEventListener("click", confirmUserAdminAction);
     userAdminCancelBtn.addEventListener("click", closeUserAdminModal);
+    companyModalOverlay.addEventListener("click", (event) => { if (event.target === companyModalOverlay) closeCompanyModal(); });
     userAdminModalOverlay.addEventListener("click", closeUserAdminModal);
     userAdminModal.addEventListener("click", (event) => event.stopPropagation());
     bankModal.addEventListener("click", (event) => event.stopPropagation());
