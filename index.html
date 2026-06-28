@@ -504,6 +504,8 @@
     .company-status.error { color: #f87171; }
     .company-status.success { color: #22c55e; }
     .company-actions-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 12px; }
+    .company-danger-zone { border-top: 1px solid var(--line-strong); margin-top: 18px; padding-top: 16px; }
+    .company-danger-note { color: var(--muted); font-size: 12px; font-weight: 850; line-height: 1.55; margin-top: 8px; }
     .company-inline-input { margin: 12px 0; }
     .company-list { border-top: 1px solid var(--line-strong); margin-top: 16px; }
     .company-employee-item { border-bottom: 1px solid var(--line); padding: 13px 0; }
@@ -5170,7 +5172,7 @@
             <div class="company-subtitle">회사를 설립하면 직원을 채용하고 하루 예상 수익을 만들 수 있습니다.</div>
             <button id="foundCompanyOpenBtn" class="primary-btn" type="button">회사 설립하기</button>
             <div class="company-cost">비용 ${formatWon(COMPANY_FOUND_COST)}</div>
-            <div class="company-subtitle">설립 비용의 5%인 ${formatWon(COMPANY_FOUND_COST * COMPANY_FOUND_TREASURY_RATE)}은 국고로 적립됩니다.</div>
+            <div class="company-subtitle">설립 비용의 5%인 ${formatWon(COMPANY_FOUND_COST * COMPANY_FOUND_TREASURY_RATE)}은 국고와 내 누적 납입액에 반영됩니다.</div>
           </div>`;
         document.getElementById("foundCompanyOpenBtn")?.addEventListener("click", openFoundCompanyModal);
         return;
@@ -5222,8 +5224,13 @@
             <div class="company-row"><div class="company-label">하루 예상 수익</div><div class="company-value">${formatWon(totalIncome)}</div></div>
             <div class="company-row"><div class="company-label">직원 수</div><div class="company-value">${companyEmployees.length}/${levelInfo.maxEmployees}명</div></div>
           </div>
+          <div class="company-danger-zone">
+            <button id="dissolveCompanyBtn" class="danger-btn" type="button">회사 해산</button>
+            <div class="company-danger-note">회사와 직원 정보가 모두 삭제되며 설립 비용은 환불되지 않습니다.</div>
+          </div>
         </div>`;
       document.getElementById("companyLevelUpBtn")?.addEventListener("click", levelUpCompany);
+      document.getElementById("dissolveCompanyBtn")?.addEventListener("click", openDissolveCompanyModal);
     }
 
     function renderCompanyEmployees(panel) {
@@ -5297,7 +5304,7 @@
     }
 
     function openFoundCompanyModal() {
-      openCompanyModal("회사 설립", `<label>회사 이름</label><input id="companyNameInput" type="text" maxlength="16" placeholder="회사 이름을 입력하세요" /><div class="company-subtitle">설립 비용 ${formatWon(COMPANY_FOUND_COST)}<br />국고 적립 ${formatWon(COMPANY_FOUND_COST * COMPANY_FOUND_TREASURY_RATE)}</div>`, `<button id="foundCompanyConfirmBtn" class="primary-btn" type="button">회사 설립</button><button id="foundCompanyCancelBtn" class="secondary-btn" type="button">설립 취소</button>`, "found");
+      openCompanyModal("회사 설립", `<label>회사 이름</label><input id="companyNameInput" type="text" maxlength="16" placeholder="회사 이름을 입력하세요" /><div class="company-subtitle">설립 비용 ${formatWon(COMPANY_FOUND_COST)}<br />국고 적립 ${formatWon(COMPANY_FOUND_COST * COMPANY_FOUND_TREASURY_RATE)}<br />내 누적 납입액에도 함께 반영됩니다.</div>`, `<button id="foundCompanyConfirmBtn" class="primary-btn" type="button">회사 설립</button><button id="foundCompanyCancelBtn" class="secondary-btn" type="button">설립 취소</button>`, "found");
       document.getElementById("foundCompanyCancelBtn")?.addEventListener("click", closeCompanyModal);
       document.getElementById("foundCompanyConfirmBtn")?.addEventListener("click", foundCompany);
     }
@@ -5312,23 +5319,73 @@
         const uRef = doc(db, "users", currentUser.uid);
         const cRef = doc(db, "companies", currentUser.uid);
         const tRef = doc(db, "treasury", "global");
+        const contributionRef = treasuryContributionRef(currentUser.uid);
+        const foundingTax = Math.floor(COMPANY_FOUND_COST * COMPANY_FOUND_TREASURY_RATE);
         await runTransaction(db, async (tx) => {
-          const [uSnap, cSnap, tSnap] = await Promise.all([tx.get(uRef), tx.get(cRef), tx.get(tRef)]);
+          const [uSnap, cSnap, tSnap, contributionSnap] = await Promise.all([tx.get(uRef), tx.get(cRef), tx.get(tRef), tx.get(contributionRef)]);
           if (!uSnap.exists()) throw new Error("사용자 정보를 찾을 수 없습니다.");
           if (cSnap.exists()) throw new Error("이미 설립한 회사가 있습니다.");
-          const cash = Number(uSnap.data().cash || 0);
+          const userData = uSnap.data();
+          const cash = Number(userData.cash || 0);
           if (cash < COMPANY_FOUND_COST) throw new Error("보유 현금이 부족합니다.");
+          const treasuryData = tSnap.exists() ? tSnap.data() : {};
+          const treasury = Number(treasuryData.totalTreasury || 0);
+          const trackedContributions = Number(treasuryData.trackedContributions || 0);
+          const oldContribution = contributionSnap.exists() ? Number(contributionSnap.data().totalTaxPaid || 0) : 0;
           tx.update(uRef, { cash: cash - COMPANY_FOUND_COST, lastTradeAt: serverTimestamp() });
           tx.set(cRef, { uid: currentUser.uid, name, level: 1, createdAt: serverTimestamp(), updatedAt: serverTimestamp() });
-          const treasury = Number(tSnap.exists() ? tSnap.data().totalTreasury || 0 : 0);
-          tx.set(tRef, { totalTreasury: treasury + Math.floor(COMPANY_FOUND_COST * COMPANY_FOUND_TREASURY_RATE), updatedAt: serverTimestamp() }, { merge: true });
+          tx.set(tRef, { totalTreasury: treasury + foundingTax, trackedContributions: trackedContributions + foundingTax, updatedAt: serverTimestamp() }, { merge: true });
+          tx.set(contributionRef, {
+            uid: currentUser.uid,
+            nickname: userData.nickname || currentUserData?.nickname || "-",
+            promotionLevel: getPromotionLevel(userData),
+            totalTaxPaid: oldContribution + foundingTax,
+            updatedAt: serverTimestamp()
+          }, { merge: true });
         });
         closeCompanyModal();
-        setCompanyStatus("회사를 설립했습니다.", "success");
+        setCompanyStatus(`회사를 설립했습니다. 설립 법인세 ${formatWon(foundingTax)}이 누적 납입액에 반영되었습니다.`, "success");
+        await loadTreasury().catch(() => {});
+        if (currentScreenName === "treasury") await loadTreasuryContributions().catch(() => {});
         await loadCompany();
       } catch (error) {
         console.error(error);
         setCompanyModalStatus(error.message || "회사 설립에 실패했습니다.", "error");
+      }
+    }
+
+    function openDissolveCompanyModal() {
+      if (!companyData) return;
+      openCompanyModal(
+        "회사 해산",
+        `<div class="company-subtitle">정말 회사를 해산하시겠습니까?<br />직원 정보가 모두 삭제되며 복구할 수 없습니다.<br />설립 비용은 환불되지 않습니다.</div>`,
+        `<button id="dissolveCompanyConfirmBtn" class="danger-btn" type="button">해산</button><button id="dissolveCompanyCancelBtn" class="secondary-btn" type="button">취소</button>`,
+        "dissolveCompany"
+      );
+      document.getElementById("dissolveCompanyCancelBtn")?.addEventListener("click", closeCompanyModal);
+      document.getElementById("dissolveCompanyConfirmBtn")?.addEventListener("click", dissolveCompany);
+    }
+
+    async function dissolveCompany() {
+      if (!currentUser || !companyData) return;
+      try {
+        setCompanyModalStatus("회사 해산 중...");
+        const employeeSnap = await getDocs(collection(db, "companies", currentUser.uid, "employees"));
+        const batch = writeBatch(db);
+        employeeSnap.docs.forEach(employeeDoc => batch.delete(employeeDoc.ref));
+        batch.delete(doc(db, "companies", currentUser.uid));
+        await batch.commit();
+        companyData = null;
+        companyEmployees = [];
+        activeCompanyTab = "info";
+        expandedCompanyEmployeeId = null;
+        closeCompanyModal();
+        setCompanyStatus("회사를 해산했습니다. 설립 비용은 환불되지 않습니다.", "success");
+        await loadCompany();
+        if (currentScreenName === "game" && infoTab === "daily") renderDailySalary(false);
+      } catch (error) {
+        console.error(error);
+        setCompanyModalStatus(error.message || "회사 해산에 실패했습니다.", "error");
       }
     }
 
