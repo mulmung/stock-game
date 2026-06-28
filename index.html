@@ -2294,17 +2294,17 @@
       const storedTax = Math.max(0, Math.floor(Number(currentUserData.lastDailySalaryTax || 0)));
       const storedNet = Math.max(0, Math.floor(Number(currentUserData.lastDailySalaryNet || 0)));
       const preview = calculateDailyIncomePreview(salary);
-      const taxAmount = claimed && storedTax > 0 ? storedTax : preview.salaryTax;
-      const corporateTax = claimed && storedTax > 0 ? Math.max(0, storedTax - preview.salaryTax) : preview.corporateTax;
-      const netSalary = claimed && (storedTax > 0 || storedNet > 0) ? storedNet : preview.netSalary;
+      // v67-3: 일급 화면의 표시값은 항상 현재 회사 수익 기준의 예상값으로 계산합니다.
+      // 이미 오늘 일급을 받은 경우에도 화면에는 현재 기준 예상 법인세/실수령을 보여주고,
+      // 실제 지급 기록은 아래 상태 문구에서만 별도로 안내합니다.
       dailyPromotionValue.innerHTML = `${styledNicknameHtml(currentUserData.nickname || "-", level)} ${promotionNameHtml(level)}`;
-      dailySalaryValue.textContent = formatWon(salary);
-      if (dailyTaxExpectedValue) dailyTaxExpectedValue.textContent = formatWon(taxAmount);
+      dailySalaryValue.textContent = formatWon(preview.personalSalary);
+      if (dailyTaxExpectedValue) dailyTaxExpectedValue.textContent = formatWon(preview.salaryTax);
       if (dailyCompanyIncomeValue) dailyCompanyIncomeValue.textContent = formatWon(preview.companyIncome);
-      if (dailyCorporateTaxValue) dailyCorporateTaxValue.textContent = formatWon(corporateTax);
-      if (dailyNetSalaryValue) dailyNetSalaryValue.textContent = formatWon(netSalary);
-      if (clearStatus && dailySalaryStatus) dailySalaryStatus.textContent = claimed && storedTax > 0
-        ? `오늘 납부 일급세 ${formatWon(preview.salaryTax)} / 법인세 ${formatWon(corporateTax)} / 실수령 ${formatWon(netSalary)}`
+      if (dailyCorporateTaxValue) dailyCorporateTaxValue.textContent = formatWon(preview.corporateTax);
+      if (dailyNetSalaryValue) dailyNetSalaryValue.textContent = formatWon(preview.netSalary);
+      if (clearStatus && dailySalaryStatus) dailySalaryStatus.textContent = claimed && (storedTax > 0 || storedNet > 0)
+        ? `오늘 기록된 납부세 ${formatWon(storedTax)} / 실수령 ${formatWon(storedNet)}`
         : "";
       updateDailySalaryCountdown();
       scheduleLegacyDailyTaxAdjustment();
@@ -5155,6 +5155,7 @@
         companyEmployees = sortCompanyEmployees(eSnap.docs.map(d => ({ id: d.id, ...d.data() })));
       }
       renderCompany();
+      if (currentScreenName === "game" && infoTab === "daily") renderDailySalary(false);
     }
 
     function renderCompany() {
