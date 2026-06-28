@@ -5336,7 +5336,15 @@
           const grade = pickRandomGrade();
           hired = { id: eRef.id, uid: currentUser.uid, name: pickRandomEmployeeName(), grade: grade.grade, gradeMultiplier: grade.multiplier };
           tx.update(uRef, { cash: cash - EMPLOYEE_HIRE_COST, lastTradeAt: serverTimestamp() });
-          tx.set(eRef, { ...hired, hiredAt: serverTimestamp(), createdAt: serverTimestamp(), updatedAt: serverTimestamp() });
+          tx.set(eRef, {
+            uid: hired.uid,
+            name: hired.name,
+            grade: hired.grade,
+            gradeMultiplier: hired.gradeMultiplier,
+            hiredAt: serverTimestamp(),
+            createdAt: serverTimestamp(),
+            updatedAt: serverTimestamp()
+          });
         });
         closeCompanyModal();
         await loadCompany();
