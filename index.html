@@ -310,6 +310,9 @@
     .stock-cancel-btn { background: var(--panel-bg); border: 1px solid var(--line); }
     .stock-edit-form { display: grid; gap: 10px; margin-top: 12px; }
     .stock-edit-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+    .ranking-tabs { display: flex; align-items: center; gap: 28px; border-bottom: 1px solid var(--line-strong); margin: 18px 0 22px; overflow: visible; height: auto; max-height: none; }
+    .ranking-tab { position: relative; flex: 0 0 auto; height: 46px; padding: 0; border: 0; background: transparent; color: var(--muted); font-weight: 750; font-size: 15px; border-radius: 0; white-space: nowrap; }
+    .ranking-tab.active { color: #fff; font-weight: 1000; }
     .ranking-note { font-size: 12px; color: var(--muted); line-height: 1.55; margin: 0 0 16px; }
     .ranking-list { border-top: 1px solid var(--line-strong); }
     .ranking-row { display: grid; grid-template-columns: 54px 1fr; gap: 12px; padding: 14px 0; border-bottom: 1px solid var(--line-strong); align-items: start; cursor: pointer; user-select: none; -webkit-tap-highlight-color: transparent; }
@@ -834,8 +837,12 @@
           <h1 class="title">순위</h1>
           <button id="backFromRankingBtn" class="settings-back-btn">뒤로가기</button>
         </div>
-        <p class="subtitle">유저들의 총자산 순위를 확인할 수 있습니다.</p>
-        <div class="ranking-note">총자산 = 보유 현금 + 통장 잔액 + 보유 주식 평가금액<br />상위 10명만 표시됩니다.</div>
+        <p class="subtitle">유저들의 순위를 확인할 수 있습니다.</p>
+        <div class="ranking-tabs">
+          <button id="rankingAssetTab" class="ranking-tab active" type="button">자산 순위</button>
+          <button id="rankingCompanyTab" class="ranking-tab" type="button">회사 순위</button>
+        </div>
+        <div id="rankingNote" class="ranking-note">총자산 = 보유 현금 + 통장 잔액 + 보유 주식 평가금액<br />상위 10명만 표시됩니다.</div>
         <div id="rankingList" class="ranking-list"></div>
         <div id="rankingStatus" class="ranking-status"></div>
       </div>
@@ -1555,6 +1562,9 @@
     const openDepositBtn = document.getElementById("openDepositBtn");
     const openWithdrawBtn = document.getElementById("openWithdrawBtn");
     const bankLogList = document.getElementById("bankLogList");
+    const rankingAssetTab = document.getElementById("rankingAssetTab");
+    const rankingCompanyTab = document.getElementById("rankingCompanyTab");
+    const rankingNote = document.getElementById("rankingNote");
     const rankingList = document.getElementById("rankingList");
     const rankingStatus = document.getElementById("rankingStatus");
     const promotionAccordionHead = document.getElementById("promotionAccordionHead");
@@ -1664,6 +1674,8 @@
     let expandedBankDepositId = null;
     let activeUpgradePanel = "";
     let rankings = [];
+    let companyRankings = [];
+    let rankingActiveTab = "assets";
     let adminUsers = [];
     let expandedAdminUserId = null;
     let editingStockId = null;
@@ -1917,6 +1929,8 @@
     function treasuryContributionRef(uid) { return doc(db, "treasuryContributions", uid); }
     function rankingsCol() { return collection(db, "rankings"); }
     function rankingRef(uid) { return doc(db, "rankings", uid); }
+    function companyRankingsCol() { return collection(db, "companyRankings"); }
+    function companyRankingRef(uid) { return doc(db, "companyRankings", uid); }
 
     async function pruneOldTrades(uid) {
       try {
@@ -5045,6 +5059,31 @@
       await setDoc(rankingRef(currentUser.uid), buildMyRankingData(), { merge: true });
     }
 
+    function buildMyCompanyRankingData() {
+      if (!currentUser || !companyData) return null;
+      const level = Math.max(1, Math.floor(Number(companyData.level || 1)));
+      const dailyProfit = Math.max(0, Math.floor(getCompanyDailyIncome()));
+      return {
+        uid: currentUser.uid,
+        companyName: companyData.name || "-",
+        companyLevel: level,
+        dailyProfit,
+        employeeCount: Array.isArray(companyEmployees) ? companyEmployees.length : 0,
+        updatedAt: serverTimestamp()
+      };
+    }
+
+    async function updateMyCompanyRanking() {
+      if (!currentUser) return;
+      if (!companyData) {
+        await deleteDoc(companyRankingRef(currentUser.uid)).catch(() => {});
+        return;
+      }
+      const data = buildMyCompanyRankingData();
+      if (!data) return;
+      await setDoc(companyRankingRef(currentUser.uid), data, { merge: true });
+    }
+
 
     function escapeAttr(value) {
       return String(value ?? "").replace(/[&<>"]/g, (ch) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[ch]));
@@ -5157,6 +5196,7 @@
         companyEmployees = sortCompanyEmployees(eSnap.docs.map(d => ({ id: d.id, ...d.data() })));
       }
       renderCompany();
+      await updateMyCompanyRanking().catch((error) => console.warn("company ranking sync failed", error));
       if (currentScreenName === "game" && infoTab === "daily") renderDailySalary(false);
     }
 
@@ -5513,8 +5553,20 @@
       }
     }
 
+    function setRankingTab(tab) {
+      rankingActiveTab = tab === "company" ? "company" : "assets";
+      expandedRankingId = null;
+      renderRankings();
+      loadRankings().catch(() => {});
+    }
+
     async function loadRankings() {
       if (!rankingList || !currentUser || !currentUserData) return;
+      if (rankingActiveTab === "company") return loadCompanyRankings();
+      return loadAssetRankings();
+    }
+
+    async function loadAssetRankings() {
       rankingStatus.textContent = "순위를 갱신 중입니다...";
       try {
         await loadPromotions().catch(() => {});
@@ -5526,7 +5578,22 @@
         renderRankings();
         rankingStatus.textContent = "";
       } catch (error) {
-        rankingStatus.textContent = "순위를 불러오지 못했습니다.";
+        console.error(error);
+        rankingStatus.textContent = "자산 순위를 불러오지 못했습니다.";
+      }
+    }
+
+    async function loadCompanyRankings() {
+      rankingStatus.textContent = "회사 순위를 갱신 중입니다...";
+      try {
+        await loadCompany().catch(() => {});
+        const snap = await getDocs(query(companyRankingsCol(), orderBy("dailyProfit", "desc"), limit(RANKING_LIMIT)));
+        companyRankings = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+        renderRankings();
+        rankingStatus.textContent = "";
+      } catch (error) {
+        console.error(error);
+        rankingStatus.textContent = "회사 순위를 불러오지 못했습니다.";
       }
     }
 
@@ -5538,6 +5605,19 @@
     }
 
     function renderRankings() {
+      if (!rankingList) return;
+      if (rankingAssetTab) rankingAssetTab.classList.toggle("active", rankingActiveTab === "assets");
+      if (rankingCompanyTab) rankingCompanyTab.classList.toggle("active", rankingActiveTab === "company");
+      if (rankingNote) {
+        rankingNote.innerHTML = rankingActiveTab === "company"
+          ? "하루 예상 회사 수익 기준 상위 10개 회사입니다."
+          : "총자산 = 보유 현금 + 통장 잔액 + 보유 주식 평가금액<br />상위 10명만 표시됩니다.";
+      }
+      if (rankingActiveTab === "company") return renderCompanyRankings();
+      return renderAssetRankings();
+    }
+
+    function renderAssetRankings() {
       if (!rankingList) return;
       if (!rankings.length) {
         rankingList.innerHTML = `<div class="empty">아직 순위 데이터가 없습니다.<br />순위 화면에 들어오면 내 자산이 갱신됩니다.</div>`;
@@ -5578,6 +5658,30 @@
           expandedRankingId = expandedRankingId === itemId ? null : itemId;
           renderRankings();
         });
+        rankingList.appendChild(row);
+      });
+    }
+
+    function renderCompanyRankings() {
+      if (!rankingList) return;
+      if (!companyRankings.length) {
+        rankingList.innerHTML = `<div class="empty">아직 회사 순위 데이터가 없습니다.<br />회사를 설립하거나 회사 화면에 들어오면 순위가 갱신됩니다.</div>`;
+        return;
+      }
+      rankingList.innerHTML = "";
+      companyRankings.slice(0, RANKING_LIMIT).forEach((item, index) => {
+        const rank = index + 1;
+        const row = document.createElement("div");
+        row.className = "ranking-row";
+        row.innerHTML = `
+          <div class="ranking-rank ${getRankClass(rank)}">${rank}위</div>
+          <div class="ranking-body">
+            <div class="ranking-head">
+              <div class="ranking-name">${escapeHtml(item.companyName || "-")}</div>
+            </div>
+            <div class="ranking-total">Lv.${Number(item.companyLevel || 1)} · 회사 수익 ${formatWon(item.dailyProfit || 0)}</div>
+          </div>
+        `;
         rankingList.appendChild(row);
       });
     }
@@ -6567,7 +6671,9 @@
       showScreen("upgrade");
     });
     openCompanyBtn.addEventListener("click", () => { closeAdminMenu(); activeCompanyTab = "info"; showScreen("company"); });
-    openRankingBtn.addEventListener("click", () => { closeAdminMenu(); showScreen("ranking"); });
+    openRankingBtn.addEventListener("click", () => { closeAdminMenu(); rankingActiveTab = "assets"; showScreen("ranking"); });
+    rankingAssetTab?.addEventListener("click", () => setRankingTab("assets"));
+    rankingCompanyTab?.addEventListener("click", () => setRankingTab("company"));
     openSettingsBtn.addEventListener("click", () => { closeAdminMenu(); fillSettingsInputs(); setSettingsTab("default"); showScreen("settings"); });
     settingsDefaultTab.addEventListener("click", () => setSettingsTab("default"));
     settingsStockTab.addEventListener("click", () => setSettingsTab("stock"));
@@ -6671,6 +6777,7 @@
       if (newsToastTimer) { clearTimeout(newsToastTimer); newsToastTimer = null; }
       expandedBankDepositId = null;
       rankings = [];
+      companyRankings = [];
       expandedRankingId = null;
       stopMarketTimer();
       stopBankInterestTimer();
