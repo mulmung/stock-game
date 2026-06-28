@@ -431,10 +431,9 @@
     .news-toast-body { color: #e5e7eb; font-size: 14px; line-height: 1.55; font-weight: 800; }
 
 
-    .lottery-tabs { display: flex; align-items: center; gap: 28px; border-bottom: 1px solid var(--line-strong); margin: 18px 0 22px; overflow-x: auto; -webkit-overflow-scrolling: touch; }
-    .lottery-tab { position: relative; flex: 0 0 auto; height: 46px; padding: 0; border: 0; background: transparent; color: var(--muted); font-weight: 750; font-size: 15px; border-radius: 0; }
+    .lottery-tabs { display: flex; align-items: center; gap: 28px; border-bottom: 1px solid var(--line-strong); margin: 18px 0 22px; overflow: visible; height: auto; max-height: none; }
+    .lottery-tab { position: relative; flex: 0 0 auto; height: 46px; padding: 0; border: 0; background: transparent; color: var(--muted); font-weight: 750; font-size: 15px; border-radius: 0; white-space: nowrap; }
     .lottery-tab.active { color: #fff; font-weight: 1000; }
-    .lottery-tab.active::after { content: ""; position: absolute; left: 0; right: 0; bottom: -1px; height: 3px; background: #fff; border-radius: 999px 999px 0 0; }
     .lottery-panel { margin-top: 14px; }
     .lottery-card { border-top: 1px solid var(--line-strong); border-bottom: 1px solid var(--line-strong); padding: 18px 0; margin: 16px 0; }
     .lottery-title { font-size: 18px; font-weight: 1000; color: #fff; margin-bottom: 10px; }
@@ -482,10 +481,9 @@
 
 
     /* Company system v67 */
-    .company-tabs { display: flex; align-items: center; gap: 28px; border-bottom: 1px solid var(--line-strong); margin: 18px 0 22px; overflow-x: auto; -webkit-overflow-scrolling: touch; }
-    .company-tab { position: relative; flex: 0 0 auto; height: 46px; padding: 0; border: 0; background: transparent; color: var(--muted); font-weight: 750; font-size: 15px; border-radius: 0; }
+    .company-tabs { display: flex; align-items: center; gap: 28px; border-bottom: 1px solid var(--line-strong); margin: 18px 0 22px; overflow: visible; height: auto; max-height: none; }
+    .company-tab { position: relative; flex: 0 0 auto; height: 46px; padding: 0; border: 0; background: transparent; color: var(--muted); font-weight: 750; font-size: 15px; border-radius: 0; white-space: nowrap; }
     .company-tab.active { color: #fff; font-weight: 1000; }
-    .company-tab.active::after { content: ""; position: absolute; left: 0; right: 0; bottom: -1px; height: 3px; background: #fff; border-radius: 999px 999px 0 0; }
     .company-panel { margin-top: 14px; }
     .company-card { border-top: 1px solid var(--line-strong); border-bottom: 1px solid var(--line-strong); padding: 18px 0; margin: 16px 0; }
     .company-title { font-size: 20px; font-weight: 1000; color: #fff; margin-bottom: 10px; letter-spacing: -0.45px; }
