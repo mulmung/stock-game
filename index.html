@@ -240,6 +240,7 @@
     .daily-countdown.ready { color: var(--green); }
     .daily-claim-btn { margin-top: 14px; }
     .daily-status { min-height: 22px; color: var(--muted); font-size: 12px; font-weight: 850; text-align: center; margin-top: 12px; line-height: 1.5; }
+    .daily-guide { color: var(--muted); font-size: 12px; font-weight: 800; line-height: 1.45; padding: 10px 0 14px; border-bottom: 1px solid var(--line); word-break: keep-all; }
 
 
     .upgrade-card { border-top: 1px solid var(--line-strong); border-bottom: 1px solid var(--line-strong); padding: 0; }
@@ -601,6 +602,7 @@
               <div class="daily-label">예상 실수령</div>
               <div id="dailyNetSalaryValue" class="daily-value salary">0원</div>
             </div>
+            <div class="daily-guide">일급과 회사 수익은 수령 시점의 상태를 기준으로 계산됩니다.</div>
             <div class="daily-row">
               <div class="daily-label">다음 일급까지</div>
               <div id="dailySalaryCountdown" class="daily-countdown">수령 가능</div>
@@ -2294,7 +2296,7 @@
       const storedTax = Math.max(0, Math.floor(Number(currentUserData.lastDailySalaryTax || 0)));
       const storedNet = Math.max(0, Math.floor(Number(currentUserData.lastDailySalaryNet || 0)));
       const preview = calculateDailyIncomePreview(salary);
-      // v67-3: 일급 화면의 표시값은 항상 현재 회사 수익 기준의 예상값으로 계산합니다.
+      // v67-4: 일급/회사 수익은 수령 시점 기준 안내를 추가하고, 표시값은 현재 상태 기준의 예상값으로 계산합니다.
       // 이미 오늘 일급을 받은 경우에도 화면에는 현재 기준 예상 법인세/실수령을 보여주고,
       // 실제 지급 기록은 아래 상태 문구에서만 별도로 안내합니다.
       dailyPromotionValue.innerHTML = `${styledNicknameHtml(currentUserData.nickname || "-", level)} ${promotionNameHtml(level)}`;
